@@ -1,0 +1,72 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: |
+          cd astro-frontend
+          npm ci
+
+      - name: Run Frontend Tests
+        run: |
+          cd astro-frontend
+          npm test
+
+      - name: Deploy to Cloudflare Pages
+        if: github.ref == 'refs/heads/main'
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+          directory: astro-frontend
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup DDEV
+        uses: drud/actions-setup-ddev@v1
+        with:
+          ddev_version: latest
+
+      - name: Start DDEV
+        run: |
+          cd drupal-backend
+          ddev start
+
+      - name: Install Drupal Dependencies
+        run: |
+          cd drupal-backend
+          ddev composer install
+
+      - name: Run Drupal Tests
+        run: |
+          cd drupal-backend
+          ddev drush test:run --all
+
+      - name: Deploy to Production DDEV
+        if: github.ref == 'refs/heads/main'
+        run: |
+          cd drupal-backend
+          ddev drush deploy
+        env:
+          PROD_DDEV_HOST: ${{ secrets.PROD_DDEV_HOST }}
+          PROD_DDEV_SSH_KEY: ${{ secrets.PROD_DDEV_SSH_KEY }}
