@@ -7,6 +7,12 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Use PROJECT_NAME from env-sync.sh
+if [ -z "$PROJECT_NAME" ]; then
+    echo -e "${RED}Error:${NC} PROJECT_NAME not set. Please run env-sync.sh first."
+    exit 1
+fi
+
 # Print status message
 print_status() {
     echo -e "${GREEN}==>${NC} $1"
@@ -77,7 +83,7 @@ if [ ! -f "README.md" ]; then
 fi
 
 # Setup Drupal backend
-print_status "Setting up Drupal backend..."
+print_status "Setting up Drupal backend for project: $PROJECT_NAME"
 
 # 0. Ensure drupal-backend directory exists and is clean
 if [ -d "drupal-backend" ]; then
@@ -92,7 +98,7 @@ print_status "Initializing DDEV configuration..."
 ddev config --project-type=drupal11 \
     --php-version=8.3 \
     --docroot=web \
-    --project-name=drupal-backend \
+    --project-name=$PROJECT_NAME \
     --auto
 
 # 2. Start DDEV services
@@ -123,7 +129,7 @@ print_status "Generating environment configuration..."
 # Get DDEV site URL
 DDEV_URL=$(ddev describe -j | jq -r '.raw.status.https_url')
 if [ -z "$DDEV_URL" ]; then
-    DDEV_URL="http://drupal-backend.ddev.site"
+    DDEV_URL="http://${PROJECT_NAME}.ddev.site"
 fi
 
 # Get Drupal site UUID
@@ -142,6 +148,9 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 cd ..
 cat > .env << EOL
 # Generated on: $(date)
+# Project Configuration
+PROJECT_NAME=${PROJECT_NAME}
+
 # Drupal Backend Configuration
 DRUPAL_API_URL=${DDEV_URL}/jsonapi
 DRUPAL_API_USER=admin
@@ -170,8 +179,11 @@ EOL
 
 # Create .env.example without sensitive values
 cat > .env.example << EOL
+# Project Configuration
+PROJECT_NAME=your-project-name
+
 # Drupal Backend Configuration
-DRUPAL_API_URL=http://drupal-backend.ddev.site/jsonapi
+DRUPAL_API_URL=http://your-project-name.ddev.site/jsonapi
 DRUPAL_API_USER=admin
 DRUPAL_API_PASS=admin
 DRUPAL_SITE_UUID=your-site-uuid
@@ -197,10 +209,6 @@ EOL
 # 6. Output success message and next steps
 print_status "Drupal backend setup complete!"
 echo -e "${YELLOW}Next steps:${NC}"
-echo "1. Run 'ddev launch' to open your Drupal site"
-echo "2. Run 'ddev drush uli' to get a one-time login link"
-echo "3. Configure your Drupal site at ${DDEV_URL}"
-echo "4. Run 'scripts/setup-astro.sh' to set up the frontend"
-echo -e "${YELLOW}Environment files:${NC}"
-echo "- .env has been generated with secure random values"
-echo "- .env.example has been created for reference"
+echo "1. Run 'ddev launch' to open your Drupal site at ${DDEV_URL}"
+echo "2. Your project name is: ${PROJECT_NAME}"
+echo "3. DDEV site URL: ${DDEV_URL}"

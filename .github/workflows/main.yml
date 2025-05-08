@@ -2,13 +2,41 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - staging
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - staging
+
+env:
+  PROJECT_NAME: ${{ github.event.repository.name }}
+  # Determine environment based on branch
+  ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
 
 jobs:
-  frontend:
+  validate:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Project Configuration
+        run: |
+          if [ ! -f ".env" ]; then
+            echo "::error::.env file not found. Please run env-sync.sh locally first."
+            exit 1
+          fi
+
+          if [ ! -f "wrangler.toml" ]; then
+            echo "::error::wrangler.toml not found. Please run setup-astro.sh locally first."
+            exit 1
+          fi
+
+  frontend:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: ${{ env.ENVIRONMENT }}
     steps:
       - uses: actions/checkout@v4
 
@@ -16,6 +44,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "astro-frontend/package-lock.json"
 
       - name: Install Dependencies
         run: |
@@ -27,18 +57,35 @@ jobs:
           cd astro-frontend
           npm test
 
+      - name: Build Frontend
+        run: |
+          cd astro-frontend
+          npm run build
+        env:
+          NODE_ENV: ${{ env.ENVIRONMENT }}
+          # Environment-specific variables
+          VITE_API_URL: ${{ env.ENVIRONMENT == 'production' && secrets.PROD_API_URL || secrets.STAGING_API_URL }}
+          VITE_ANALYTICS_ID: ${{ env.ENVIRONMENT == 'production' && secrets.PROD_ANALYTICS_ID || secrets.STAGING_ANALYTICS_ID }}
+
       - name: Deploy to Cloudflare Pages
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
         uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+          projectName: ${{ env.PROJECT_NAME }}
           directory: astro-frontend
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref_name }}
+          workingDirectory: astro-frontend
+          # Environment-specific settings
+          environment: ${{ env.ENVIRONMENT }}
+          environmentName: ${{ env.ENVIRONMENT }}
 
   backend:
+    needs: validate
     runs-on: ubuntu-latest
+    environment: ${{ env.ENVIRONMENT }}
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +93,15 @@ jobs:
         uses: drud/actions-setup-ddev@v1
         with:
           ddev_version: latest
+
+      - name: Configure DDEV
+        run: |
+          cd drupal-backend
+          ddev config --project-type=drupal11 \
+            --php-version=8.3 \
+            --docroot=web \
+            --project-name=${{ env.PROJECT_NAME }} \
+            --auto
 
       - name: Start DDEV
         run: |
@@ -55,18 +111,49 @@ jobs:
       - name: Install Drupal Dependencies
         run: |
           cd drupal-backend
-          ddev composer install
+          ddev composer install --no-dev --optimize-autoloader
 
       - name: Run Drupal Tests
         run: |
           cd drupal-backend
           ddev drush test:run --all
 
-      - name: Deploy to Production DDEV
-        if: github.ref == 'refs/heads/main'
+      - name: Deploy to DDEV
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
         run: |
           cd drupal-backend
           ddev drush deploy
         env:
+          # Environment-specific DDEV hosts
           PROD_DDEV_HOST: ${{ secrets.PROD_DDEV_HOST }}
+          STAGING_DDEV_HOST: ${{ secrets.STAGING_DDEV_HOST }}
+          DDEV_HOST: ${{ env.ENVIRONMENT == 'production' && secrets.PROD_DDEV_HOST || secrets.STAGING_DDEV_HOST }}
           PROD_DDEV_SSH_KEY: ${{ secrets.PROD_DDEV_SSH_KEY }}
+          STAGING_DDEV_SSH_KEY: ${{ secrets.STAGING_DDEV_SSH_KEY }}
+          DDEV_SSH_KEY: ${{ env.ENVIRONMENT == 'production' && secrets.PROD_DDEV_SSH_KEY || secrets.STAGING_DDEV_SSH_KEY }}
+          DRUPAL_ENV: ${{ env.ENVIRONMENT }}
+
+  notify:
+    needs: [frontend, backend]
+    if: always()
+    runs-on: ubuntu-latest
+    environment: ${{ env.ENVIRONMENT }}
+    steps:
+      - name: Notify on Success
+        if: success()
+        run: |
+          echo "✅ Deployment completed successfully for ${{ env.PROJECT_NAME }}"
+          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "Frontend: https://${{ env.PROJECT_NAME }}.pages.dev"
+          if [ "${{ env.ENVIRONMENT }}" = "production" ]; then
+            echo "Backend: ${{ secrets.PROD_DDEV_HOST }}"
+          else
+            echo "Backend: ${{ secrets.STAGING_DDEV_HOST }}"
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed for ${{ env.PROJECT_NAME }}"
+          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "Check the GitHub Actions logs for details"

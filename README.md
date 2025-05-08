@@ -173,6 +173,247 @@ A production-ready starter kit featuring a lightning‑fast Astro frontend on Cl
    - Backend: Configure production DDEV settings
    - Update environment variables for production
 
+### 📝 Project Naming Conventions
+
+#### Repository and Project Names
+
+The starter kit uses your GitHub repository name to determine the Cloudflare Pages project name. This ensures unique deployments for each project:
+
+1. **Repository Name**:
+   - Choose a descriptive name for your GitHub repository
+   - Example: `my-astro-drupal-site`
+   - This becomes your project name automatically
+
+2. **Cloudflare Pages URL**:
+   - Your site will be available at: `https://<repository-name>.pages.dev`
+   - Example: `https://my-astro-drupal-site.pages.dev`
+
+3. **Naming Best Practices**:
+   - Use lowercase letters
+   - Use hyphens for spaces
+   - Keep it short but descriptive
+   - Avoid special characters
+   - Examples:
+     - `my-astro-drupal-site`
+     - `company-website`
+     - `portfolio-2024`
+
+4. **Multiple Projects**:
+   - Each repository creates its own Cloudflare Pages project
+   - Projects are isolated by repository name
+   - No conflicts between different projects
+   - Each project gets its own subdomain
+
+5. **Changing Project Name**:
+   - The project name is derived from the repository name
+   - To change it, rename your GitHub repository
+   - The Cloudflare Pages project will update automatically
+   - Old URLs will redirect to the new project name
+
+### 🌐 Custom Domains
+
+Custom domains are configured through the Cloudflare Dashboard, not through the starter kit:
+
+1. **Cloudflare Pages Setup**:
+   - Go to Cloudflare Dashboard → Pages
+   - Select your project
+   - Click "Custom domains"
+   - Click "Set up a custom domain"
+
+2. **Domain Requirements**:
+   - Your domain must be managed by Cloudflare
+   - DNS records will be automatically configured
+   - SSL certificates are automatically provisioned
+
+3. **Multiple Domains**:
+   - You can add multiple custom domains
+   - Each domain can have its own SSL certificate
+   - All domains point to the same Cloudflare Pages deployment
+
+4. **Domain Verification**:
+   - Cloudflare will verify domain ownership
+   - DNS records are automatically configured
+   - SSL certificates are automatically provisioned
+
+5. **Best Practices**:
+   - Set up custom domains after initial deployment
+   - Use Cloudflare's DNS management
+   - Enable Cloudflare's security features
+   - Consider setting up redirects from www to non-www (or vice versa)
+
+### ☁️ Cloudflare: Pages vs Workers
+
+The starter kit primarily uses Cloudflare Pages for the Astro frontend, but it's important to understand the difference:
+
+1. **Cloudflare Pages**:
+   - Static site hosting platform
+   - Handles our Astro frontend deployment
+   - Features:
+     - Automatic builds from Git
+     - Asset optimization
+     - Global CDN distribution
+     - Automatic SSL certificates
+     - Preview deployments
+   - Perfect for static Astro builds
+
+2. **Cloudflare Workers**:
+   - Serverless computing platform
+   - Optional for additional functionality
+   - Use cases:
+     - API routes
+     - Server-side rendering (SSR)
+     - Custom middleware
+     - Edge functions
+   - Can be added if needed for dynamic features
+
+3. **How They Work Together**:
+   - Pages hosts the static frontend
+   - Workers can be added for dynamic features
+   - Both run on Cloudflare's global network
+   - Both benefit from Cloudflare's security features
+
+4. **When to Use Each**:
+   - Use Pages for:
+     - Static site hosting
+     - Automatic deployments
+     - Asset optimization
+   - Use Workers for:
+     - Dynamic server-side code
+     - API endpoints
+     - Custom routing
+     - Server-side rendering
+
+### 🔄 Optional: Server-Side Rendering (SSR)
+
+The starter kit uses static rendering by default, but you can enable SSR when needed:
+
+1. **When to Use SSR**:
+   - Dynamic content that changes per user
+   - User authentication
+   - Real-time data
+   - Personalized content
+   - API routes
+
+2. **How to Enable SSR**:
+
+   ```bash
+   # Install the Cloudflare adapter
+   npx astro add cloudflare
+   ```
+
+   Update `astro.config.mjs`:
+
+   ```js
+   import { defineConfig } from 'astro/config';
+   import cloudflare from '@astrojs/cloudflare';
+
+   export default defineConfig({
+     adapter: cloudflare(),
+     output: 'server'  // Enable SSR
+   });
+   ```
+
+3. **Per-Page SSR**:
+   - Add `export const prerender = false` to pages that need SSR
+   - Other pages remain static by default
+   - Example:
+
+     ```astro
+     ---
+     export const prerender = false;
+     // Your dynamic page code here
+     ---
+     ```
+
+4. **Deployment Changes**:
+   - Update GitHub Actions workflow to use Workers
+   - Configure Workers KV for session storage
+   - Set up environment variables in Cloudflare
+
+5. **Best Practices**:
+   - Start with static rendering
+   - Enable SSR only when needed
+   - Use static pages for content that doesn't change
+   - Use SSR for dynamic features
+
+### 🔧 GitHub Actions for SSR
+
+When enabling SSR, you'll need to update your GitHub Actions workflow. Here's how to modify `.github/workflows/main.yml`:
+
+1. **Add SSR Configuration**:
+
+   ```yaml
+   env:
+     PROJECT_NAME: ${{ github.event.repository.name }}
+     # Add SSR configuration
+     ENABLE_SSR: false  # Set to true to enable SSR
+   ```
+
+2. **Update Frontend Job**:
+
+   ```yaml
+   frontend:
+     needs: validate
+     runs-on: ubuntu-latest
+     steps:
+       # ... existing setup steps ...
+
+       - name: Build Frontend
+         run: |
+           cd astro-frontend
+           npm run build
+         env:
+           NODE_ENV: ${{ env.ENVIRONMENT }}
+           # Add SSR-specific environment variables
+           VITE_API_URL: ${{ env.ENVIRONMENT == 'production' && secrets.PROD_API_URL || secrets.STAGING_API_URL }}
+
+       - name: Deploy to Cloudflare
+         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+         uses: cloudflare/wrangler-action@v3
+         with:
+           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+           command: ${{ env.ENABLE_SSR == 'true' && 'deploy' || 'pages deploy' }}
+           projectName: ${{ env.PROJECT_NAME }}
+           directory: astro-frontend/dist
+   ```
+
+3. **Required Secrets**:
+
+   ```yaml
+   # For static deployment (Pages)
+   CLOUDFLARE_API_TOKEN
+   CLOUDFLARE_ACCOUNT_ID
+
+   # For SSR deployment (Workers)
+   CLOUDFLARE_API_TOKEN
+   CLOUDFLARE_ACCOUNT_ID
+   CLOUDFLARE_WORKER_NAME  # Optional, defaults to PROJECT_NAME
+   ```
+
+4. **Environment-Specific Settings**:
+
+   ```yaml
+   # Development
+   ENABLE_SSR: false
+   CLOUDFLARE_ENVIRONMENT: development
+
+   # Staging
+   ENABLE_SSR: true
+   CLOUDFLARE_ENVIRONMENT: staging
+
+   # Production
+   ENABLE_SSR: true
+   CLOUDFLARE_ENVIRONMENT: production
+   ```
+
+5. **Best Practices**:
+   - Use environment variables to control SSR
+   - Keep static deployment as default
+   - Test SSR locally before enabling
+   - Monitor Worker usage and costs
+   - Use appropriate caching strategies
+
 my-saas-kit/
 ├── astro-frontend/          # (populated by setup-astro.sh)
 ├── drupal-backend/          # (populated by setup-ddev.sh)
