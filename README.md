@@ -13,11 +13,15 @@ A production-ready starter kit featuring a lightning‑fast Astro frontend on Cl
 
 ### Installation
 
-1. Clone the repository:
+1. Clone the repository and set up your project:
 
    ```bash
-   git clone [your-repo-url]
-   cd Drupal_Astro_Kit
+   # Clone the starter kit
+   git clone https://github.com/yourusername/Drupal_Astro_Kit.git your-project-name
+   cd your-project-name
+
+   # Update git remote to your new repository
+   git remote set-url origin https://github.com/yourusername/your-project-name.git
    ```
 
 2. Make the setup scripts executable:
@@ -26,12 +30,17 @@ A production-ready starter kit featuring a lightning‑fast Astro frontend on Cl
    chmod +x scripts/*.sh
    ```
 
-3. Run the setup scripts in sequence:
+3. Run the setup scripts in sequence (note the use of `source` to ensure environment variables are properly shared):
 
    ```bash
-   scripts/env-sync.sh
-   scripts/setup-ddev.sh
-   scripts/setup-astro.sh
+   # First, source the environment sync script
+   source scripts/env-sync.sh
+
+   # Then run the DDEV setup
+   source scripts/setup-ddev.sh
+
+   # Finally, setup the Astro frontend
+   source scripts/setup-astro.sh
    ```
 
 4. Start the development servers:

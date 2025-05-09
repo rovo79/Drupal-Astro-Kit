@@ -56,7 +56,7 @@ check_tool() {
 print_status "Checking dependencies..."
 
 # Check Docker
-check_tool "docker" "20.10.0" "docker --version | cut -d' ' -f3 | tr -d ','"
+check_tool "docker" "20.10.0" "docker version --format '{{.Server.Version}}'"
 
 # Check DDEV
 check_tool "ddev" "1.22.0" "ddev --version | cut -d' ' -f3"
