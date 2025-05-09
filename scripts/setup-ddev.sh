@@ -40,7 +40,8 @@ check_tool() {
     fi
 
     if [ ! -z "$min_version" ]; then
-        local version=$($version_cmd)
+        # Execute the version command and capture its output
+        local version=$(eval "$version_cmd")
         if [ $? -ne 0 ]; then
             print_error "Failed to get version for $tool"
         fi
