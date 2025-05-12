@@ -140,15 +140,21 @@ fi
 print_status "Setting up Drupal backend for project: $PROJECT_NAME"
 
 # 0. Ensure drupal-backend directory exists and is clean
+print_status "Preparing drupal-backend directory..."
 if [ -d "drupal-backend" ]; then
     print_status "Cleaning existing drupal-backend directory..."
     rm -rf drupal-backend/*
+else
+    print_status "Creating drupal-backend directory..."
+    mkdir -p drupal-backend
 fi
-mkdir -p drupal-backend
-cd drupal-backend
 
 # 1. Init DDEV for Drupal 11
 print_status "Initializing DDEV configuration..."
+cd drupal-backend || {
+    print_error "Failed to change to drupal-backend directory"
+    return 1
+}
 ddev config --project-type=drupal11 \
     --php-version=8.3 \
     --docroot=web \
