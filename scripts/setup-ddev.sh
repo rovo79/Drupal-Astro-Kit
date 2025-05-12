@@ -1,25 +1,7 @@
 #!/usr/bin/env bash
-set -e
 
-# Trap errors and cleanup
-cleanup() {
-    local exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        echo -e "\n${RED}Script failed with exit code $exit_code${NC}"
-        echo -e "${YELLOW}You can safely exit with Ctrl+C if needed${NC}\n"
-    fi
-    # Return to original directory if we changed it
-    if [ "$PWD" != "$ORIGINAL_DIR" ]; then
-        cd "$ORIGINAL_DIR"
-    fi
-    exit $exit_code
-}
-
-# Store original directory
-ORIGINAL_DIR=$(pwd)
-
-# Set up trap
-trap cleanup EXIT ERR INT TERM
+# Don't exit on error, we'll handle that in the cleanup
+set +e
 
 # Colors for output
 RED='\033[0;31m'
@@ -33,17 +15,38 @@ read_env_file() {
         export $(grep -v '^#' .env | xargs)
     else
         echo -e "${RED}Error:${NC} .env file not found. Please run env-sync.sh first."
-        exit 1
+        return 1
     fi
 }
 
+# Trap errors and cleanup
+cleanup() {
+    local exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        echo -e "\n${RED}Script encountered an error (exit code: $exit_code)${NC}"
+        echo -e "${YELLOW}The script has completed, but you may want to check the output above for any issues${NC}\n"
+    fi
+    # Return to original directory if we changed it
+    if [ "$PWD" != "$ORIGINAL_DIR" ]; then
+        cd "$ORIGINAL_DIR"
+    fi
+    # Don't exit the shell, just return
+    return $exit_code
+}
+
+# Store original directory
+ORIGINAL_DIR=$(pwd)
+
+# Set up trap
+trap cleanup EXIT ERR INT TERM
+
 # Read environment variables from .env
-read_env_file
+read_env_file || return 1
 
 # Verify PROJECT_NAME is set
 if [ -z "$PROJECT_NAME" ]; then
     echo -e "${RED}Error:${NC} PROJECT_NAME not set in .env file. Please run env-sync.sh first."
-    exit 1
+    return 1
 fi
 
 # Print status message
@@ -160,10 +163,22 @@ fi
 # 5. Generate .env file for Astro frontend
 print_status "Generating environment configuration..."
 
-# Get DDEV site URL
-DDEV_URL=$(ddev describe -j | jq -r '.raw.status.url')
+# Get DDEV site URL - try multiple methods to get the URL
+DDEV_URL=""
+if command -v jq &> /dev/null; then
+    # Try to get URL from ddev describe JSON output
+    DDEV_JSON=$(ddev describe -j 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        # Try different JSON paths that might contain the URL
+        DDEV_URL=$(echo "$DDEV_JSON" | jq -r '.raw.status.url // .raw.status.https_url // .raw.status.http_url // empty' 2>/dev/null)
+    fi
+fi
+
+# Fallback if jq fails or URL not found
 if [ -z "$DDEV_URL" ]; then
+    # Use the project name to construct the URL
     DDEV_URL="http://${PROJECT_NAME}.ddev.site"
+    print_warning "Could not get URL from ddev describe, using default: $DDEV_URL"
 fi
 
 # Get Drupal site UUID

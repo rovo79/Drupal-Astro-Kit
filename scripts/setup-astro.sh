@@ -1,25 +1,7 @@
 #!/usr/bin/env bash
-set -e
 
-# Trap errors and cleanup
-cleanup() {
-    local exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        echo -e "\n${RED}Script failed with exit code $exit_code${NC}"
-        echo -e "${YELLOW}You can safely exit with Ctrl+C if needed${NC}\n"
-    fi
-    # Return to original directory if we changed it
-    if [ "$PWD" != "$ORIGINAL_DIR" ]; then
-        cd "$ORIGINAL_DIR"
-    fi
-    exit $exit_code
-}
-
-# Store original directory
-ORIGINAL_DIR=$(pwd)
-
-# Set up trap
-trap cleanup EXIT ERR INT TERM
+# Don't exit on error, we'll handle that in the cleanup
+set +e
 
 # Colors for output
 RED='\033[0;31m'
@@ -33,17 +15,38 @@ read_env_file() {
         export $(grep -v '^#' .env | xargs)
     else
         echo -e "${RED}Error:${NC} .env file not found. Please run env-sync.sh first."
-        exit 1
+        return 1
     fi
 }
 
+# Trap errors and cleanup
+cleanup() {
+    local exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        echo -e "\n${RED}Script encountered an error (exit code: $exit_code)${NC}"
+        echo -e "${YELLOW}The script has completed, but you may want to check the output above for any issues${NC}\n"
+    fi
+    # Return to original directory if we changed it
+    if [ "$PWD" != "$ORIGINAL_DIR" ]; then
+        cd "$ORIGINAL_DIR"
+    fi
+    # Don't exit the shell, just return
+    return $exit_code
+}
+
+# Store original directory
+ORIGINAL_DIR=$(pwd)
+
+# Set up trap
+trap cleanup EXIT ERR INT TERM
+
 # Read environment variables from .env
-read_env_file
+read_env_file || return 1
 
 # Verify PROJECT_NAME is set
 if [ -z "$PROJECT_NAME" ]; then
     echo -e "${RED}Error:${NC} PROJECT_NAME not set in .env file. Please run env-sync.sh first."
-    exit 1
+    return 1
 fi
 
 # Print status message
