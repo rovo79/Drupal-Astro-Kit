@@ -171,10 +171,22 @@ fi
 print_status "Installing Drush and configuring site..."
 if ! ddev composer require drush/drush -q; then
     print_error "Failed to install Drush. Check composer logs for details."
+    return 1
 fi
 
-if ! ddev drush site:install --account-name=admin --account-pass=admin -y; then
+# Wait a moment for Drush to be available
+sleep 2
+
+# Verify Drush is available
+if ! ddev exec which drush > /dev/null; then
+    print_error "Drush not found after installation"
+    return 1
+fi
+
+# Install Drupal site
+if ! ddev exec drush site:install --account-name=admin --account-pass=admin -y; then
     print_error "Failed to install Drupal site. Check Drush logs for details."
+    return 1
 fi
 
 # 5. Generate .env file for Astro frontend
@@ -198,8 +210,12 @@ if [ -z "$DDEV_URL" ]; then
     print_warning "Could not get URL from ddev describe, using default: $DDEV_URL"
 fi
 
-# Get Drupal site UUID
-SITE_UUID=$(ddev drush cget system.site uuid --format=string)
+# Get Drupal site UUID - try multiple methods
+SITE_UUID=""
+if ddev exec which drush > /dev/null; then
+    SITE_UUID=$(ddev exec drush cget system.site uuid --format=string 2>/dev/null)
+fi
+
 if [ -z "$SITE_UUID" ]; then
     print_warning "Could not get site UUID, using default"
     SITE_UUID="default"
@@ -272,12 +288,16 @@ SESSION_SECRET=your-session-secret
 COOKIE_SECRET=your-cookie-secret
 EOL
 
-# 6. Output success message and next steps
 print_status "✅ Drupal backend setup complete!"
 echo -e "${YELLOW}Next steps:${NC}"
-echo "1. Run 'ddev launch' to open your Drupal site"
-echo "2. Your project name is: $PROJECT_NAME"
-echo "3. DDEV site URL: $DDEV_URL"
+echo "1. Run 'ddev launch' to open your Drupal site at ${DDEV_URL}"
+echo "2. Your project name is: ${PROJECT_NAME}"
+echo "3. Drupal admin credentials:"
+echo "   - Username: admin"
+echo "   - Password: admin"
+echo "4. To verify the setup:"
+echo "   - Run 'ddev status' to check DDEV services"
+echo "   - Run 'ddev drush status' to check Drupal status"
 
 # Explicitly return success
 return 0
