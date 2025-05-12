@@ -25,9 +25,6 @@ A production-ready starter kit featuring a lightning‑fast Astro frontend on Cl
 
    # Create a new repository on GitHub first, then:
    git remote add origin https://github.com/your-username/new-repo-name.git
-   git add .
-   git commit -m "Initial commit"
-   git push -u origin main
    ```
 
 2. Make the setup scripts executable:
@@ -49,7 +46,16 @@ A production-ready starter kit featuring a lightning‑fast Astro frontend on Cl
    source scripts/setup-astro.sh
    ```
 
-4. Start the development servers:
+4. After the setup is complete, commit and push your changes:
+
+   ```bash
+   # Add all the new files created during setup
+   git add .
+   git commit -m "Initial project setup"
+   git push -u origin main
+   ```
+
+5. Start the development servers:
    - Drupal backend: `ddev launch`
    - Astro frontend: `cd astro-frontend && npm run dev`
 

@@ -7,9 +7,22 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Use PROJECT_NAME from env-sync.sh
+# Function to read .env file
+read_env_file() {
+    if [ -f ".env" ]; then
+        export $(grep -v '^#' .env | xargs)
+    else
+        echo -e "${RED}Error:${NC} .env file not found. Please run env-sync.sh first."
+        exit 1
+    fi
+}
+
+# Read environment variables from .env
+read_env_file
+
+# Verify PROJECT_NAME is set
 if [ -z "$PROJECT_NAME" ]; then
-    echo -e "${RED}Error:${NC} PROJECT_NAME not set. Please run env-sync.sh first."
+    echo -e "${RED}Error:${NC} PROJECT_NAME not set in .env file. Please run env-sync.sh first."
     exit 1
 fi
 
