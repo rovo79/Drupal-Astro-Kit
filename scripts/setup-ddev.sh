@@ -208,17 +208,18 @@ fi
 
 # 5. Generate .env file for Astro frontend
 print_status "Generating environment configuration..."
-pop_dir
 
 # Get DDEV site URL - try multiple methods to get the URL
 DDEV_URL=""
 if command -v jq &> /dev/null; then
-    # Try to get URL from ddev describe JSON output
+    # Run ddev describe from drupal-backend directory
+    push_dir "drupal-backend" || return 1
     DDEV_JSON=$(ddev describe -j 2>/dev/null)
     if [ $? -eq 0 ]; then
         # Try different JSON paths that might contain the URL
         DDEV_URL=$(echo "$DDEV_JSON" | jq -r '.raw.status.url // .raw.status.https_url // .raw.status.http_url // empty' 2>/dev/null)
     fi
+    pop_dir
 fi
 
 # Fallback if jq fails or URL not found
@@ -230,9 +231,11 @@ fi
 
 # Get Drupal site UUID - try multiple methods
 SITE_UUID=""
+push_dir "drupal-backend" || return 1
 if ddev exec which drush > /dev/null; then
     SITE_UUID=$(ddev exec drush cget system.site uuid --format=string 2>/dev/null)
 fi
+pop_dir
 
 if [ -z "$SITE_UUID" ]; then
     print_warning "Could not get site UUID, using default"
