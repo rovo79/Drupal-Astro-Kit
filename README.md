@@ -20,8 +20,14 @@ A production-ready starter kit featuring a lightning‑fast Astro frontend on Cl
    git clone https://github.com/yourusername/Drupal_Astro_Kit.git your-project-name
    cd your-project-name
 
-   # Update git remote to your new repository
-   git remote set-url origin https://github.com/yourusername/your-project-name.git
+   # Remove the original remote and set up your new repository
+   git remote remove origin
+
+   # Create a new repository on GitHub first, then:
+   git remote add origin https://github.com/your-username/new-repo-name.git
+   git add .
+   git commit -m "Initial commit"
+   git push -u origin main
    ```
 
 2. Make the setup scripts executable:
