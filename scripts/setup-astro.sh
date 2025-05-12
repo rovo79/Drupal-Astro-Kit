@@ -22,16 +22,21 @@ read_env_file() {
 # Trap errors and cleanup
 cleanup() {
     local exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        echo -e "\n${RED}Script encountered an error (exit code: $exit_code)${NC}"
-        echo -e "${YELLOW}The script has completed, but you may want to check the output above for any issues${NC}\n"
-    fi
-    # Return to original directory if we changed it
-    if [ "$PWD" != "$ORIGINAL_DIR" ]; then
+    # If we're in the astro-frontend directory, go back to project root
+    if [[ "$PWD" == *"astro-frontend"* ]]; then
         cd "$ORIGINAL_DIR"
     fi
-    # Don't exit the shell, just return
-    return $exit_code
+
+    # Only show error message if there was an actual error
+    if [ $exit_code -ne 0 ]; then
+        echo -e "\n${RED}Script encountered an error (exit code: $exit_code)${NC}"
+        echo -e "${YELLOW}Please check the output above for any issues${NC}\n"
+    else
+        echo -e "\n${GREEN}Script completed successfully!${NC}"
+    fi
+
+    # Always return 0 to prevent shell exit
+    return 0
 }
 
 # Store original directory
@@ -40,8 +45,20 @@ ORIGINAL_DIR=$(pwd)
 # Set up trap
 trap cleanup EXIT ERR INT TERM
 
+# Function to check command status
+check_status() {
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error:${NC} Command failed: $1"
+        return 1
+    fi
+    return 0
+}
+
 # Read environment variables from .env
-read_env_file || return 1
+read_env_file || {
+    echo -e "${RED}Error:${NC} Failed to read .env file"
+    return 1
+}
 
 # Verify PROJECT_NAME is set
 if [ -z "$PROJECT_NAME" ]; then
@@ -57,7 +74,7 @@ print_status() {
 # Print error message
 print_error() {
     echo -e "${RED}Error:${NC} $1"
-    exit 1
+    return 1
 }
 
 # Check for required tools
@@ -71,13 +88,23 @@ print_status "Setting up Astro frontend for project: $PROJECT_NAME"
 
 # 1. Create the Astro project
 print_status "Creating Astro project..."
-npm create astro@latest astro-frontend -- --template basics --yes
+if ! npm create astro@latest astro-frontend -- --template basics --yes; then
+    print_error "Failed to create Astro project"
+    return 1
+fi
 
 # 2. Install Cloudflare adapter and dependencies
 print_status "Installing Cloudflare adapter and dependencies..."
-cd astro-frontend
-npm install --save-dev wrangler
-npx astro add cloudflare
+cd astro-frontend || return 1
+if ! npm install --save-dev wrangler; then
+    print_error "Failed to install wrangler"
+    return 1
+fi
+
+if ! npx astro add cloudflare; then
+    print_error "Failed to add Cloudflare adapter"
+    return 1
+fi
 
 # 3. Configure project-specific settings
 print_status "Configuring project settings..."
@@ -175,4 +202,5 @@ echo "1. For local development, use: npx wrangler dev --remote"
 echo "2. The SESSION binding is used by Astro's Cloudflare adapter"
 echo "3. Check the Cloudflare Dashboard to manage your KV data"
 
-# Ensures your Astro build is wired for Pages (via @astrojs/cloudflare) automatically.
+# Explicitly return success
+return 0

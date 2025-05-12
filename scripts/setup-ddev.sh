@@ -22,16 +22,21 @@ read_env_file() {
 # Trap errors and cleanup
 cleanup() {
     local exit_code=$?
-    if [ $exit_code -ne 0 ]; then
-        echo -e "\n${RED}Script encountered an error (exit code: $exit_code)${NC}"
-        echo -e "${YELLOW}The script has completed, but you may want to check the output above for any issues${NC}\n"
-    fi
-    # Return to original directory if we changed it
-    if [ "$PWD" != "$ORIGINAL_DIR" ]; then
+    # If we're in the drupal-backend directory, go back to project root
+    if [[ "$PWD" == *"drupal-backend"* ]]; then
         cd "$ORIGINAL_DIR"
     fi
-    # Don't exit the shell, just return
-    return $exit_code
+
+    # Only show error message if there was an actual error
+    if [ $exit_code -ne 0 ]; then
+        echo -e "\n${RED}Script encountered an error (exit code: $exit_code)${NC}"
+        echo -e "${YELLOW}Please check the output above for any issues${NC}\n"
+    else
+        echo -e "\n${GREEN}Script completed successfully!${NC}"
+    fi
+
+    # Always return 0 to prevent shell exit
+    return 0
 }
 
 # Store original directory
@@ -40,8 +45,20 @@ ORIGINAL_DIR=$(pwd)
 # Set up trap
 trap cleanup EXIT ERR INT TERM
 
+# Function to check command status
+check_status() {
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error:${NC} Command failed: $1"
+        return 1
+    fi
+    return 0
+}
+
 # Read environment variables from .env
-read_env_file || return 1
+read_env_file || {
+    echo -e "${RED}Error:${NC} Failed to read .env file"
+    return 1
+}
 
 # Verify PROJECT_NAME is set
 if [ -z "$PROJECT_NAME" ]; then
@@ -57,7 +74,7 @@ print_status() {
 # Print error message
 print_error() {
     echo -e "${RED}Error:${NC} $1"
-    exit 1
+    return 1
 }
 
 # Print warning message
@@ -256,8 +273,11 @@ COOKIE_SECRET=your-cookie-secret
 EOL
 
 # 6. Output success message and next steps
-print_status "Drupal backend setup complete!"
+print_status "✅ Drupal backend setup complete!"
 echo -e "${YELLOW}Next steps:${NC}"
-echo "1. Run 'ddev launch' to open your Drupal site at ${DDEV_URL}"
-echo "2. Your project name is: ${PROJECT_NAME}"
-echo "3. DDEV site URL: ${DDEV_URL}"
+echo "1. Run 'ddev launch' to open your Drupal site"
+echo "2. Your project name is: $PROJECT_NAME"
+echo "3. DDEV site URL: $DDEV_URL"
+
+# Explicitly return success
+return 0
