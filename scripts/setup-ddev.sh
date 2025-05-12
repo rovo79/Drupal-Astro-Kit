@@ -128,7 +128,7 @@ fi
 print_status "Generating environment configuration..."
 
 # Get DDEV site URL
-DDEV_URL=$(ddev describe -j | jq -r '.raw.status.https_url')
+DDEV_URL=$(ddev describe -j | jq -r '.raw.status.url')
 if [ -z "$DDEV_URL" ]; then
     DDEV_URL="http://${PROJECT_NAME}.ddev.site"
 fi
