@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 set -e
 
+# Trap errors and cleanup
+cleanup() {
+    local exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        echo -e "\n${RED}Script failed with exit code $exit_code${NC}"
+        echo -e "${YELLOW}You can safely exit with Ctrl+C if needed${NC}\n"
+    fi
+    # Return to original directory if we changed it
+    if [ "$PWD" != "$ORIGINAL_DIR" ]; then
+        cd "$ORIGINAL_DIR"
+    fi
+    exit $exit_code
+}
+
+# Store original directory
+ORIGINAL_DIR=$(pwd)
+
+# Set up trap
+trap cleanup EXIT ERR INT TERM
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'

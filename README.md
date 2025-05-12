@@ -10,6 +10,7 @@ A production-ready starter kit featuring a lightning‑fast Astro frontend on Cl
 - Docker (required by DDEV)
 - Node.js (for Astro frontend)
 - Composer (for Drupal dependencies)
+- Cloudflare account (for frontend deployment)
 
 ### Installation
 
@@ -58,6 +59,101 @@ A production-ready starter kit featuring a lightning‑fast Astro frontend on Cl
 5. Start the development servers:
    - Drupal backend: `ddev launch`
    - Astro frontend: `cd astro-frontend && npm run dev`
+
+### Expected Output
+
+After running the setup scripts, you should see:
+
+1. From `env-sync.sh`:
+
+   ```
+   ✅ .env created from .env.example and updated with project-specific values
+   📝 Project name: your-project-name
+   🌐 Drupal API URL: http://your-project-name.ddev.site/jsonapi
+   ```
+
+2. From `setup-ddev.sh`:
+
+   ```
+   ==> Checking dependencies...
+   ==> Setting up Drupal backend for project: your-project-name
+   ...
+   ✅ Drupal backend setup complete!
+   Next steps:
+   1. Run 'ddev launch' to open your Drupal site
+   2. Your project name is: your-project-name
+   3. DDEV site URL: http://your-project-name.ddev.site
+   ```
+
+3. From `setup-astro.sh`:
+
+   ```
+   ==> Setting up Astro frontend for project: your-project-name
+   ...
+   ✅ Astro frontend setup complete!
+   Next steps:
+   1. Run 'npm run dev' to start the development server
+   2. Your project is configured for Cloudflare Pages deployment
+   3. Environment variables are set up from your .env file
+
+   Important:
+   1. You'll need to create a KV namespace in Cloudflare
+   2. The image service is configured for Cloudflare compatibility
+   3. Update the KV namespace ID in wrangler.toml
+   ```
+
+### Cloudflare Setup
+
+1. Create a KV Namespace:
+
+   ```bash
+   # Create a namespace for sessions
+   npx wrangler kv namespace create "SESSION"
+
+   # The command will output something like:
+   # 🌀  Creating namespace with title your-project-name-SESSION
+   # ✨  Success!
+   # Add the following to your configuration file:
+   # [[kv_namespaces]]
+   # binding = "SESSION"
+   # id = "<BINDING_ID>"
+   ```
+
+2. Update `wrangler.toml`:
+   - Open `wrangler.toml` in your project root
+   - Replace the placeholder KV namespace configuration with your actual namespace ID:
+
+     ```toml
+     [[kv_namespaces]]
+     binding = "SESSION"
+     id = "<BINDING_ID>"  # Replace with the ID from step 1
+     ```
+
+3. Verify Your Setup:
+
+   ```bash
+   # Verify your Cloudflare credentials
+   npx wrangler whoami
+
+   # List your KV namespaces
+   npx wrangler kv:namespace list
+
+   # Test your KV namespace (optional)
+   npx wrangler kv:key put --binding=SESSION "test" "value"
+   npx wrangler kv:key get --binding=SESSION "test"
+   ```
+
+4. Development Notes:
+   - When using `npm run dev`, the Astro development server will use a local version of KV
+   - For production, your KV namespace will be automatically used
+   - The SESSION binding is used by Astro's Cloudflare adapter for session management
+   - You can manage your KV data through the Cloudflare Dashboard at:
+     [Workers & Pages > KV](https://dash.cloudflare.com/?to=/:account/workers/kv/namespaces)
+
+5. Troubleshooting:
+   - If you see "Invalid binding `SESSION`" in your build output, verify your KV namespace ID
+   - For local development, use `npx wrangler dev --remote` to connect to your Cloudflare KV
+   - Check the [Cloudflare KV documentation](https://developers.cloudflare.com/kv/get-started/) for more details
 
 ## 📚 Documentation
 

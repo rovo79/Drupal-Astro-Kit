@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 set -e
 
+# Trap errors and cleanup
+cleanup() {
+    local exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        echo -e "\n${RED}Script failed with exit code $exit_code${NC}"
+        echo -e "${YELLOW}You can safely exit with Ctrl+C if needed${NC}\n"
+    fi
+    # Return to original directory if we changed it
+    if [ "$PWD" != "$ORIGINAL_DIR" ]; then
+        cd "$ORIGINAL_DIR"
+    fi
+    exit $exit_code
+}
+
+# Store original directory
+ORIGINAL_DIR=$(pwd)
+
+# Set up trap
+trap cleanup EXIT ERR INT TERM
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -69,8 +89,16 @@ import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
   output: 'server',
-  adapter: cloudflare(),
+  adapter: cloudflare({
+    imageService: true,
+    mode: 'directory'
+  }),
   site: 'https://${PROJECT_NAME}.pages.dev',
+  image: {
+    service: {
+      entrypoint: 'astro/assets/services/compile'
+    }
+  },
   vite: {
     build: {
       sourcemap: true
@@ -94,6 +122,14 @@ if [ ! -f wrangler.toml ]; then
     cat > wrangler.toml << EOL
 name = "${PROJECT_NAME}"
 compatibility_date = "$(date +%Y-%m-%d)"
+main = "workers-site/index.js"
+
+# KV Namespace for sessions
+# You'll need to create this namespace and update the ID
+# Run: npx wrangler kv namespace create "SESSION"
+[[kv_namespaces]]
+binding = "SESSION"
+id = "your-kv-namespace-id"  # Replace this with your actual namespace ID
 
 [site]
 bucket = "./astro-frontend/dist"
@@ -101,9 +137,23 @@ bucket = "./astro-frontend/dist"
 [build]
 command = "cd astro-frontend && npm run build"
 EOL
+    echo -e "${YELLOW}Important:${NC} You need to create a KV namespace for sessions:"
+    echo "1. Run: npx wrangler kv namespace create \"SESSION\""
+    echo "2. Copy the namespace ID from the output"
+    echo "3. Update the 'id' in wrangler.toml with your namespace ID"
 else
-    # Update existing wrangler.toml with project name
+    # Update existing wrangler.toml with project name and required fields
     sed -i '' "s|^name = .*|name = \"$PROJECT_NAME\"|" wrangler.toml
+    if ! grep -q "main = " wrangler.toml; then
+        echo "main = \"workers-site/index.js\"" >> wrangler.toml
+    fi
+    if ! grep -q "kv_namespaces" wrangler.toml; then
+        echo -e "\n# KV Namespace for sessions\n# You'll need to create this namespace and update the ID\n# Run: npx wrangler kv namespace create \"SESSION\"\n[[kv_namespaces]]\nbinding = \"SESSION\"\nid = \"your-kv-namespace-id\"  # Replace this with your actual namespace ID" >> wrangler.toml
+        echo -e "${YELLOW}Important:${NC} You need to create a KV namespace for sessions:"
+        echo "1. Run: npx wrangler kv namespace create \"SESSION\""
+        echo "2. Copy the namespace ID from the output"
+        echo "3. Update the 'id' in wrangler.toml with your namespace ID"
+    fi
 fi
 
 cd astro-frontend
@@ -113,5 +163,13 @@ echo -e "${YELLOW}Next steps:${NC}"
 echo "1. Run 'npm run dev' to start the development server"
 echo "2. Your project is configured for Cloudflare Pages deployment"
 echo "3. Environment variables are set up from your .env file"
+echo -e "\n${YELLOW}Cloudflare Setup Required:${NC}"
+echo "1. Create a KV namespace: npx wrangler kv namespace create \"SESSION\""
+echo "2. Update wrangler.toml with your namespace ID"
+echo "3. Verify setup: npx wrangler kv:namespace list"
+echo -e "\n${YELLOW}Development Notes:${NC}"
+echo "1. For local development, use: npx wrangler dev --remote"
+echo "2. The SESSION binding is used by Astro's Cloudflare adapter"
+echo "3. Check the Cloudflare Dashboard to manage your KV data"
 
 # Ensures your Astro build is wired for Pages (via @astrojs/cloudflare) automatically.
