@@ -12,6 +12,35 @@ A production-ready starter kit featuring a lightning‑fast Astro frontend on Cl
 - Composer (for Drupal dependencies)
 - Cloudflare account (for frontend deployment)
 
+### Cloudflare Setup
+
+Before running the setup scripts, you'll need to create a Cloudflare API token with specific permissions:
+
+1. Go to [Cloudflare Dashboard > API Tokens](https://dash.cloudflare.com/profile/api-tokens)
+2. Click "Create Token"
+3. Choose "Create Custom Token"
+4. Set the following permissions:
+
+   **Account-level permissions:**
+   - `Cloudflare Pages Read` and `Cloudflare Pages Edit` (for Pages deployment)
+   - `Workers KV Storage Read` and `Workers KV Storage Edit` (for KV namespaces)
+   - `Workers Scripts Read` and `Workers Scripts Edit` (for Workers)
+   - `Workers Routes Read` and `Workers Routes Edit` (for routing)
+
+   **Zone-level permissions** (if using custom domains):
+   - `DNS Read` and `DNS Write` (for DNS management)
+   - `SSL and Certificates Read` and `SSL and Certificates Write` (for HTTPS)
+
+   **Optional but recommended:**
+   - `Account Analytics Read` (for monitoring)
+   - `Account Settings Read` (for configuration)
+
+5. Set the token's TTL (Time To Live) according to your security requirements
+6. Create the token and copy it securely
+7. Add the token to your `.env` file as `CLOUDFLARE_API_TOKEN`
+
+Note: Keep your API token secure and never commit it to version control. The `.env` file is automatically added to `.gitignore`.
+
 ### Installation
 
 1. Clone the repository and set up your project:

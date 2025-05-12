@@ -19,13 +19,30 @@ read_env_file() {
     fi
 }
 
+# Store original directory
+ORIGINAL_DIR=$(pwd)
+
+# Function to track directory changes
+push_dir() {
+    cd "$1" || {
+        print_error "Failed to change to directory: $1"
+        return 1
+    }
+}
+
+# Function to return to original directory
+pop_dir() {
+    cd "$ORIGINAL_DIR" || {
+        print_error "Failed to return to original directory: $ORIGINAL_DIR"
+        return 1
+    }
+}
+
 # Trap errors and cleanup
 cleanup() {
     local exit_code=$?
-    # If we're in the drupal-backend directory, go back to project root
-    if [[ "$PWD" == *"drupal-backend"* ]]; then
-        cd "$ORIGINAL_DIR"
-    fi
+    # Always return to original directory
+    pop_dir
 
     # Only show error message if there was an actual error
     if [ $exit_code -ne 0 ]; then
@@ -38,9 +55,6 @@ cleanup() {
     # Always return 0 to prevent shell exit
     return 0
 }
-
-# Store original directory
-ORIGINAL_DIR=$(pwd)
 
 # Set up trap
 trap cleanup EXIT ERR INT TERM
@@ -151,10 +165,7 @@ fi
 
 # 1. Init DDEV for Drupal 11
 print_status "Initializing DDEV configuration..."
-cd drupal-backend || {
-    print_error "Failed to change to drupal-backend directory"
-    return 1
-}
+push_dir "drupal-backend" || return 1
 ddev config --project-type=drupal11 \
     --php-version=8.3 \
     --docroot=web \
@@ -197,6 +208,7 @@ fi
 
 # 5. Generate .env file for Astro frontend
 print_status "Generating environment configuration..."
+pop_dir
 
 # Get DDEV site URL - try multiple methods to get the URL
 DDEV_URL=""
