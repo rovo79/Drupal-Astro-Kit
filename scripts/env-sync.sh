@@ -29,10 +29,15 @@ if [ ! -f .env ]; then
 else
   # If .env exists, read PROJECT_NAME from it
   if [ -f .env ]; then
-    PROJECT_NAME=$(grep "^PROJECT_NAME=" .env | cut -d'=' -f2)
-    export PROJECT_NAME
+    PROJECT_NAME_FROM_ENV=$(grep "^PROJECT_NAME=" .env | cut -d'=' -f2)
+    if [ -n "$PROJECT_NAME_FROM_ENV" ]; then
+      PROJECT_NAME=$PROJECT_NAME_FROM_ENV
+      export PROJECT_NAME
+    else
+      echo "⚠️  PROJECT_NAME not found in .env; using directory name instead: $PROJECT_NAME"
+    fi
   fi
   echo "ℹ️  .env already exists, using existing configuration"
 fi
 
-# Guards against "forgot to copy .env" errors and keeps secrets out of Git.
+exit 0

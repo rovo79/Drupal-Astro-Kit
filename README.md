@@ -45,7 +45,7 @@ Note: Keep your API token secure and never commit it to version control. The `.e
 
 1. Clone the repository and set up your project:
 
-   ```bash
+   ```zsh
    # Clone the starter kit
    git clone https://github.com/yourusername/Drupal_Astro_Kit.git your-project-name
    cd your-project-name
@@ -59,26 +59,26 @@ Note: Keep your API token secure and never commit it to version control. The `.e
 
 2. Make the setup scripts executable:
 
-   ```bash
+   ```zsh
    chmod +x scripts/*.sh
    ```
 
-3. Run the setup scripts in sequence (note the use of `source` to ensure environment variables are properly shared):
+3. Run the setup scripts in sequence:
 
-   ```bash
-   # First, source the environment sync script
-   source scripts/env-sync.sh
+```zsh
+   # First, run the environment sync script
+   zsh scripts/env-sync.sh
 
    # Then run the DDEV setup
-   source scripts/setup-ddev.sh
+   zsh scripts/setup-ddev.sh
 
    # Finally, setup the Astro frontend
-   source scripts/setup-astro.sh
-   ```
+   zsh scripts/setup-astro.sh
+```
 
 4. After the setup is complete, commit and push your changes:
 
-   ```bash
+   ```zsh
    # Add all the new files created during setup
    git add .
    git commit -m "Initial project setup"
@@ -131,7 +131,7 @@ After running the setup scripts, you should see:
    3. Update the KV namespace ID in wrangler.toml
    ```
 
-### Cloudflare Setup
+### Cloudflare Setup (Optional)
 
 1. Create a KV Namespace:
 
