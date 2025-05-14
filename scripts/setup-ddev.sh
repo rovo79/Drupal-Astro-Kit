@@ -203,7 +203,6 @@ print_status "Sample content has been created for Article type"
 print_status "Generating environment configuration..."
 
 # Get DDEV site URL
-set -x  # turn on debug tracing
 DDEV_URL=""
 DDEV_JSON=$(ddev describe -j 2>&1)  # capture stderr
 if [ $? -ne 0 ]; then
@@ -219,7 +218,6 @@ else
 fi
 
 # Get Drupal site UUID
-set -x  # turn on debug tracing
 SITE_UUID=""
 if ddev exec which drush > /dev/null; then
     SITE_UUID=$(ddev exec drush cget system.site uuid --format=string 2>/dev/null)
@@ -246,7 +244,6 @@ echo "COOKIE_SECRET: ${COOKIE_SECRET_VAL:0:8}..."
 
 # Determine if we need to update the .env file
 ENV_FILE="${PROJECT_ROOT}/.env"
-set -x  # turn on debug tracing
 if [ -f "$ENV_FILE" ]; then
     print_status "Updating existing .env file with Drupal configuration..."
 
@@ -294,7 +291,6 @@ if [ -f "$ENV_FILE" ]; then
 
 # Security
 # Change these values in production
-set -x  # turn on debug tracing
 SESSION_SECRET=${SESSION_SECRET_VAL}
 COOKIE_SECRET=${COOKIE_SECRET_VAL}
 EOF
@@ -313,7 +309,6 @@ else
     exit 1
 fi
 
-set -x  # turn on debug tracing
 # Check if the file was created/updated successfully
 if ! grep -i "SECRET" "$ENV_FILE" > /dev/null; then
     print_warning "SECRET variables may not have been properly written to .env"
