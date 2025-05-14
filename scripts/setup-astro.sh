@@ -202,5 +202,12 @@ echo "1. For local development, use: npx wrangler dev --remote"
 echo "2. The SESSION binding is used by Astro's Cloudflare adapter"
 echo "3. Check the Cloudflare Dashboard to manage your KV data"
 
+# 6. Install additional dependencies
+print_status "Installing additional dependencies..."
+if ! npm install jsona drupal-jsonapi-params; then
+    print_error "Failed to install additional dependencies"
+    return 1
+fi
+
 # Explicitly return success
 return 0
