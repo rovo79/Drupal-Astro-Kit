@@ -196,7 +196,7 @@ fi
 ddev composer require drupal/devel --dev
 ddev exec drush en jsonapi devel devel_generate -y
 
-ddev exec drush genc 1 --types=article
+ddev exec drush devel-generate:content 1 --bundles=article
 print_status "Sample content has been created for Article type"
 
 # 5. Generate or update .env file for Astro frontend
