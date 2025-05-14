@@ -1,6 +1,6 @@
 # 🚀 Drupal + Astro + Cloudflare Starter Kit
 
-A production-ready starter kit featuring a lightning‑fast Astro frontend on Cloudflare Pages, powered by a robust Drupal 11 backend running via DDEV.
+A production-ready starter kit featuring an Astro frontend on Cloudflare Pages, powered by a Drupal 11 backend running via DDEV.
 
 ## 🚦 Quick Start
 
@@ -65,16 +65,16 @@ Note: Keep your API token secure and never commit it to version control. The `.e
 
 3. Run the setup scripts in sequence:
 
-```zsh
-   # First, run the environment sync script
-   zsh scripts/env-sync.sh
+   ```zsh
+      # First, run the environment sync script
+      zsh scripts/env-sync.sh
 
-   # Then run the DDEV setup
-   zsh scripts/setup-ddev.sh
+      # Then run the DDEV setup
+      zsh scripts/setup-ddev.sh
 
-   # Finally, setup the Astro frontend
-   zsh scripts/setup-astro.sh
-```
+      # Finally, setup the Astro frontend
+      zsh scripts/setup-astro.sh
+   ```
 
 4. After the setup is complete, commit and push your changes:
 
@@ -95,7 +95,7 @@ After running the setup scripts, you should see:
 
 1. From `env-sync.sh`:
 
-   ```
+   ```zsh
    ✅ .env created from .env.example and updated with project-specific values
    📝 Project name: your-project-name
    🌐 Drupal API URL: http://your-project-name.ddev.site/jsonapi
@@ -103,7 +103,7 @@ After running the setup scripts, you should see:
 
 2. From `setup-ddev.sh`:
 
-   ```
+   ```zsh
    ==> Checking dependencies...
    ==> Setting up Drupal backend for project: your-project-name
    ...
@@ -129,6 +129,19 @@ After running the setup scripts, you should see:
    1. You'll need to create a KV namespace in Cloudflare
    2. The image service is configured for Cloudflare compatibility
    3. Update the KV namespace ID in wrangler.toml
+   ```
+
+## Astro Frontend Requirements
+
+The Astro frontend expects the following packages to be installed:
+
+- [jsona](https://www.npmjs.com/package/jsona)
+- [drupal-jsonapi-params](https://www.npmjs.com/package/drupal-jsonapi-params)
+
+These are installed automatically by `setup-astro.sh`, but if you set up manually, run:
+
+   ```zsh
+   npm install jsona drupal-jsonapi-params
    ```
 
 ### Cloudflare Setup (Optional)
