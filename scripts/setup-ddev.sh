@@ -193,6 +193,11 @@ if ! ddev exec drush site:install --account-name=admin --account-pass=admin -y; 
     exit 1
 fi
 
+ddev exec drush en jsonapi devel -y
+
+ddev exec drush genc 1 --types=article
+print_status "Sample content has been created for Article type"
+
 # 5. Generate or update .env file for Astro frontend
 print_status "Generating environment configuration..."
 
@@ -258,6 +263,7 @@ if [ -f "$ENV_FILE" ]; then
     }
 
     # Update only the necessary values
+    update_env_var "DRUPAL_BASE_URL" "${DDEV_URL}"
     update_env_var "DRUPAL_API_URL" "${DDEV_URL}/jsonapi"
     update_env_var "DRUPAL_API_USER" "admin"
     update_env_var "DRUPAL_API_PASS" "admin"
