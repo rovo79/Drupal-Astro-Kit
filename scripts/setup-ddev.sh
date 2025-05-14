@@ -193,7 +193,8 @@ if ! ddev exec drush site:install --account-name=admin --account-pass=admin -y; 
     exit 1
 fi
 
-ddev exec drush en jsonapi devel -y
+ddev composer require drupal/devel --dev
+ddev exec drush en jsonapi devel devel_generate -y
 
 ddev exec drush genc 1 --types=article
 print_status "Sample content has been created for Article type"
