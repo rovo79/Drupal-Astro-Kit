@@ -178,11 +178,11 @@ These are installed automatically by `setup-astro.sh`, but if you set up manuall
    npx wrangler whoami
 
    # List your KV namespaces
-   npx wrangler kv:namespace list
+   npx wrangler kv namespace list
 
    # Test your KV namespace (optional)
-   npx wrangler kv:key put --binding=SESSION "test" "value"
-   npx wrangler kv:key get --binding=SESSION "test"
+   npx wrangler kv key put --binding=SESSION "test" "value"
+   npx wrangler kv key get --binding=SESSION "test"
    ```
 
 4. Development Notes:
