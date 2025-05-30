@@ -88,7 +88,7 @@ print_status "Setting up Astro frontend for project: $PROJECT_NAME"
 
 # 1. Create the Astro project
 print_status "Creating Astro project..."
-if ! npm create astro@latest astro-frontend -- --template basics --yes; then
+if ! npm create astro@latest astro-frontend -- --template basics --yes --no-git; then
     print_error "Failed to create Astro project"
     return 1
 fi
