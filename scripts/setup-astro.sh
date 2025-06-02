@@ -123,7 +123,7 @@ export default defineConfig({
     imageService: true,
     mode: 'directory'
   }),
-  site: 'https://${PROJECT_NAME}.pages.dev',
+  site: 'https://${PROJECT_NAME}.workers.dev',
   image: {
     service: {
       entrypoint: 'astro/assets/services/compile'
@@ -137,7 +137,14 @@ export default defineConfig({
 });
 EOL
 
-# 4. Set up environment configuration
+# 4. Create .assetsignore file for Workers (as per official docs)
+print_status "Creating .assetsignore file..."
+cat > public/.assetsignore << EOL
+_worker.js
+_routes.json
+EOL
+
+# 5. Set up environment configuration
 print_status "Setting up environment configuration..."
 if [ -f "../.env" ]; then
     cp ../.env .env
@@ -145,14 +152,28 @@ else
     print_error "No .env file found. Please run env-sync.sh first."
 fi
 
-# 5. Configure wrangler.toml
-print_status "Configuring Cloudflare settings..."
+# 6. Configure wrangler.toml for Workers SSR (following official docs)
+print_status "Configuring Cloudflare Workers settings..."
 cd ..
 if [ ! -f wrangler.toml ]; then
     cat > wrangler.toml << EOL
 name = "${PROJECT_NAME}"
+main = "./astro-frontend/dist/_worker.js/index.js"
 compatibility_date = "$(date +%Y-%m-%d)"
-main = "workers-site/index.js"
+compatibility_flags = ["nodejs_compat"]
+
+# Static assets configuration for Workers
+[assets]
+binding = "ASSETS"
+directory = "./astro-frontend/dist"
+
+# Build configuration
+[build]
+command = "cd astro-frontend && npm run build"
+
+# Observability
+[observability]
+enabled = true
 
 # KV Namespace for sessions
 # You'll need to create this namespace and update the ID
@@ -161,11 +182,9 @@ main = "workers-site/index.js"
 binding = "SESSION"
 id = "your-kv-namespace-id"  # Replace this with your actual namespace ID
 
-[site]
-bucket = "./astro-frontend/dist"
-
-[build]
-command = "cd astro-frontend && npm run build"
+# Optional: Environment variables
+[vars]
+ENVIRONMENT = "production"
 EOL
     echo -e "${YELLOW}Important:${NC} You need to create a KV namespace for sessions:"
     echo "1. Run: npx wrangler kv namespace create \"SESSION\""
@@ -174,8 +193,21 @@ EOL
 else
     # Update existing wrangler.toml with project name and required fields
     sed -i '' "s|^name = .*|name = \"$PROJECT_NAME\"|" wrangler.toml
-    if ! grep -q "main = " wrangler.toml; then
-        echo "main = \"workers-site/index.js\"" >> wrangler.toml
+    if ! grep -q "^main = " wrangler.toml; then
+        sed -i '' "2i\\
+main = \"./astro-frontend/dist/_worker.js/index.js\"
+" wrangler.toml
+    fi
+    if ! grep -q "compatibility_flags" wrangler.toml; then
+        sed -i '' "/compatibility_date/a\\
+compatibility_flags = [\"nodejs_compat\"]
+" wrangler.toml
+    fi
+    if ! grep -q "\[assets\]" wrangler.toml; then
+        echo -e "\n[assets]\nbinding = \"ASSETS\"\ndirectory = \"./astro-frontend/dist\"" >> wrangler.toml
+    fi
+    if ! grep -q "\[observability\]" wrangler.toml; then
+        echo -e "\n[observability]\nenabled = true" >> wrangler.toml
     fi
     if ! grep -q "kv_namespaces" wrangler.toml; then
         echo -e "\n# KV Namespace for sessions\n# You'll need to create this namespace and update the ID\n# Run: npx wrangler kv namespace create \"SESSION\"\n[[kv_namespaces]]\nbinding = \"SESSION\"\nid = \"your-kv-namespace-id\"  # Replace this with your actual namespace ID" >> wrangler.toml
@@ -191,18 +223,19 @@ cd astro-frontend
 print_status "✅ Astro frontend setup complete!"
 echo -e "${YELLOW}Next steps:${NC}"
 echo "1. Run 'npm run dev' to start the development server"
-echo "2. Your project is configured for Cloudflare Pages deployment"
+echo "2. Your project is configured for Cloudflare Workers deployment (SSR)"
 echo "3. Environment variables are set up from your .env file"
 echo -e "\n${YELLOW}Cloudflare Setup Required:${NC}"
 echo "1. Create a KV namespace: npx wrangler kv namespace create \"SESSION\""
 echo "2. Update wrangler.toml with your namespace ID"
 echo "3. Verify setup: npx wrangler kv:namespace list"
 echo -e "\n${YELLOW}Development Notes:${NC}"
-echo "1. For local development, use: npx wrangler dev --remote"
-echo "2. The SESSION binding is used by Astro's Cloudflare adapter"
-echo "3. Check the Cloudflare Dashboard to manage your KV data"
+echo "1. For local development with Workers: npx wrangler dev"
+echo "2. The SESSION binding is available for session management"
+echo "3. Observability is enabled for monitoring and debugging"
+echo "4. SSR is enabled - pages render on-demand in Workers"
 
-# 6. Install additional dependencies
+# 7. Install additional dependencies
 print_status "Installing additional dependencies..."
 if ! npm install jsona drupal-jsonapi-params; then
     print_error "Failed to install additional dependencies"

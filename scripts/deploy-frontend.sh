@@ -7,6 +7,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Load environment variables
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+fi
+
 # Use PROJECT_NAME from env-sync.sh
 if [ -z "$PROJECT_NAME" ]; then
     echo -e "${RED}Error:${NC} PROJECT_NAME not set. Please run env-sync.sh first."
@@ -24,10 +29,12 @@ print_error() {
     exit 1
 }
 
-# Print warning message
-print_warning() {
-    echo -e "${YELLOW}Warning:${NC} $1"
-}
+# Check for required tools
+for cmd in npm npx; do
+  if ! command -v $cmd &> /dev/null; then
+    print_error "'$cmd' is not installed or not in your PATH."
+  fi
+done
 
 # Check for required environment variables
 if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
@@ -39,11 +46,6 @@ if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
 fi
 
 print_status "Deploying frontend for project: $PROJECT_NAME"
-
-# Ensure we're in the project root
-if [ ! -f "wrangler.toml" ]; then
-    print_error "wrangler.toml not found. Please run setup-astro.sh first."
-fi
 
 # Navigate to frontend directory
 cd astro-frontend
@@ -60,20 +62,14 @@ if ! npm run build; then
     print_error "Build failed. Check the build logs for details."
 fi
 
-# 3. Deploy to Pages
-print_status "Deploying to Cloudflare Pages..."
-if ! npx wrangler pages deploy ./dist \
-    --project-name="$PROJECT_NAME" \
-    --branch="main" \
-    --commit-dirty=true; then
+# 3. Deploy using Workers instead of Pages
+print_status "Deploying to Cloudflare Workers..."
+if ! npx wrangler deploy; then
     print_error "Deployment failed. Check the deployment logs for details."
 fi
 
 print_status "✅ Frontend deployment complete!"
 echo -e "${YELLOW}Next steps:${NC}"
-echo "1. Your site should be available at: https://${PROJECT_NAME}.pages.dev"
+echo "1. Your site should be available at: https://${PROJECT_NAME}.${CLOUDFLARE_WORKERS_SUBDOMAIN:-workers.dev}"
 echo "2. Check Cloudflare Dashboard for deployment status"
 echo "3. Monitor your site's performance in Cloudflare Analytics"
-
-# Note: This script is designed to be run both locally and in CI/CD environments.
-# It uses project-specific configuration from wrangler.toml and .env files.

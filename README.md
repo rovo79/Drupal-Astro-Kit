@@ -1,6 +1,6 @@
 # 🚀 Drupal + Astro + Cloudflare Starter Kit
 
-A production-ready starter kit featuring an Astro frontend on Cloudflare Pages, powered by a Drupal 11 backend running via DDEV.
+A production-ready starter kit featuring an Astro frontend on Cloudflare Workers, powered by a Drupal 11 backend running via DDEV.
 
 ## 🚦 Quick Start
 
@@ -22,10 +22,10 @@ Before running the setup scripts, you'll need to create a Cloudflare API token w
 4. Set the following permissions:
 
    **Account-level permissions:**
-   - `Cloudflare Pages Read` and `Cloudflare Pages Edit` (for Pages deployment)
+   - `Workers Scripts Read` and `Workers Scripts Edit` (for Workers deployment)
    - `Workers KV Storage Read` and `Workers KV Storage Edit` (for KV namespaces)
-   - `Workers Scripts Read` and `Workers Scripts Edit` (for Workers)
    - `Workers Routes Read` and `Workers Routes Edit` (for routing)
+   - `Account Settings Read` (for configuration)
 
    **Zone-level permissions** (if using custom domains):
    - `DNS Read` and `DNS Write` (for DNS management)
@@ -122,13 +122,19 @@ After running the setup scripts, you should see:
    ✅ Astro frontend setup complete!
    Next steps:
    1. Run 'npm run dev' to start the development server
-   2. Your project is configured for Cloudflare Pages deployment
+   2. Your project is configured for Cloudflare Workers deployment (SSR)
    3. Environment variables are set up from your .env file
 
-   Important:
-   1. You'll need to create a KV namespace in Cloudflare
-   2. The image service is configured for Cloudflare compatibility
-   3. Update the KV namespace ID in wrangler.toml
+   Cloudflare Setup Required:
+   1. Create a KV namespace: npx wrangler kv namespace create "SESSION"
+   2. Update wrangler.toml with your namespace ID
+   3. Verify setup: npx wrangler kv:namespace list
+
+   Development Notes:
+   1. For local development with Workers: npx wrangler dev
+   2. The SESSION binding is available for session management
+   3. Observability is enabled for monitoring and debugging
+   4. SSR is enabled - pages render on-demand in Workers
    ```
 
 ## Astro Frontend Requirements
@@ -144,7 +150,7 @@ These are installed automatically by `setup-astro.sh`, but if you set up manuall
    npm install jsona drupal-jsonapi-params
    ```
 
-### Cloudflare Setup (Optional)
+### Cloudflare Workers Setup (Optional)
 
 1. Create a KV Namespace:
 
@@ -186,34 +192,38 @@ These are installed automatically by `setup-astro.sh`, but if you set up manuall
    ```
 
 4. Development Notes:
-   - When using `npm run dev`, the Astro development server will use a local version of KV
-   - For production, your KV namespace will be automatically used
-   - The SESSION binding is used by Astro's Cloudflare adapter for session management
+   - For local development with Workers: `npx wrangler dev`
+   - For production deployment: `npx wrangler deploy`
+   - Your site will be available at `https://your-project-name.your-subdomain.workers.dev`
+   - The SESSION binding is available for session management in your Astro components
+   - Observability is enabled - check Workers Logs in the Cloudflare Dashboard
+   - SSR is enabled by default - pages render on-demand in Workers
    - You can manage your KV data through the Cloudflare Dashboard at:
      [Workers & Pages > KV](https://dash.cloudflare.com/?to=/:account/workers/kv/namespaces)
 
 5. Troubleshooting:
    - If you see "Invalid binding `SESSION`" in your build output, verify your KV namespace ID
    - For local development, use `npx wrangler dev --remote` to connect to your Cloudflare KV
-   - Check the [Cloudflare KV documentation](https://developers.cloudflare.com/kv/get-started/) for more details
+   - Check the [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/) for more details
+   - For KV-specific help, see the [KV documentation](https://developers.cloudflare.com/kv/get-started/)
 
 ## 📚 Documentation
 
-- [Deployment Guide](docs/deployment.md) - How to deploy your site
-- [SSR Guide](docs/ssr-guide.md) - Server-side rendering configuration
-- [GitHub Actions](docs/github-actions.md) - CI/CD workflow details
-- [Cloudflare Setup](docs/cloudflare-setup.md) - Cloudflare configuration
+- [Deployment Guide](docs/deployment.md) - How to deploy your site to Cloudflare Workers
+- [SSR Guide](docs/ssr-guide.md) - Server-side rendering with Workers configuration
+- [GitHub Actions](docs/github-actions.md) - CI/CD workflow for Workers deployment
+- [Cloudflare Setup](docs/cloudflare-setup.md) - Workers and KV configuration
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 
 ## 🏗️ Project Structure
 
-```
+```plaintext
 my-saas-kit/
 ├── astro-frontend/          # Astro frontend
 ├── drupal-backend/          # Drupal backend
 ├── scripts/                 # Setup and utility scripts
 ├── docs/                    # Documentation
-├── wrangler.toml           # Cloudflare configuration
+├── wrangler.toml           # Cloudflare Workers configuration
 ├── .env.example            # Environment template
 └── README.md               # This file
 ```
@@ -222,15 +232,41 @@ my-saas-kit/
 
 ### Local Development
 
-- Drupal Backend: `http://drupal-backend.ddev.site`
-- Astro Frontend: `http://localhost:4321`
+- Drupal Backend: `http://your-project-name.ddev.site`
+- Astro Frontend (dev): `http://localhost:4321`
+- Astro Frontend (Cloudflare Workers dev): `http://localhost:8787`
+
+### Production Deployment
+
+To deploy your frontend to Cloudflare Workers:
+
+```bash
+# Deploy using the provided script
+zsh scripts/deploy-frontend.sh
+
+# Or deploy manually
+cd astro-frontend
+npx wrangler deploy
+```
+
+Your site will be available at: `https://your-project-name.your-subdomain.workers.dev`
+
+### Cloudflare Workers Features
+
+This starter kit leverages several Cloudflare Workers capabilities:
+
+- **Server-Side Rendering (SSR)**: Pages render on-demand in Workers
+- **KV Storage**: Session management and caching with Workers KV
+- **Edge Computing**: Global distribution with minimal latency
+- **Observability**: Built-in monitoring and logging
+- **Serverless Primitives**: Ready for D1, R2, and other Workers services
 
 ### Available Scripts
 
 - `scripts/env-sync.sh` - Sync environment variables
 - `scripts/setup-ddev.sh` - Setup Drupal backend
 - `scripts/setup-astro.sh` - Setup Astro frontend
-- `scripts/deploy-frontend.sh` - Deploy frontend to Cloudflare
+- `scripts/deploy-frontend.sh` - Deploy frontend to Cloudflare Workers
 
 ## 📝 License
 
