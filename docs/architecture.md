@@ -4,11 +4,11 @@ This document provides a high-level overview of how the Drupal + Astro starter k
 
 ## System Components
 
-```
+```plaintext
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │                 │     │                 │     │                 │
-│  Drupal Backend │────►│  Astro Frontend │────►│  Cloudflare CDN │
-│  (DDEV)         │     │                 │     │                 │
+│  Drupal Backend │────►│  Astro Frontend │────►│ Cloudflare Edge │
+│  (DDEV)         │     │  (SSR/Static)   │     │   (Workers)     │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
         ▲                       ▲                        ▲
         │                       │                        │
@@ -17,20 +17,20 @@ This document provides a high-level overview of how the Drupal + Astro starter k
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │                 │     │                 │     │                 │
 │  GitHub Actions │     │  Cloudflare     │     │  Custom Domain  │
-│  (CI/CD)        │     │  Workers        │     │                 │
+│  (CI/CD)        │     │  KV Storage     │     │                 │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
 The flow above shows:
 
 - Drupal Backend provides content and API endpoints
-- Astro Frontend consumes the API and generates pages
-- Cloudflare CDN serves the frontend to users
-- Supporting services (GitHub Actions, Workers, Custom Domain) enhance the core functionality
+- Astro Frontend consumes the API and generates pages with SSR capabilities
+- Cloudflare Workers serve the frontend globally with edge computing
+- Supporting services (GitHub Actions, KV Storage, Custom Domain) enhance the core functionality
 
 ## Development Flow
 
-```
+```plaintext
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │             │     │             │     │             │
 │  Local Dev  │────►│  Staging    │────►│ Production  │
@@ -42,10 +42,12 @@ The flow above shows:
 
 ### 1. Frontend (Astro)
 
-- Serves static content through Cloudflare Pages
-- Can use SSR via Cloudflare Workers when needed
-- Communicates with Drupal backend via API
-- Benefits from Cloudflare's global CDN
+- Deploys to Cloudflare Workers with SSR capabilities
+- Supports both static generation and server-side rendering
+- Communicates with Drupal backend via JSON:API
+- Benefits from Cloudflare's global edge network
+- Integrates with KV storage for session management
+- Leverages edge computing for dynamic content
 
 ### 2. Backend (Drupal)
 
@@ -72,7 +74,7 @@ The flow above shows:
 
 ### Local Development
 
-```
+```plaintext
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │             │     │             │     │             │
 │  User       │────►│  Frontend   │     │  Backend    │
@@ -96,12 +98,12 @@ The flow above shows:
 
 ### Production Environment
 
-```
+```plaintext
 ┌─────────────┐     ┌─────────────┐     ┌─────────────────────────┐
 │             │     │             │     │                         │
-│  User       │────►│  Frontend   │     │      Backend Options    │
-│  Request    │     │  (Astro)    │     │                         │
-│             │     │  Pages      │     │                         │
+│  User       │────►│  Frontend   │────►│      Backend Options    │
+│  Request    │     │  (Workers)  │     │                         │
+│             │     │  SSR/Static │     │                         │
 └─────────────┘     └─────────────┘     └─────────────────────────┘
         │                 │                    ▲
         │                 │                    │
@@ -112,18 +114,18 @@ The flow above shows:
         ▼                 ▼                    ▼
 ┌─────────────┐     ┌─────────────────────────────────────────┐
 │             │     │                                         │
-│  CDN        │     │  Cloudflare Services                    │
-│  Cache      │     │  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
-│             │     │  │ Workers │ │  D1 DB  │ │   KV    │   │
-└─────────────┘     │  └─────────┘ └─────────┘ └─────────┘   │
-                    │  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
-                    │  │   R2    │ │ Workers │ │ Vector  │   │
-                    │  │ Storage │ │   AI    │ │  Store  │   │
-                    │  └─────────┘ └─────────┘ └─────────┘   │
-                    │  ┌─────────────────────────┐           │
-                    │  │      Drupal Backend     │           │
-                    │  │    (Enterprise Only)    │           │
-                    │  └─────────────────────────┘           │
+│  Edge       │     │  Cloudflare Services                    │
+│  Cache      │     │  ┌─────────┐ ┌─────────┐ ┌─────────┐    │
+│             │     │  │ Workers │ │  D1 DB  │ │   KV    │    │
+└─────────────┘     │  └─────────┘ └─────────┘ └─────────┘    │
+                    │  ┌─────────┐ ┌─────────┐ ┌─────────┐    │
+                    │  │   R2    │ │ Workers │ │ Vector  │    │
+                    │  │ Storage │ │   AI    │ │  Store  │    │
+                    │  └─────────┘ └─────────┘ └─────────┘    │
+                    │  ┌─────────────────────────┐            │
+                    │  │      Drupal Backend     │            │
+                    │  │    (External/Cloud)     │            │
+                    │  └─────────────────────────┘            │
                     └─────────────────────────────────────────┘
 ```
 
@@ -158,4 +160,22 @@ The data flow above shows:
 
 ## Deployment Flow
 
+```plaintext
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│             │     │             │     │             │
+│   GitHub    │────►│   Build     │────►│  Cloudflare │
+│   Push      │     │   Process   │     │   Workers   │
+│             │     │             │     │             │
+└─────────────┘     └─────────────┘     └─────────────┘
+        │                 │                     │
+        │                 │                     │
+        ▼                 ▼                     ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│             │     │             │     │             │
+│  CI/CD      │     │  Astro      │     │  Global     │
+│  Pipeline   │     │  Build      │     │  Edge       │
+│             │     │             │     │             │
+└─────────────┘     └─────────────┘     └─────────────┘
 ```
+
+This deployment flow shows how code moves from development to production through the Cloudflare Workers platform.

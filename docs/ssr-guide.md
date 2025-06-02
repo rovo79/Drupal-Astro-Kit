@@ -1,26 +1,23 @@
 # Server-Side Rendering (SSR) Guide
 
-This guide explains how to enable and configure server-side rendering in your Astro frontend.
+This guide explains how to configure and use server-side rendering with Cloudflare Workers in your Astro frontend.
 
 ## When to Use SSR
 
-Consider enabling SSR when you need:
+Consider using SSR when you need:
 
 - Dynamic content that changes per user
-- User authentication
-- Real-time data
+- User authentication and session management
+- Real-time data from APIs
 - Personalized content
-- API routes
+- SEO optimization for dynamic pages
+- Edge computing capabilities
 
-## Enabling SSR
+## SSR Configuration
 
-1. **Install Cloudflare Adapter**
+1. **Cloudflare Workers Adapter**
 
-   ```bash
-   npx astro add cloudflare
-   ```
-
-2. **Update Configuration**
+   The project comes pre-configured with the Cloudflare Workers adapter:
 
    ```js
    // astro.config.mjs
@@ -28,109 +25,185 @@ Consider enabling SSR when you need:
    import cloudflare from '@astrojs/cloudflare';
 
    export default defineConfig({
-     adapter: cloudflare(),
-     output: 'server'  // Enable SSR
+     adapter: cloudflare({
+       mode: 'advanced'
+     }),
+     output: 'server'  // Enable SSR globally
    });
    ```
 
-3. **Per-Page SSR**
+2. **Wrangler Configuration**
+
+   ```toml
+   # wrangler.toml
+   name = "your-project-name"
+   main = "./astro-frontend/dist/_worker.js/index.js"
+   compatibility_date = "2024-01-01"
+   compatibility_flags = ["nodejs_compat"]
+
+   [assets]
+   binding = "ASSETS"
+
+   [[kv_namespaces]]
+   binding = "SESSION"
+   id = "your-kv-namespace-id"
+
+   [observability]
+   enabled = true
+   ```
+
+3. **Per-Page Configuration**
 
    ```astro
    ---
-   // Add to pages that need SSR
+   // For pages that need SSR
    export const prerender = false;
-   // Your dynamic page code here
+
+   // For static pages (overrides global SSR)
+   export const prerender = true;
    ---
    ```
 
-## Deployment Configuration
+## Workers Runtime Features
 
-### GitHub Actions
+### KV Storage Integration
 
-Update your workflow file to support SSR:
-
-```yaml
-env:
-  PROJECT_NAME: ${{ github.event.repository.name }}
-  ENABLE_SSR: false  # Set to true to enable SSR
-
-jobs:
-  frontend:
-    steps:
-      - name: Deploy to Cloudflare
-        uses: cloudflare/wrangler-action@v3
-        with:
-          command: ${{ env.ENABLE_SSR == 'true' && 'deploy' || 'pages deploy' }}
+```astro
+---
+// Access KV storage in your pages
+const runtime = Astro.locals.runtime;
+const sessionData = await runtime.env.SESSION.get('user-session');
+---
 ```
 
-### Required Secrets
+### Environment Variables
 
-```yaml
-CLOUDFLARE_API_TOKEN
-CLOUDFLARE_ACCOUNT_ID
-CLOUDFLARE_WORKER_NAME  # Optional, defaults to PROJECT_NAME
+```astro
+---
+// Access environment variables
+const apiUrl = Astro.locals.runtime.env.DRUPAL_API_URL;
+const response = await fetch(`${apiUrl}/node/article`);
+---
+```
+
+### Request Context
+
+```astro
+---
+// Access request information
+const userAgent = Astro.request.headers.get('user-agent');
+const clientIP = Astro.request.headers.get('cf-connecting-ip');
+const country = Astro.request.cf?.country;
+---
+```
+
+## Deployment Configuration
+
+### Automated Deployment
+
+The project includes automated Workers deployment:
+
+```bash
+# Deploy using the provided script
+zsh scripts/deploy-frontend.sh
+
+# Or deploy manually
+cd astro-frontend
+npx wrangler deploy
+```
+
+### Required Environment Variables
+
+```bash
+CLOUDFLARE_API_TOKEN=your_api_token
+DRUPAL_API_URL=https://your-drupal-backend.com/jsonapi
+NODE_ENV=production
+```
+
+### KV Namespace Setup
+
+```bash
+# Create KV namespace for sessions
+npx wrangler kv namespace create "SESSION"
+
+# Update wrangler.toml with the returned namespace ID
 ```
 
 ## Environment-Specific Settings
 
 ### Development
 
-```yaml
-ENABLE_SSR: false
-CLOUDFLARE_ENVIRONMENT: development
+```bash
+# Local development with Workers
+npx wrangler dev
+
+# Access at http://localhost:8787
 ```
 
 ### Staging
 
-```yaml
-ENABLE_SSR: true
-CLOUDFLARE_ENVIRONMENT: staging
+```bash
+# Deploy to staging environment
+npx wrangler deploy --env staging
 ```
 
 ### Production
 
-```yaml
-ENABLE_SSR: true
-CLOUDFLARE_ENVIRONMENT: production
+```bash
+# Deploy to production
+npx wrangler deploy --env production
 ```
 
 ## Best Practices
 
-1. **Start Static**
-   - Begin with static rendering
-   - Enable SSR only when needed
-   - Use static pages for content that doesn't change
+1. **Start with Hybrid Rendering**
+   - Use static rendering for unchanging content
+   - Enable SSR only for dynamic pages
+   - Leverage edge caching for better performance
 
-2. **Performance**
-   - Implement caching strategies
-   - Monitor Worker usage and costs
-   - Use appropriate caching headers
+2. **Performance Optimization**
+   - Implement KV storage for session management
+   - Use appropriate cache headers
+   - Monitor Worker CPU usage and execution time
 
-3. **Testing**
-   - Test SSR locally before enabling
-   - Verify all dynamic routes
-   - Check error handling
+3. **Testing and Development**
+   - Test locally with `npx wrangler dev`
+   - Use `--remote` flag to test with live KV storage
+   - Verify all dynamic routes work correctly
 
-4. **Monitoring**
-   - Set up error tracking
-   - Monitor response times
-   - Track Worker invocations
+4. **Monitoring and Observability**
+   - Enable observability in wrangler.toml
+   - Monitor Worker logs in Cloudflare Dashboard
+   - Set up alerts for error rates and performance
 
 ## Troubleshooting
 
 Common SSR issues and solutions:
 
-1. **Cold Starts**
+1. **Worker Build Errors**
+   - Check `compatibility_flags` in wrangler.toml
+   - Verify Node.js compatibility
+   - Review build output for asset issues
+
+2. **KV Storage Issues**
+   - Verify namespace ID in wrangler.toml
+   - Check KV permissions and access
+   - Use `--remote` flag for local development
+
+3. **Performance Issues**
+   - Monitor Worker execution time
+   - Optimize database queries
+   - Implement caching strategies
    - Implement warm-up requests
    - Use appropriate caching
    - Consider static generation for popular pages
 
-2. **Memory Issues**
+4. **Memory Issues**
    - Monitor Worker memory usage
    - Optimize large responses
    - Use streaming for large datasets
 
-3. **Timeout Errors**
+5. **Timeout Errors**
    - Adjust Worker timeout settings
    - Implement request timeouts
    - Use background tasks for long operations

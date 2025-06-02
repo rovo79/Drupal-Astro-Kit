@@ -77,24 +77,47 @@ This guide covers common issues and their solutions for the Drupal + Astro start
    rm -rf dist
    ```
 
-## Cloudflare Issues
+## Cloudflare Workers Issues
 
 ### Deployment Problems
 
-1. **Failed Deployments**
-   - Check GitHub Actions logs
-   - Verify Cloudflare API token
-   - Check build settings
+1. **Failed Workers Deployments**
+   - Check `wrangler.toml` configuration
+   - Verify Cloudflare API token permissions
+   - Review build output for errors
+   - Check compatibility flags and Node.js version
 
-2. **Custom Domain Issues**
-   - Verify DNS records
-   - Check SSL certificate
-   - Review domain settings
+2. **KV Storage Issues**
+   - Verify KV namespace ID in `wrangler.toml`
+   - Check KV namespace permissions
+   - Test KV access with `npx wrangler kv key list`
+   - Use `--remote` flag for local development
 
-3. **Worker Errors**
-   - Check Worker logs
-   - Verify Worker configuration
-   - Test Worker locally
+3. **SSR Errors**
+   - Check Worker logs in Cloudflare Dashboard
+   - Verify Astro configuration for Workers
+   - Review asset handling in `.assetsignore`
+   - Test locally with `npx wrangler dev`
+
+4. **Custom Domain Issues**
+   - Verify DNS records in Cloudflare Dashboard
+   - Check SSL certificate status
+   - Review Workers route configuration
+   - Ensure domain is proxied through Cloudflare
+
+### Performance Issues
+
+1. **Slow Worker Execution**
+   - Monitor CPU usage in Workers Analytics
+   - Check for blocking operations
+   - Optimize database queries
+   - Review memory usage patterns
+
+2. **Cold Start Issues**
+   - Minimize Worker bundle size
+   - Avoid heavy imports in global scope
+   - Use lightweight dependencies
+   - Consider implementing keep-alive strategies
 
 ## Environment Issues
 
@@ -121,7 +144,7 @@ This guide covers common issues and their solutions for the Drupal + Astro start
    - Check Cloudflare secrets
    - Review environment variables
 
-## Performance Issues
+## General Performance Issues
 
 ### Slow Loading
 

@@ -4,27 +4,48 @@ This guide covers how to deploy your Drupal + Astro site to production.
 
 ## Frontend Deployment
 
-### Cloudflare Pages
+### Cloudflare Workers
 
 1. **Initial Setup**
-   - Connect your GitHub repository to Cloudflare Pages
-   - Configure build settings:
-     - Build command: `npm run build`
-     - Build output directory: `dist`
-     - Node.js version: 20
+   - Configure your `wrangler.toml` file with project settings
+   - Set up KV namespaces for session management
+   - Deploy using the provided script or Wrangler CLI
 
-2. **Environment Variables**
+2. **Build and Deploy**
+
+   ```bash
+   # Using the provided script
+   zsh scripts/deploy-frontend.sh
+
+   # Or manually
+   cd astro-frontend
+   npm run build
+   npx wrangler deploy
+   ```
+
+3. **Environment Variables**
 
    ```bash
    NODE_ENV=production
-   VITE_API_URL=https://your-drupal-backend.com
+   DRUPAL_API_URL=https://your-drupal-backend.com/jsonapi
+   CLOUDFLARE_API_TOKEN=your_api_token
    ```
 
-3. **Custom Domains**
-   - Go to Cloudflare Dashboard → Pages
+4. **Verify Deployment**
+
+   ```bash
+   # Check deployment status
+   npx wrangler whoami
+
+   # Test your deployed site
+   curl https://your-project-name.your-subdomain.workers.dev
+   ```
+
+5. **Custom Domains**
+   - Go to Cloudflare Dashboard → Workers & Pages
    - Select your project
-   - Click "Custom domains"
-   - Follow the setup wizard
+   - Click "Settings" → "Triggers"
+   - Add custom domain following the setup wizard
 
 ## Backend Deployment
 

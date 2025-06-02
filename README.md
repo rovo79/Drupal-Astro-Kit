@@ -116,7 +116,7 @@ After running the setup scripts, you should see:
 
 3. From `setup-astro.sh`:
 
-   ```
+   ```bash
    ==> Setting up Astro frontend for project: your-project-name
    ...
    ✅ Astro frontend setup complete!

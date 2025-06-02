@@ -1,15 +1,15 @@
 # GitHub Actions Guide
 
-This guide explains the CI/CD pipeline configuration using GitHub Actions.
+This guide explains the CI/CD pipeline configuration using GitHub Actions for Cloudflare Workers deployment.
 
 ## Workflow Overview
 
 The project uses GitHub Actions for:
 
-- Automated testing
-- Frontend deployment to Cloudflare Pages
+- Automated testing and validation
+- Frontend deployment to Cloudflare Workers
 - Backend deployment via DDEV
-- Environment-specific deployments
+- Environment-specific deployments with SSR support
 
 ## Workflow Configuration
 
@@ -34,12 +34,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check Required Files
         run: |
-          if [ ! -f ".env" ]; then
-            echo "::error::.env file is missing"
+          if [ ! -f ".env.example" ]; then
+            echo "::error::.env.example file is missing"
             exit 1
           fi
           if [ ! -f "wrangler.toml" ]; then
             echo "::error::wrangler.toml file is missing"
+            exit 1
+          fi
+          if [ ! -f "astro-frontend/.assetsignore" ]; then
+            echo "::error::.assetsignore file is missing"
             exit 1
           fi
 
@@ -65,17 +69,15 @@ jobs:
           npm run build
         env:
           NODE_ENV: ${{ env.ENVIRONMENT }}
-          VITE_API_URL: ${{ env.ENVIRONMENT == 'production' && secrets.PROD_API_URL || secrets.STAGING_API_URL }}
+          DRUPAL_API_URL: ${{ env.ENVIRONMENT == 'production' && secrets.PROD_API_URL || secrets.STAGING_API_URL }}
 
-      - name: Deploy to Cloudflare
+      - name: Deploy to Cloudflare Workers
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: ${{ env.ENABLE_SSR == 'true' && 'deploy' || 'pages deploy' }}
-          projectName: ${{ env.PROJECT_NAME }}
-          directory: astro-frontend/dist
+          command: deploy
+          workingDirectory: astro-frontend
 
   backend:
     needs: validate
@@ -106,38 +108,36 @@ jobs:
 
 ```yaml
 ENVIRONMENT: development
-ENABLE_SSR: false
+NODE_ENV: development
 ```
 
 ### Staging
 
 ```yaml
 ENVIRONMENT: staging
-ENABLE_SSR: true
+NODE_ENV: production
 ```
 
 ### Production
 
 ```yaml
 ENVIRONMENT: production
-ENABLE_SSR: true
+NODE_ENV: production
 ```
 
 ## Required Secrets
 
 ```yaml
-# Cloudflare
+# Cloudflare Workers
 CLOUDFLARE_API_TOKEN
-CLOUDFLARE_ACCOUNT_ID
-CLOUDFLARE_PROJECT_NAME
-
-# DDEV
-PROD_DDEV_HOST
-PROD_DDEV_SSH_KEY
 
 # API URLs
 STAGING_API_URL
 PROD_API_URL
+
+# DDEV (for backend deployment)
+PROD_DDEV_HOST
+PROD_DDEV_SSH_KEY
 ```
 
 ## Setting Up Secrets
@@ -146,6 +146,14 @@ PROD_API_URL
 2. Navigate to Settings > Secrets and variables > Actions
 3. Click "New repository secret"
 4. Add each secret with its corresponding value
+
+### Cloudflare API Token
+
+Create a token with these permissions:
+
+- Account: `Cloudflare Workers:Edit`
+- Zone: `Zone Settings:Read` (if using custom domains)
+- Zone: `DNS:Edit` (if using custom domains)
 
 ## Best Practices
 

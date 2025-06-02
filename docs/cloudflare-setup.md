@@ -1,29 +1,29 @@
-# Cloudflare Setup Guide
+# Cloudflare Workers Setup Guide
 
-This guide explains how to configure Cloudflare for your Drupal + Astro project.
+This guide explains how to configure Cloudflare Workers for your Drupal + Astro project.
 
-## Cloudflare Pages vs Workers
+## Cloudflare Workers vs Pages
 
-### Cloudflare Pages
+### Cloudflare Workers (Recommended)
+
+- Serverless computing platform with SSR support
+- Handles Astro frontend deployment with server-side rendering
+- Features:
+  - Server-side rendering (SSR)
+  - Edge computing capabilities
+  - KV storage integration
+  - Built-in observability
+  - Global distribution
+  - Automatic scaling
+
+### Cloudflare Pages (Legacy)
 
 - Static site hosting platform
-- Handles Astro frontend deployment
-- Features:
-  - Automatic builds from Git
-  - Asset optimization
-  - Global CDN distribution
-  - Automatic SSL certificates
-  - Preview deployments
-
-### Cloudflare Workers
-
-- Serverless computing platform
-- Optional for additional functionality
+- Limited to static site generation
 - Use cases:
-  - API routes
-  - Server-side rendering (SSR)
-  - Custom middleware
-  - Edge functions
+  - Static-only websites
+  - JAMstack applications
+  - No server-side rendering needed
 
 ## Initial Setup
 
@@ -32,23 +32,64 @@ This guide explains how to configure Cloudflare for your Drupal + Astro project.
    - Verify your email
    - Add your domain (if using custom domain)
 
-2. **Configure Pages Project**
-   - Go to Pages dashboard
-   - Click "Create a project"
-   - Connect your GitHub repository
-   - Configure build settings:
+2. **Configure Workers Project**
+   - Use the provided `wrangler.toml` configuration
+   - Set up KV namespaces for session management
+   - Configure SSR settings:
 
-     ```yaml
-     Build command: npm run build
-     Build output directory: dist
-     Node.js version: 20
+     ```toml
+     name = "your-project-name"
+     main = "./astro-frontend/dist/_worker.js/index.js"
+     compatibility_date = "2024-01-01"
+     compatibility_flags = ["nodejs_compat"]
+
+     [assets]
+     binding = "ASSETS"
+
+     [[kv_namespaces]]
+     binding = "SESSION"
+     id = "your-kv-namespace-id"
+
+     [observability]
+     enabled = true
      ```
 
 3. **Environment Variables**
 
    ```bash
    NODE_ENV=production
-   VITE_API_URL=https://your-drupal-backend.com
+   DRUPAL_API_URL=https://your-drupal-backend.com/jsonapi
+   ```
+
+## Workers-Specific Setup
+
+1. **KV Namespace Creation**
+
+   ```bash
+   # Create KV namespace for sessions
+   npx wrangler kv namespace create "SESSION"
+
+   # Update wrangler.toml with the returned namespace ID
+   # The command will output the configuration needed
+   ```
+
+2. **Asset Configuration**
+
+   ```bash
+   # The .assetsignore file is automatically created with:
+   _worker.js
+   _routes.json
+   ```
+
+3. **Deployment**
+
+   ```bash
+   # Deploy your Workers application
+   cd astro-frontend
+   npx wrangler deploy
+
+   # Your site will be available at:
+   # https://your-project-name.your-subdomain.workers.dev
    ```
 
 ## Custom Domains
@@ -59,16 +100,16 @@ This guide explains how to configure Cloudflare for your Drupal + Astro project.
    - SSL certificates are automatically provisioned
 
 2. **Setup Process**
-   - Go to Pages dashboard
+   - Go to Workers dashboard
    - Select your project
-   - Click "Custom domains"
-   - Click "Set up a custom domain"
+   - Click "Settings" → "Triggers"
+   - Click "Add Custom Domain"
    - Follow the setup wizard
 
 3. **Multiple Domains**
    - Add multiple custom domains
    - Each domain gets its own SSL certificate
-   - All domains point to the same deployment
+   - All domains point to the same Worker deployment
 
 ## Security Features
 
@@ -89,37 +130,40 @@ This guide explains how to configure Cloudflare for your Drupal + Astro project.
 
 ## Performance Optimization
 
-1. **Caching**
-   - Browser cache TTL
-   - Edge cache rules
-   - Cache purge options
+1. **Workers Features**
+   - Edge computing with global distribution
+   - Server-side rendering for dynamic content
+   - Built-in caching and optimization
+   - KV storage for session management
 
-2. **Image Optimization**
-   - Automatic image optimization
-   - WebP conversion
-   - Responsive images
+2. **Asset Optimization**
+   - Automatic asset bundling
+   - JavaScript and CSS optimization
+   - Response compression
 
-3. **Minification**
-   - JavaScript minification
-   - CSS minification
-   - HTML minification
+3. **Observability**
+   - Built-in monitoring and logging
+   - Real-time performance metrics
+   - Error tracking and debugging
 
 ## Monitoring
 
-1. **Analytics**
-   - Page views
-   - Bandwidth usage
-   - Cache hit ratio
+1. **Workers Analytics**
+   - Request count and latency
+   - Error rates and status codes
+   - Geographic distribution
+   - CPU and memory usage
 
 2. **Logs**
-   - Request logs
-   - Error logs
-   - Security events
+   - Real-time Worker logs
+   - Console logs and errors
+   - Exception tracking
+   - Performance metrics
 
 3. **Alerts**
-   - Performance alerts
-   - Security alerts
-   - Usage alerts
+   - Performance threshold alerts
+   - Error rate monitoring
+   - Resource usage warnings
 
 ## Best Practices
 
