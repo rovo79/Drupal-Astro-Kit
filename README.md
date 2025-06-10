@@ -24,10 +24,9 @@ Before running the setup scripts, you'll need to create a Cloudflare API token w
    **Account-level permissions:**
    - `Workers Scripts Read` and `Workers Scripts Edit` (for Workers deployment)
    - `Workers KV Storage Read` and `Workers KV Storage Edit` (for KV namespaces)
-   - `Workers Routes Read` and `Workers Routes Edit` (for routing)
-   - `Account Settings Read` (for configuration)
 
    **Zone-level permissions** (if using custom domains):
+   - `Workers Routes Read` and `Workers Routes Edit` (for routing)
    - `DNS Read` and `DNS Write` (for DNS management)
    - `SSL and Certificates Read` and `SSL and Certificates Write` (for HTTPS)
 
