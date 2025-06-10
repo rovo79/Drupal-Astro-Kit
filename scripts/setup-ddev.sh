@@ -328,17 +328,5 @@ echo "   - Run 'ddev drush status' to check Drupal status"
 if ! grep -i "SECRET" "$ENV_FILE" > /dev/null; then
     print_warning "SECRET variables may not have been properly written to .env"
 fi
-
-print_status "✅ Drupal backend setup complete!"
-echo -e "${YELLOW}Next steps:${NC}"
-echo "1. Run 'ddev launch' to open your Drupal site at ${DDEV_URL}"
-echo "2. Your project name is: ${PROJECT_NAME}"
-echo "3. Drupal admin credentials:"
-echo "   - Username: admin"
-echo "   - Password: admin"
-echo "4. To verify the setup:"
-echo "   - Run 'ddev status' to check DDEV services"
-echo "   - Run 'ddev drush status' to check Drupal status"
-
 echo -e "\n${GREEN}✅ setup-ddev.sh completed successfully${NC}"
 exit 0
