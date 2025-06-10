@@ -186,10 +186,6 @@ id = "your-kv-namespace-id"  # Replace this with your actual namespace ID
 [vars]
 ENVIRONMENT = "production"
 EOL
-    echo -e "${YELLOW}Important:${NC} You need to create a KV namespace for sessions:"
-    echo "1. Run: npx wrangler kv namespace create \"SESSION\""
-    echo "2. Copy the namespace ID from the output"
-    echo "3. Update the 'id' in wrangler.toml with your namespace ID"
 else
     # Update existing wrangler.toml with project name and required fields
     sed -i '' "s|^name = .*|name = \"$PROJECT_NAME\"|" wrangler.toml
@@ -211,12 +207,15 @@ compatibility_flags = [\"nodejs_compat\"]
     fi
     if ! grep -q "kv_namespaces" wrangler.toml; then
         echo -e "\n# KV Namespace for sessions\n# You'll need to create this namespace and update the ID\n# Run: npx wrangler kv namespace create \"SESSION\"\n[[kv_namespaces]]\nbinding = \"SESSION\"\nid = \"your-kv-namespace-id\"  # Replace this with your actual namespace ID" >> wrangler.toml
-        echo -e "${YELLOW}Important:${NC} You need to create a KV namespace for sessions:"
-        echo "1. Run: npx wrangler kv namespace create \"SESSION\""
-        echo "2. Copy the namespace ID from the output"
-        echo "3. Update the 'id' in wrangler.toml with your namespace ID"
     fi
 fi
+
+# Insert single consolidated KV namespace instruction block
+print_status "Configuring KV namespace for sessions"
+echo -e "${YELLOW}KV namespace required:${NC}"
+echo "1. From project root, run: npx wrangler kv namespace create \"SESSION\""
+echo "2. Copy the namespace ID from the output"
+echo "3. Update wrangler.toml [[kv_namespaces]].id with that ID"
 
 cd astro-frontend
 
@@ -225,15 +224,6 @@ echo -e "${YELLOW}Next steps:${NC}"
 echo "1. Run 'npm run dev' to start the development server"
 echo "2. Your project is configured for Cloudflare Workers deployment (SSR)"
 echo "3. Environment variables are set up from your .env file"
-echo -e "\n${YELLOW}Cloudflare Setup Required:${NC}"
-echo "1. Create a KV namespace: npx wrangler kv namespace create \"SESSION\""
-echo "2. Update wrangler.toml with your namespace ID"
-echo "3. Verify setup: npx wrangler kv:namespace list"
-echo -e "\n${YELLOW}Development Notes:${NC}"
-echo "1. For local development with Workers: npx wrangler dev"
-echo "2. The SESSION binding is available for session management"
-echo "3. Observability is enabled for monitoring and debugging"
-echo "4. SSR is enabled - pages render on-demand in Workers"
 
 # 7. Install additional dependencies
 print_status "Installing additional dependencies..."
