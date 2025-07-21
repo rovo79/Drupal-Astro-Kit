@@ -56,23 +56,11 @@ Note: Keep your API token secure and never commit it to version control. The `.e
    git remote add origin https://github.com/your-username/new-repo-name.git
    ```
 
-2. Make the setup scripts executable:
+2. Run the setup script:
 
    ```zsh
-   chmod +x scripts/*.sh
-   ```
-
-3. Run the setup scripts in sequence:
-
-   ```zsh
-      # First, run the environment sync script
-      zsh scripts/env-sync.sh
-
-      # Then run the DDEV setup
-      zsh scripts/setup-ddev.sh
-
-      # Finally, setup the Astro frontend
-      zsh scripts/setup-astro.sh
+   chmod +x setup.sh
+   ./setup.sh
    ```
 
 4. After the setup is complete, commit and push your changes:
@@ -262,9 +250,7 @@ This starter kit leverages several Cloudflare Workers capabilities:
 
 ### Available Scripts
 
-- `scripts/env-sync.sh` - Sync environment variables
-- `scripts/setup-ddev.sh` - Setup Drupal backend
-- `scripts/setup-astro.sh` - Setup Astro frontend
+- `setup.sh` - The main setup script for the project.
 - `scripts/deploy-frontend.sh` - Deploy frontend to Cloudflare Workers
 
 ## 📝 License

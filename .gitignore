@@ -7,3 +7,4 @@ drupal-backend/web/sites/*/settings*.php
 drupal-backend/web/sites/*/services*.yml
 drupal-backend/web/sites/*/files
 drupal-backend/web/sites/*/private
+setup/node_modules/*
