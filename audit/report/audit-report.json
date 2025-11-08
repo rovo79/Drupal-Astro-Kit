@@ -1,0 +1,196 @@
+{
+  "generatedAt": "2025-11-08T20:45:09.925Z",
+  "findings": [
+    {
+      "id": "finding-b5ca464d-02c5-4d5f-becd-a70bf6b37841",
+      "category": "setup",
+      "severity": "medium",
+      "description": "PROJECT_NAME is missing from .env. Setup script should stamp it during bootstrap.",
+      "evidence": "/Users/rob/Dev/Drupal_Astro_Kit/.env",
+      "recommendationId": "rec-b4bd66b5-ddd9-43e8-9bde-37884c491557"
+    },
+    {
+      "id": "finding-38ac9231-61bb-47fd-987e-6a7accc426a6",
+      "category": "setup",
+      "severity": "high",
+      "description": "DRUPAL_API_URL is missing from .env. JSON:API clients rely on this value.",
+      "evidence": "/Users/rob/Dev/Drupal_Astro_Kit/.env",
+      "recommendationId": "rec-c7de2471-3397-4dbf-8e86-9a905c22d3e5"
+    },
+    {
+      "id": "finding-256dbb83-db3d-4356-bf27-e34fe76abdbf",
+      "category": "setup",
+      "severity": "high",
+      "description": "Required command \"wrangler\" is not available in PATH.",
+      "evidence": "PATH",
+      "recommendationId": "rec-25a1625a-38af-4bbf-8e48-edcced2c34a1"
+    },
+    {
+      "id": "finding-2d906948-fb8d-49cc-b18a-3b53bcbe3b98",
+      "category": "setup",
+      "severity": "medium",
+      "description": "astro-frontend does not exist. Setup automation should provision this artifact.",
+      "evidence": "/Users/rob/Dev/Drupal_Astro_Kit/astro-frontend",
+      "recommendationId": "rec-df164cd9-81fd-4786-aa49-e3827fb8e02f"
+    },
+    {
+      "id": "finding-4a84291f-414a-478a-9c1f-a0bcda95c23b",
+      "category": "setup",
+      "severity": "high",
+      "description": "wrangler.toml does not exist. Setup automation should provision this artifact.",
+      "evidence": "/Users/rob/Dev/Drupal_Astro_Kit/wrangler.toml",
+      "recommendationId": "rec-351ed5af-df86-46d2-ab03-73683312cdd9"
+    },
+    {
+      "id": "finding-9d903ec9-351d-4785-80bc-bdb3a06a49d5",
+      "category": "setup",
+      "severity": "medium",
+      "description": "astro-frontend/astro.config.mjs does not exist. Setup automation should provision this artifact.",
+      "evidence": "/Users/rob/Dev/Drupal_Astro_Kit/astro-frontend/astro.config.mjs",
+      "recommendationId": "rec-27ab4f72-5a81-42ae-a4a9-f052a3b9e283"
+    },
+    {
+      "id": "finding-71079824-9150-45ad-bb64-8686ab53ac04",
+      "category": "setup",
+      "severity": "medium",
+      "description": "Drupal site at http://Drupal_Astro_Kit.ddev.site is not reachable (TypeError).",
+      "evidence": "fetch failed",
+      "recommendationId": "rec-520bb046-4fd1-44c2-b715-4d02cab423e2"
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "rec-b4bd66b5-ddd9-43e8-9bde-37884c491557",
+      "relatedFindingIds": [
+        "finding-b5ca464d-02c5-4d5f-becd-a70bf6b37841"
+      ],
+      "action": "Update .env with PROJECT_NAME matching the repository directory name",
+      "impact": "DX",
+      "effort": "trivial",
+      "status": "proposed"
+    },
+    {
+      "id": "rec-c7de2471-3397-4dbf-8e86-9a905c22d3e5",
+      "relatedFindingIds": [
+        "finding-38ac9231-61bb-47fd-987e-6a7accc426a6"
+      ],
+      "action": "Ensure setup automation appends DRUPAL_API_URL to .env after sync",
+      "impact": "correctness",
+      "effort": "trivial",
+      "status": "proposed"
+    },
+    {
+      "id": "rec-25a1625a-38af-4bbf-8e48-edcced2c34a1",
+      "relatedFindingIds": [
+        "finding-256dbb83-db3d-4356-bf27-e34fe76abdbf"
+      ],
+      "action": "Install or expose the \"wrangler\" CLI before running ./setup.sh",
+      "impact": "DX",
+      "effort": "low",
+      "status": "proposed"
+    },
+    {
+      "id": "rec-df164cd9-81fd-4786-aa49-e3827fb8e02f",
+      "relatedFindingIds": [
+        "finding-2d906948-fb8d-49cc-b18a-3b53bcbe3b98"
+      ],
+      "action": "Run ./setup.sh to create astro-frontend",
+      "impact": "DX",
+      "effort": "low",
+      "status": "proposed"
+    },
+    {
+      "id": "rec-351ed5af-df86-46d2-ab03-73683312cdd9",
+      "relatedFindingIds": [
+        "finding-4a84291f-414a-478a-9c1f-a0bcda95c23b"
+      ],
+      "action": "Run ./setup.sh to create wrangler.toml",
+      "impact": "DX",
+      "effort": "low",
+      "status": "proposed"
+    },
+    {
+      "id": "rec-27ab4f72-5a81-42ae-a4a9-f052a3b9e283",
+      "relatedFindingIds": [
+        "finding-9d903ec9-351d-4785-80bc-bdb3a06a49d5"
+      ],
+      "action": "Run ./setup.sh to create astro-frontend/astro.config.mjs",
+      "impact": "DX",
+      "effort": "low",
+      "status": "proposed"
+    },
+    {
+      "id": "rec-520bb046-4fd1-44c2-b715-4d02cab423e2",
+      "relatedFindingIds": [
+        "finding-71079824-9150-45ad-bb64-8686ab53ac04"
+      ],
+      "action": "Start DDEV with \"ddev start\" and ensure http://Drupal_Astro_Kit.ddev.site is reachable",
+      "impact": "reliability",
+      "effort": "low",
+      "status": "proposed"
+    }
+  ],
+  "gateResults": [
+    {
+      "gate": "setup",
+      "passed": false,
+      "details": "High severity setup findings detected. Resolve before continuing to SSR/API audits.",
+      "timestamp": "2025-11-08T20:45:10.061Z"
+    }
+  ],
+  "diagnostics": [
+    {
+      "level": "info",
+      "message": "Commands available: ddev, docker, npm, npx",
+      "target": "setup"
+    },
+    {
+      "level": "warn",
+      "message": "Missing commands: wrangler",
+      "target": "setup"
+    },
+    {
+      "level": "info",
+      "message": ".env present: true",
+      "target": "setup"
+    },
+    {
+      "level": "warn",
+      "message": "Drupal probe failed (http://Drupal_Astro_Kit.ddev.site)",
+      "target": "setup"
+    }
+  ],
+  "metadata": {
+    "issuedBy": "audit/index.js",
+    "ranTargets": [
+      "setup"
+    ],
+    "collectors": [
+      {
+        "target": "setup",
+        "envExists": true,
+        "projectName": "Drupal_Astro_Kit",
+        "drupalProbe": {
+          "url": "http://Drupal_Astro_Kit.ddev.site",
+          "ok": false,
+          "status": 0,
+          "durationMs": 120.01462500000002
+        },
+        "missingCommands": [
+          "wrangler"
+        ],
+        "missingPaths": [
+          "astro-frontend",
+          "wrangler.toml",
+          "astro-frontend/astro.config.mjs"
+        ]
+      },
+      {
+        "target": "setup",
+        "status": "ok",
+        "findingCount": 7,
+        "recommendationCount": 7
+      }
+    ]
+  }
+}

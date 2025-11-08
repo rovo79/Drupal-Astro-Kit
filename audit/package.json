@@ -1,0 +1,27 @@
+{
+  "name": "drupal-astro-audit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Audit tooling for Drupal + Astro + Cloudflare starter kit",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "audit:setup": "node ./index.js --target setup",
+    "audit:ssr": "node ./index.js --target ssr",
+    "audit:api": "node ./index.js --target api",
+    "audit:kv": "node ./index.js --target kv",
+    "audit:ci": "node ./index.js --target ci",
+    "audit:docs": "node ./index.js --target docs",
+    "audit:all": "node ./index.js --target all"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "chalk": "^5.3.0",
+    "drupal-jsonapi-params": "^3.0.0",
+    "jsona": "^1.12.1",
+    "yargs": "^17.7.2"
+  }
+}
