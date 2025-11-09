@@ -1,0 +1,17 @@
+{"type":"entity","name":"Drupal_Astro_Kit","entityType":"project","observations":["Full-stack web development project combining Drupal backend with Astro frontend","Located at /Users/rob/Dev/Drupal_Astro_Kit","Contains setup scripts and documentation for deployment","Has workspace configuration file Drupal_Astro_Kit.code-workspace","Includes documentation for architecture, deployment, SSR, and troubleshooting"]}
+{"type":"entity","name":"MCP_Configuration","entityType":"configuration","observations":["Uses Model Context Protocol with multiple servers","Configured with Playwright, Markitdown, Memory, and Context7 servers","Memory server configured with file path /Users/rob/Dev/Drupal_Astro_Kit/memory.json","All servers use npx or uvx for execution","Configuration stored in mcp.json file"]}
+{"type":"entity","name":"Astro","entityType":"technology","observations":["Frontend framework used in the project","Supports server-side rendering (SSR)","Part of the modern web stack in this project","Paired with Drupal as headless CMS backend"]}
+{"type":"entity","name":"Drupal","entityType":"technology","observations":["Content management system used as backend","Configured as headless CMS","Located in drupal-backend directory","Provides API endpoints for frontend consumption"]}
+{"type":"entity","name":"Project_Documentation","entityType":"documentation","observations":["Comprehensive docs folder with multiple guides","Includes architecture.md for system design documentation","Contains deployment.md for deployment procedures","Has cloudflare-setup.md for CDN configuration","Includes github-actions.md for CI/CD setup","Features ssr-guide.md for server-side rendering guidance","Contains troubleshooting.md for common issues"]}
+{"type":"entity","entityType":"environment","name":"Development_Environment","observations":["Running on macOS system","Uses Zsh shell by default","Has Node.js ecosystem with npm/npx","Python environment with uvx package manager","VS Code as primary development environment","Git repository hosted on GitHub (rovo79/Drupal_Astro_Kit)"]}
+{"type":"entity","entityType":"script","name":"Setup_Scripts","observations":["Main setup.sh script in project root","deploy-frontend.sh for frontend deployment","setup-mcp.sh for MCP server configuration","CLI setup tool at setup/cli.js","UI setup tool at setup/ui.js","All scripts designed for automated project initialization"]}
+{"type":"relation","from":"Drupal_Astro_Kit","to":"Astro","relationType":"uses_frontend"}
+{"type":"relation","from":"Drupal_Astro_Kit","to":"Drupal","relationType":"uses_backend"}
+{"type":"relation","from":"Drupal_Astro_Kit","to":"MCP_Configuration","relationType":"configured_with"}
+{"type":"relation","from":"Drupal_Astro_Kit","to":"Project_Documentation","relationType":"documented_by"}
+{"type":"relation","from":"Astro","to":"Drupal","relationType":"consumes_api_from"}
+{"type":"relation","from":"MCP_Configuration","to":"Drupal_Astro_Kit","relationType":"stores_memory_in"}
+{"type":"relation","from":"Drupal_Astro_Kit","relationType":"runs_on","to":"Development_Environment"}
+{"type":"relation","from":"Drupal_Astro_Kit","relationType":"automated_by","to":"Setup_Scripts"}
+{"type":"relation","from":"Setup_Scripts","relationType":"configures","to":"MCP_Configuration"}
+{"type":"relation","from":"Development_Environment","relationType":"supports","to":"MCP_Configuration"}

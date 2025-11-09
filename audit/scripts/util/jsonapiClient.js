@@ -1,4 +1,4 @@
-import Jsona from 'jsona';
+import { Jsona } from 'jsona';
 import DrupalJsonApiParams from 'drupal-jsonapi-params';
 import { DEFAULT_TIMEOUT_MS } from './constants.js';
 

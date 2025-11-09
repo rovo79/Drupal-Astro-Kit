@@ -75,7 +75,7 @@
 
 ---
 
-## Phase 5: User Story 3 - Validate Drupal JSON:API integration (Priority: P1)
+## Phase 5: User Story 3 - Validate Drupal JSON:API integration (Priority: P1) ✅
 
 **Goal**: Confirm JSON:API fetch + normalization works with `jsona` & `drupal-jsonapi-params`.
 
@@ -83,11 +83,11 @@
 
 ### Implementation Tasks — US3
 
-- [ ] T017 [US3] Implement JSON:API audit script `audit/scripts/jsonapi_audit.js`
-- [ ] T018 [P] [US3] Add sample Astro page for API check `astro-frontend/src/pages/api-check.astro`
-- [ ] T019 [US3] Integrate JSON:API audit results into aggregator `audit/index.js`
+- [X] T017 [US3] Implement JSON:API audit script `audit/scripts/jsonapi_audit.js`
+- [X] T018 [P] [US3] Add sample Astro page for API check `astro-frontend/src/pages/api-check.astro`
+- [X] T019 [US3] Integrate JSON:API audit results into aggregator `audit/index.js`
 
-**Checkpoint**: API integration verification independently runnable.
+**Checkpoint**: ✅ API integration verification independently runnable.
 
 ---
 

@@ -1,0 +1,114 @@
+---
+// Astro page for JSON:API integration audit
+// Tests fetching and rendering Drupal content via JSON:API
+// Used by collect_snapshots.js in SSR parity audit
+
+import { createJsonApiClient } from '../../../audit/scripts/util/jsonapiClient.js';
+
+let articles = [];
+let error = null;
+
+try {
+  const apiUrl = import.meta.env.DRUPAL_API_URL;
+  
+  if (!apiUrl) {
+    error = 'DRUPAL_API_URL not configured in environment';
+  } else {
+    const client = createJsonApiClient({ baseUrl: apiUrl });
+    const result = await client.fetchCollection('node--article', {
+      'page[limit]': 5
+    });
+    
+    articles = Array.isArray(result.data) ? result.data.slice(0, 5) : [];
+  }
+} catch (err) {
+  error = err instanceof Error ? err.message : 'Unknown error fetching articles';
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Check - Drupal JSON:API Integration</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      color: #333;
+    }
+    h1 {
+      color: #0969da;
+    }
+    .status {
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+    }
+    .status.success {
+      background-color: #d3f9d8;
+      border: 1px solid #51cf66;
+      color: #2b8a3e;
+    }
+    .status.error {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+    .articles {
+      margin-top: 2rem;
+    }
+    .article {
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      background-color: #f9f9f9;
+    }
+    .article h3 {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>JSON:API Integration Check</h1>
+  
+  {error ? (
+    <div class="status error">
+      <strong>Error:</strong> {error}
+    </div>
+  ) : (
+    <div class="status success">
+      <strong>Success:</strong> JSON:API integration working. Fetched {articles.length} article(s).
+    </div>
+  )}
+
+  {articles.length > 0 && (
+    <div class="articles">
+      <h2>Sample Articles</h2>
+      {articles.map((article) => (
+        <div class="article">
+          <h3>{article.title || '(untitled)'}</h3>
+          <p>
+            <strong>Type:</strong> {article.type || 'unknown'}
+            {article.created && (
+              <>
+                <br />
+                <strong>Created:</strong> {new Date(article.created).toLocaleDateString()}
+              </>
+            )}
+          </p>
+        </div>
+      ))}
+    </div>
+  )}
+
+  <hr />
+  <p style="color: #666; font-size: 0.9rem;">
+    This page is used by the audit suite to verify Drupal JSON:API integration.
+  </p>
+</body>
+</html>
