@@ -123,7 +123,7 @@
 
 ---
 
-## Phase 8: User Story 6 - Documentation accuracy and drift check (Priority: P3)
+## Phase 8: User Story 6 - Documentation accuracy and drift check (Priority: P3) ✅
 
 **Goal**: Detect mismatches between docs and actual paths/configs.
 
@@ -131,11 +131,11 @@
 
 ### Implementation Tasks — US6
 
-- [ ] T026 [US6] Implement docs drift audit script `audit/scripts/docs_drift_audit.js`
-- [ ] T027 [P] [US6] Implement docs path extractor `audit/scripts/util/docsExtractor.js`
-- [ ] T028 [US6] Integrate docs drift audit results into aggregator `audit/index.js`
+- [X] T026 [US6] Implement docs drift audit script `audit/scripts/docs_drift_audit.js`
+- [X] T027 [P] [US6] Implement docs path extractor `audit/scripts/util/docsExtractor.js`
+- [X] T028 [US6] Integrate docs drift audit results into aggregator `audit/index.js`
 
-**Checkpoint**: Documentation drift verification independently runnable.
+**Checkpoint**: ✅ Documentation drift verification independently runnable.
 
 ---
 
