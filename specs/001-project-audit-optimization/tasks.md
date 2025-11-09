@@ -107,7 +107,7 @@
 
 ---
 
-## Phase 7: User Story 5 - CI/CD pipeline verification (Priority: P2)
+## Phase 7: User Story 5 - CI/CD pipeline verification (Priority: P2) ✅
 
 **Goal**: Parse workflow to ensure required validation/build/deploy steps exist.
 
@@ -115,11 +115,11 @@
 
 ### Implementation Tasks — US5
 
-- [ ] T023 [US5] Implement CI/CD audit script `audit/scripts/ci_cd_audit.js`
-- [ ] T024 [P] [US5] Implement workflow parser utility `audit/scripts/util/workflowParser.js`
-- [ ] T025 [US5] Integrate CI/CD audit results into aggregator `audit/index.js`
+- [X] T023 [US5] Implement CI/CD audit script `audit/scripts/ci_cd_audit.js`
+- [X] T024 [P] [US5] Implement workflow parser utility `audit/scripts/util/workflowParser.js`
+- [X] T025 [US5] Integrate CI/CD audit results into aggregator `audit/index.js`
 
-**Checkpoint**: CI/CD verification independently runnable.
+**Checkpoint**: ✅ CI/CD verification independently runnable.
 
 ---
 
