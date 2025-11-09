@@ -139,18 +139,18 @@
 
 ---
 
-## Phase 9: Polish & Cross-Cutting Concerns
+## Phase 9: Polish & Cross-Cutting Concerns ✅
 
 **Purpose**: Final report generation, documentation, consolidation, governance checks.
 
-- [ ] T029 [P] Generate combined audit JSON report `audit/report/audit-report.json`
-- [ ] T030 [P] Generate markdown summary `audit/report/audit-report.md`
-- [ ] T031 Optimize and refactor shared helpers `audit/scripts/util/`
-- [ ] T032 Update root usage guide with audit instructions `README.md`
-- [ ] T033 Run quickstart validation steps `specs/001-project-audit-optimization/quickstart.md`
-- [ ] T034 Perform constitution gate re-check log `audit/report/constitution-check.txt`
+- [X] T029 [P] Generate combined audit JSON report `audit/report/audit-report.json`
+- [X] T030 [P] Generate markdown summary `audit/report/audit-report.md`
+- [X] T031 Optimize and refactor shared helpers `audit/scripts/util/`
+- [X] T032 Update root usage guide with audit instructions `README.md`
+- [X] T033 Run quickstart validation steps `specs/001-project-audit-optimization/quickstart.md`
+- [X] T034 Perform constitution gate re-check log `audit/report/constitution-check.txt`
 
----
+**Checkpoint**: ✅ Audit suite complete with reporting, documentation, and governance validation.
 
 ## Dependencies & Execution Order
 

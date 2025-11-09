@@ -253,6 +253,49 @@ This starter kit leverages several Cloudflare Workers capabilities:
 - `setup.sh` - The main setup script for the project.
 - `scripts/deploy-frontend.sh` - Deploy frontend to Cloudflare Workers
 
+## 🔍 Project Audit Suite
+
+A comprehensive audit tool validates your setup, SSR configuration, API integration, KV storage, CI/CD pipeline, and documentation accuracy.
+
+### Running Audits
+
+```bash
+cd audit
+npm install  # One-time setup
+
+# Run all audits
+node index.js
+
+# Run specific audit target
+node index.js --target setup
+node index.js --target ssr
+node index.js --target api
+node index.js --target kv
+node index.js --target ci
+node index.js --target docs
+
+# Generate enhanced reports
+node scripts/generate-report.js
+```
+
+### Audit Targets
+
+| Target | Purpose | Checks |
+|--------|---------|--------|
+| **setup** | Project initialization | .env, wrangler.toml, required commands, Drupal reachability |
+| **ssr** | SSR parity | Astro dev vs Workers dev rendering consistency |
+| **api** | JSON:API integration | Drupal connectivity, jsona deserialization |
+| **kv** | KV namespace | SESSION namespace read/write/delete cycle |
+| **ci** | CI/CD pipeline | GitHub Actions workflow validation, required jobs |
+| **docs** | Documentation drift | Path references, config mentions, link validation |
+
+### Reports
+
+Audit results generate two files:
+
+- `audit/report/audit-report.json` - Detailed findings, recommendations, metadata
+- `audit/report/audit-report.md` - Human-readable summary with actionable steps
+
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
