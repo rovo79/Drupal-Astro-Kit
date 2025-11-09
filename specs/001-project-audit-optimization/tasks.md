@@ -91,7 +91,7 @@
 
 ---
 
-## Phase 6: User Story 4 - KV namespace setup and usage (Priority: P2)
+## Phase 6: User Story 4 - KV namespace setup and usage (Priority: P2) ✅
 
 **Goal**: Validate `SESSION` KV binding read/write cycle.
 
@@ -99,11 +99,11 @@
 
 ### Implementation Tasks — US4
 
-- [ ] T020 [US4] Implement KV audit script `audit/scripts/kv_audit.js`
-- [ ] T021 [P] [US4] Add Workers runtime test page `astro-frontend/src/pages/kv-check.astro`
-- [ ] T022 [US4] Integrate KV audit results into aggregator `audit/index.js`
+- [X] T020 [US4] Implement KV audit script `audit/scripts/kv_audit.js`
+- [X] T021 [P] [US4] Add Workers runtime test page `astro-frontend/src/pages/kv-check.astro`
+- [X] T022 [US4] Integrate KV audit results into aggregator `audit/index.js`
 
-**Checkpoint**: KV namespace usage verification independently runnable.
+**Checkpoint**: ✅ KV namespace usage verification independently runnable.
 
 ---
 
