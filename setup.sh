@@ -9,5 +9,6 @@ cd setup
 # Install dependencies
 npm install
 
-# Run the setup CLI
+# Make cli.js executable and run it
+chmod +x cli.js
 ./cli.js
