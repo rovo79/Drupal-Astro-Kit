@@ -1,5 +1,4 @@
 import crypto from 'node:crypto';
-import path from 'node:path';
 import chalk from 'chalk';
 import {
   AUDIT_TARGETS,
