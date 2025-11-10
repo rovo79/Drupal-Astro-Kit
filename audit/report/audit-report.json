@@ -1,0 +1,114 @@
+{
+  "generatedAt": "2025-11-10T16:20:19.905Z",
+  "findings": [
+    {
+      "id": "finding-03c9259b-3129-4237-b43b-fb49ce4c8c73",
+      "category": "docs",
+      "severity": "medium",
+      "description": "Docs drift audit: 5 referenced path(s) not found in repository",
+      "evidence": "Missing: wrangler.toml, troubleshooting.md, github-actions.md, deployment.md, ssr-guide.md"
+    },
+    {
+      "id": "finding-779c1fd3-fead-4439-a171-9b29a2f65042",
+      "category": "docs",
+      "severity": "low",
+      "description": "Docs drift audit: configuration file package.json not mentioned in documentation",
+      "evidence": "Documentation may be incomplete"
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "rec-fa78a8c6-d6be-4bff-8290-6b4b88524d79",
+      "relatedFindingIds": [
+        "finding-03c9259b-3129-4237-b43b-fb49ce4c8c73"
+      ],
+      "action": "Update documentation to reference existing paths or create missing files/directories",
+      "impact": "DX",
+      "effort": "low",
+      "status": "proposed"
+    }
+  ],
+  "gateResults": [],
+  "diagnostics": [
+    {
+      "level": "info",
+      "message": "Scanned 6 documentation file(s)",
+      "target": "docs"
+    },
+    {
+      "level": "warn",
+      "message": "Broken reference in docs: wrangler.toml",
+      "target": "docs"
+    },
+    {
+      "level": "warn",
+      "message": "Broken reference in docs: troubleshooting.md",
+      "target": "docs"
+    },
+    {
+      "level": "warn",
+      "message": "Broken reference in docs: github-actions.md",
+      "target": "docs"
+    },
+    {
+      "level": "warn",
+      "message": "Broken reference in docs: deployment.md",
+      "target": "docs"
+    },
+    {
+      "level": "warn",
+      "message": "Broken reference in docs: ssr-guide.md",
+      "target": "docs"
+    },
+    {
+      "level": "info",
+      "message": "Total unique paths referenced: 5",
+      "target": "docs"
+    },
+    {
+      "level": "info",
+      "message": "Valid paths: 0, Missing: 5",
+      "target": "docs"
+    },
+    {
+      "level": "info",
+      "message": "Environment variables referenced: 0",
+      "target": "docs"
+    }
+  ],
+  "metadata": {
+    "issuedBy": "audit/index.js",
+    "ranTargets": [
+      "docs"
+    ],
+    "collectors": [
+      {
+        "target": "docs",
+        "filesScanned": 6,
+        "pathsReferenced": 5,
+        "validPaths": 0,
+        "missingPaths": 5,
+        "driftIssues": 5,
+        "configsReferenced": [
+          "wrangler.toml",
+          ".env",
+          "astro.config.mjs"
+        ],
+        "environmentVariablesReferenced": 0,
+        "missingReferences": [
+          "wrangler.toml",
+          "troubleshooting.md",
+          "github-actions.md",
+          "deployment.md",
+          "ssr-guide.md"
+        ]
+      },
+      {
+        "target": "docs",
+        "status": "ok",
+        "findingCount": 2,
+        "recommendationCount": 1
+      }
+    ]
+  }
+}

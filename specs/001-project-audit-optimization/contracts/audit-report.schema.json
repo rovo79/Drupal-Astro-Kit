@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AuditReport",
+  "type": "object",
+  "properties": {
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "category": { "type": "string", "enum": ["setup", "ssr", "api", "kv", "ci", "docs", "performance"] },
+          "description": { "type": "string" },
+          "severity": { "type": "string", "enum": ["info", "low", "medium", "high"] },
+          "evidence": { "type": "string" },
+          "recommendationId": { "type": ["string", "null"] }
+        },
+        "required": ["id", "category", "description", "severity"]
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "relatedFindingIds": { "type": "array", "items": { "type": "string" } },
+          "action": { "type": "string" },
+          "impact": { "type": "string", "enum": ["DX", "performance", "reliability", "correctness"] },
+          "effort": { "type": "string", "enum": ["trivial", "low", "medium", "high"] },
+          "status": { "type": "string", "enum": ["proposed", "accepted", "implemented", "deferred"] }
+        },
+        "required": ["id", "action", "impact", "effort", "status"]
+      }
+    },
+    "gateResults": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "gate": { "type": "string", "enum": ["setup", "integration", "deployment"] },
+          "passed": { "type": "boolean" },
+          "details": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        },
+        "required": ["gate", "passed", "timestamp"]
+      }
+    }
+  },
+  "required": ["generatedAt", "findings"]
+}

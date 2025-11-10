@@ -1,0 +1,130 @@
+---
+// Workers KV test page for audit suite
+// Handles read/write/delete operations on SESSION KV namespace
+// Tests: POST (write), GET (read), DELETE (cleanup)
+
+export async function POST({ request, locals }) {
+  const runtime = locals.runtime || {};
+  const KV = runtime.env?.SESSION;
+
+  if (!KV) {
+    return new Response(
+      JSON.stringify({
+        error: 'SESSION KV namespace not bound. Check wrangler.toml kv_namespaces configuration.'
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  try {
+    const payload = await request.json();
+    const { action, key, value } = payload;
+
+    if (action === 'write') {
+      if (!key || !value) {
+        return new Response(
+          JSON.stringify({ error: 'write action requires key and value' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      await KV.put(key, value);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          action: 'write',
+          key,
+          message: `Key "${key}" written to SESSION KV`
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'delete') {
+      if (!key) {
+        return new Response(
+          JSON.stringify({ error: 'delete action requires key' }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      await KV.delete(key);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          action: 'delete',
+          key,
+          message: `Key "${key}" deleted from SESSION KV`
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ error: `Unknown action: ${action}` }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Unknown error processing request'
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+export async function GET({ request, locals }) {
+  const runtime = locals.runtime || {};
+  const KV = runtime.env?.SESSION;
+
+  if (!KV) {
+    return new Response(
+      JSON.stringify({
+        error: 'SESSION KV namespace not bound. Check wrangler.toml kv_namespaces configuration.'
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  try {
+    const url = new URL(request.url);
+    const key = url.searchParams.get('key');
+
+    if (!key) {
+      return new Response(
+        JSON.stringify({ error: 'GET requires key query parameter' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const value = await KV.get(key);
+
+    if (value === null) {
+      return new Response(
+        JSON.stringify({
+          key,
+          value: null,
+          message: `Key "${key}" not found in SESSION KV`
+        }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        key,
+        value,
+        message: `Key "${key}" retrieved from SESSION KV`
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Unknown error reading from KV'
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
