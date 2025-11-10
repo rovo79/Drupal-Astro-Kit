@@ -1,91 +1,15 @@
 {
-  "generatedAt": "2025-11-09T22:29:12.216Z",
+  "generatedAt": "2025-11-10T16:20:19.905Z",
   "findings": [
     {
-      "id": "finding-ddae1a8a-92d3-40b5-a181-96c963f67594",
-      "category": "setup",
-      "severity": "medium",
-      "description": "PROJECT_NAME is missing from .env. Setup script should stamp it during bootstrap.",
-      "evidence": "/Users/rob/Dev/Drupal_Astro_Kit/.env",
-      "recommendationId": "rec-a1348700-9e74-41d6-bc75-2914ac3a85ba"
-    },
-    {
-      "id": "finding-6be0dad5-4215-45b8-80c0-63a8821b96c2",
-      "category": "setup",
-      "severity": "high",
-      "description": "DRUPAL_API_URL is missing from .env. JSON:API clients rely on this value.",
-      "evidence": "/Users/rob/Dev/Drupal_Astro_Kit/.env",
-      "recommendationId": "rec-3a2786da-bcd6-4f35-8b97-4becc1fa84c9"
-    },
-    {
-      "id": "finding-4b7d8142-ee3f-4534-adee-54d7fa81ab12",
-      "category": "setup",
-      "severity": "high",
-      "description": "Required command \"wrangler\" is not available in PATH.",
-      "evidence": "PATH",
-      "recommendationId": "rec-b9e948f6-8a69-426a-a401-6d75ddb6eed1"
-    },
-    {
-      "id": "finding-2e4274fb-343d-4ae7-a41f-e15cd6a5cdb2",
-      "category": "setup",
-      "severity": "high",
-      "description": "wrangler.toml does not exist. Setup automation should provision this artifact.",
-      "evidence": "/Users/rob/Dev/Drupal_Astro_Kit/wrangler.toml",
-      "recommendationId": "rec-3e25c841-d1fc-4387-aa6c-ac7a0ae783ca"
-    },
-    {
-      "id": "finding-9df5a7f3-7c43-407b-9dc8-49d7056a28c4",
-      "category": "setup",
-      "severity": "medium",
-      "description": "astro-frontend/astro.config.mjs does not exist. Setup automation should provision this artifact.",
-      "evidence": "/Users/rob/Dev/Drupal_Astro_Kit/astro-frontend/astro.config.mjs",
-      "recommendationId": "rec-5c2563cc-f723-4495-9e7b-3e9bedf44d2b"
-    },
-    {
-      "id": "finding-00967672-75d3-4a1d-b380-4ffb6c6048aa",
-      "category": "setup",
-      "severity": "medium",
-      "description": "Drupal site at http://Drupal_Astro_Kit.ddev.site is not reachable (TypeError).",
-      "evidence": "fetch failed",
-      "recommendationId": "rec-fc99a363-d949-4bcb-b1ac-f4123d4417ea"
-    },
-    {
-      "id": "finding-c42dc0cf-e5f0-42e1-a7e1-5f4d8055877e",
-      "category": "ssr",
-      "severity": "high",
-      "description": "SSR parity audit: Astro dev server not reachable",
-      "evidence": "All 3 requests to Astro dev failed"
-    },
-    {
-      "id": "finding-a42f757c-aac6-42ad-90a7-91ff21bdd3c7",
-      "category": "ssr",
-      "severity": "high",
-      "description": "SSR parity audit: Workers dev not reachable",
-      "evidence": "All 3 requests to Workers dev failed"
-    },
-    {
-      "id": "finding-4b027546-d7c2-4188-b618-bc4266f5bded",
-      "category": "api",
-      "severity": "high",
-      "description": "JSON:API audit skipped: DRUPAL_JSONAPI_URL not configured",
-      "evidence": "DRUPAL_JSONAPI_URL missing from .env"
-    },
-    {
-      "id": "finding-9ee1169e-8e61-4b5a-900b-d280935cf03c",
-      "category": "kv",
-      "severity": "high",
-      "description": "KV audit: probe execution failed",
-      "evidence": "fetch failed"
-    },
-    {
-      "id": "finding-5eb546ec-3645-405b-9445-406723667949",
+      "id": "finding-03c9259b-3129-4237-b43b-fb49ce4c8c73",
       "category": "docs",
       "severity": "medium",
       "description": "Docs drift audit: 5 referenced path(s) not found in repository",
       "evidence": "Missing: wrangler.toml, troubleshooting.md, github-actions.md, deployment.md, ssr-guide.md"
     },
     {
-      "id": "finding-c27fd1c7-9e4e-4eb8-8a6f-895428d15b95",
+      "id": "finding-779c1fd3-fead-4439-a171-9b29a2f65042",
       "category": "docs",
       "severity": "low",
       "description": "Docs drift audit: configuration file package.json not mentioned in documentation",
@@ -94,109 +18,9 @@
   ],
   "recommendations": [
     {
-      "id": "rec-a1348700-9e74-41d6-bc75-2914ac3a85ba",
+      "id": "rec-fa78a8c6-d6be-4bff-8290-6b4b88524d79",
       "relatedFindingIds": [
-        "finding-ddae1a8a-92d3-40b5-a181-96c963f67594"
-      ],
-      "action": "Update .env with PROJECT_NAME matching the repository directory name",
-      "impact": "DX",
-      "effort": "trivial",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-3a2786da-bcd6-4f35-8b97-4becc1fa84c9",
-      "relatedFindingIds": [
-        "finding-6be0dad5-4215-45b8-80c0-63a8821b96c2"
-      ],
-      "action": "Ensure setup automation appends DRUPAL_API_URL to .env after sync",
-      "impact": "correctness",
-      "effort": "trivial",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-b9e948f6-8a69-426a-a401-6d75ddb6eed1",
-      "relatedFindingIds": [
-        "finding-4b7d8142-ee3f-4534-adee-54d7fa81ab12"
-      ],
-      "action": "Install or expose the \"wrangler\" CLI before running ./setup.sh",
-      "impact": "DX",
-      "effort": "low",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-3e25c841-d1fc-4387-aa6c-ac7a0ae783ca",
-      "relatedFindingIds": [
-        "finding-2e4274fb-343d-4ae7-a41f-e15cd6a5cdb2"
-      ],
-      "action": "Run ./setup.sh to create wrangler.toml",
-      "impact": "DX",
-      "effort": "low",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-5c2563cc-f723-4495-9e7b-3e9bedf44d2b",
-      "relatedFindingIds": [
-        "finding-9df5a7f3-7c43-407b-9dc8-49d7056a28c4"
-      ],
-      "action": "Run ./setup.sh to create astro-frontend/astro.config.mjs",
-      "impact": "DX",
-      "effort": "low",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-fc99a363-d949-4bcb-b1ac-f4123d4417ea",
-      "relatedFindingIds": [
-        "finding-00967672-75d3-4a1d-b380-4ffb6c6048aa"
-      ],
-      "action": "Start DDEV with \"ddev start\" and ensure http://Drupal_Astro_Kit.ddev.site is reachable",
-      "impact": "reliability",
-      "effort": "low",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-1a8115a9-3299-4014-aa02-4fc72a99fd0c",
-      "relatedFindingIds": [
-        "finding-c42dc0cf-e5f0-42e1-a7e1-5f4d8055877e"
-      ],
-      "action": "Verify Astro dev server is running (npm run dev) on the expected port",
-      "impact": "reliability",
-      "effort": "trivial",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-2e9bf6a5-9620-4068-8479-196fc5405984",
-      "relatedFindingIds": [
-        "finding-a42f757c-aac6-42ad-90a7-91ff21bdd3c7"
-      ],
-      "action": "Verify Workers dev is running (npx wrangler dev --remote) on the expected port",
-      "impact": "reliability",
-      "effort": "trivial",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-3237f836-4749-411f-b24e-8c5f88f36a37",
-      "relatedFindingIds": [
-        "finding-4b027546-d7c2-4188-b618-bc4266f5bded"
-      ],
-      "action": "Add DRUPAL_JSONAPI_URL to .env (e.g., http://{PROJECT_NAME}.ddev.site/jsonapi)",
-      "impact": "correctness",
-      "effort": "trivial",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-4d4fd28b-93d7-4b14-ba65-3160e1517741",
-      "relatedFindingIds": [
-        "finding-9ee1169e-8e61-4b5a-900b-d280935cf03c"
-      ],
-      "action": "Verify Workers dev is running (npx wrangler dev --remote) and /kv-check route is available",
-      "impact": "reliability",
-      "effort": "trivial",
-      "status": "proposed"
-    },
-    {
-      "id": "rec-2b32f0e4-5d78-432f-a24b-57b4df8e97ae",
-      "relatedFindingIds": [
-        "finding-5eb546ec-3645-405b-9445-406723667949"
+        "finding-03c9259b-3129-4237-b43b-fb49ce4c8c73"
       ],
       "action": "Update documentation to reference existing paths or create missing files/directories",
       "impact": "DX",
@@ -204,95 +28,8 @@
       "status": "proposed"
     }
   ],
-  "gateResults": [
-    {
-      "gate": "setup",
-      "passed": false,
-      "details": "High severity setup findings detected. Resolve before continuing to SSR/API audits.",
-      "timestamp": "2025-11-09T22:29:12.270Z"
-    }
-  ],
+  "gateResults": [],
   "diagnostics": [
-    {
-      "level": "info",
-      "message": "Commands available: ddev, docker, npm, npx",
-      "target": "setup"
-    },
-    {
-      "level": "warn",
-      "message": "Missing commands: wrangler",
-      "target": "setup"
-    },
-    {
-      "level": "info",
-      "message": ".env present: true",
-      "target": "setup"
-    },
-    {
-      "level": "warn",
-      "message": "Drupal probe failed (http://Drupal_Astro_Kit.ddev.site)",
-      "target": "setup"
-    },
-    {
-      "level": "debug",
-      "message": "Snapshot collected for /: Astro 0, Workers 0",
-      "target": "ssr"
-    },
-    {
-      "level": "debug",
-      "message": "Snapshot collected for /about: Astro 0, Workers 0",
-      "target": "ssr"
-    },
-    {
-      "level": "debug",
-      "message": "Snapshot collected for /api-check: Astro 0, Workers 0",
-      "target": "ssr"
-    },
-    {
-      "level": "info",
-      "message": "Collected 3 snapshots for parity comparison",
-      "target": "ssr"
-    },
-    {
-      "level": "info",
-      "message": "SSR Parity Summary: Astro dev 0/3 ok, Workers dev 0/3 ok",
-      "target": "ssr"
-    },
-    {
-      "level": "warning",
-      "message": "Skipping JSON:API audit: DRUPAL_JSONAPI_URL not configured",
-      "target": "api"
-    },
-    {
-      "level": "debug",
-      "message": "KV probe target: http://localhost:8787/kv-check",
-      "target": "kv"
-    },
-    {
-      "level": "warning",
-      "message": "KV probe failed: fetch failed",
-      "target": "kv"
-    },
-    {
-      "level": "info",
-      "message": "Found 1 workflow file(s)",
-      "target": "ci"
-    },
-    {
-      "level": "debug",
-      "message": "Parsed main.yml: 2 trigger(s), 4 job(s)",
-      "target": "ci"
-    },
-    {
-      "level": "info",
-      "message": "CI/CD Summary: ✓ frontend build, ✓ backend build, ✓ deploy",
-      "target": "ci"
-    },
-    {
-      "level": "info",
-      "message": "CI/CD validation gate PASS: All required pipeline stages present",
-      "target": "ci"
-    },
     {
       "level": "info",
       "message": "Scanned 6 documentation file(s)",
@@ -342,115 +79,9 @@
   "metadata": {
     "issuedBy": "audit/index.js",
     "ranTargets": [
-      "setup",
-      "ssr",
-      "api",
-      "kv",
-      "ci",
       "docs"
     ],
     "collectors": [
-      {
-        "target": "setup",
-        "envExists": true,
-        "projectName": "Drupal_Astro_Kit",
-        "drupalProbe": {
-          "url": "http://Drupal_Astro_Kit.ddev.site",
-          "ok": false,
-          "status": 0,
-          "durationMs": 36.80954199999999
-        },
-        "missingCommands": [
-          "wrangler"
-        ],
-        "missingPaths": [
-          "wrangler.toml",
-          "astro-frontend/astro.config.mjs"
-        ]
-      },
-      {
-        "target": "setup",
-        "status": "ok",
-        "findingCount": 6,
-        "recommendationCount": 6
-      },
-      {
-        "target": "ssr",
-        "snapshotCount": 3,
-        "paritySummary": {
-          "totalSnapshots": 3,
-          "astroDevOk": 0,
-          "workersDevOk": 0,
-          "statusParity": 0,
-          "contentTypeParity": 0,
-          "headersParity": 0,
-          "timingDeltaAvg": 0
-        },
-        "parityIssueCount": 6
-      },
-      {
-        "target": "ssr",
-        "status": "ok",
-        "findingCount": 2,
-        "recommendationCount": 2
-      },
-      {
-        "target": "api",
-        "apiAuditSkipped": true,
-        "reason": "no_api_url"
-      },
-      {
-        "target": "api",
-        "status": "ok",
-        "findingCount": 1,
-        "recommendationCount": 1
-      },
-      {
-        "target": "kv",
-        "kvAuditSkipped": true,
-        "reason": "probe_failed",
-        "probeResult": {
-          "endpoint": "http://localhost:8787/kv-check",
-          "key": "audit-kv-b7af2353-ab63-4562-ae62-1cf2c4488a3a",
-          "attemptedValue": "audit-ae9a9570-72ae-4515-9604-63cd73ce918d",
-          "write": null,
-          "read": null,
-          "delete": null,
-          "success": false,
-          "error": "fetch failed"
-        }
-      },
-      {
-        "target": "kv",
-        "status": "ok",
-        "findingCount": 1,
-        "recommendationCount": 1
-      },
-      {
-        "target": "ci",
-        "workflowFile": "main.yml",
-        "workflowCount": 1,
-        "parseErrors": 0,
-        "analysis": {
-          "hasValidation": true,
-          "hasFrontendBuild": true,
-          "hasFrontendTests": true,
-          "hasBackendBuild": true,
-          "hasBackendTests": true,
-          "hasDeploy": true,
-          "jobCount": 4,
-          "triggers": [
-            "push",
-            "pull_request"
-          ]
-        }
-      },
-      {
-        "target": "ci",
-        "status": "ok",
-        "findingCount": 0,
-        "recommendationCount": 0
-      },
       {
         "target": "docs",
         "filesScanned": 6,
