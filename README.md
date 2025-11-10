@@ -1,18 +1,46 @@
 # 🚀 Drupal + Astro + Cloudflare Starter Kit
 
+[![CI/CD Pipeline](https://github.com/rovo79/Drupal_Astro_Kit/actions/workflows/deploy.yml/badge.svg)](https://github.com/rovo79/Drupal_Astro_Kit/actions/workflows/deploy.yml)
+
 A production-ready starter kit featuring an Astro frontend on Cloudflare Workers, powered by a Drupal 11 backend running via DDEV.
+
+## 📋 Table of Contents
+
+- [What You Get](#-what-you-get)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#-quick-start)
+- [Cloudflare Setup](#cloudflare-setup)
+- [Documentation](#-documentation)
+- [Project Structure](#️-project-structure)
+- [Development](#-development)
+- [Project Audit Suite](#-project-audit-suite)
+- [Common Troubleshooting](#-common-troubleshooting)
+
+## ✨ What You Get
+
+- **Astro SSR Frontend** - Server-side rendering on Cloudflare Workers with edge distribution
+- **Drupal 11 Backend** - Headless CMS with JSON:API, managed via DDEV
+- **Instant Setup** - Interactive CLI installer configures everything in one command
+- **KV Session Storage** - Built-in session management with Workers KV
+- **CI/CD Ready** - GitHub Actions workflows for automated deployment
+- **Type-Safe API** - `jsona` + `drupal-jsonapi-params` for structured Drupal data
+- **Comprehensive Audit Suite** - Validates setup, SSR, API, KV, CI/CD, and docs
 
 ## 🚦 Quick Start
 
 ### Prerequisites
 
-- DDEV (for local Drupal development)
-- Docker (required by DDEV)
-- Node.js (for Astro frontend)
-- Composer (for Drupal dependencies)
-- Cloudflare account (for frontend deployment)
+### Prerequisites
 
-
+| Requirement | Version | Installation |
+|------------|---------|--------------|
+| **Node.js** | 20+ | `brew install node@20` |
+| **DDEV** | Latest | `brew install ddev/ddev/ddev` |
+| **Docker** | Latest | `brew install --cask docker` |
+| **PHP** | 8.3+ | Managed by DDEV |
+| **Composer** | Latest | `brew install composer` |
+| **Wrangler CLI** | v3+ | `npm install -g wrangler` |
+| **Cloudflare Account** | Free tier+ | [Sign up here](https://dash.cloudflare.com/sign-up) |
 
 ### Installation
 
@@ -37,7 +65,7 @@ A production-ready starter kit featuring an Astro frontend on Cloudflare Workers
    ./setup.sh
    ```
 
-4. After the setup is complete, commit and push your changes:
+3. After the setup is complete, commit and push your changes:
 
    ```zsh
    # Add all the new files created during setup
@@ -46,18 +74,19 @@ A production-ready starter kit featuring an Astro frontend on Cloudflare Workers
    git push -u origin main
    ```
 
-5. Start the development servers:
+4. Start the development servers:
    - Drupal backend: `ddev launch`
    - Astro frontend: `cd astro-frontend && npm run dev`
 
 ### Cloudflare Setup
 
-Before running Cloudflare-specific commands, set up your API token for this new project:
+#### 1. API Token Configuration
+
+Before deploying to Cloudflare Workers, set up your API token:
 
 1. Go to [Cloudflare Dashboard > API Tokens](https://dash.cloudflare.com/profile/api-tokens)
-2. Click "Create Token"
-3. Choose "Create Custom Token"
-4. Set the following permissions:
+2. Click "Create Token" → "Create Custom Token"
+3. Set the following permissions:
 
    **Account-level permissions:**
    - `Workers Scripts Read` and `Workers Scripts Edit` (for Workers deployment)
@@ -72,11 +101,89 @@ Before running Cloudflare-specific commands, set up your API token for this new 
    - `Account Analytics Read` (for monitoring)
    - `Account Settings Read` (for configuration)
 
-5. Set the token's TTL (Time To Live) according to your security requirements
-6. Create the token and copy it securely
-7. Add the token to your `.env` file as `CLOUDFLARE_API_TOKEN`
+4. Set the token's TTL (Time To Live) according to your security requirements
+5. Create the token and copy it securely
+6. Add the token to your `.env` file as `CLOUDFLARE_API_TOKEN`
 
-Note: Keep your API token secure and never commit it to version control. The `.env` file is automatically added to `.gitignore`.
+⚠️ **Security Note:** Keep your API token secure and never commit it to version control. The `.env` file is automatically added to `.gitignore`.
+
+#### 2. KV Namespace Setup
+
+Create a KV namespace for session management:
+
+```bash
+# Create a namespace for sessions
+npx wrangler kv namespace create "SESSION"
+
+# The command will output something like:
+# 🌀  Creating namespace with title your-project-name-SESSION
+# ✨  Success!
+# Add the following to your configuration file:
+# [[kv_namespaces]]
+# binding = "SESSION"
+# id = "<BINDING_ID>"
+```
+
+Update `wrangler.toml` in your project root:
+
+```toml
+[[kv_namespaces]]
+binding = "SESSION"
+id = "<BINDING_ID>"  # Replace with the ID from the command output
+```
+
+#### 3. Verify Your Setup
+
+```bash
+# Verify your Cloudflare credentials
+npx wrangler whoami
+
+# List your KV namespaces
+npx wrangler kv namespace list
+
+# Test your KV namespace (optional)
+npx wrangler kv key put --binding=SESSION "test" "value"
+npx wrangler kv key get --binding=SESSION "test"
+```
+
+#### 4. Development & Deployment
+
+**Local Development:**
+```bash
+# For local dev with live KV access (recommended for KV testing)
+npx wrangler dev --remote
+
+# For local dev without KV (faster, but SESSION binding won't work)
+cd astro-frontend && npm run dev
+```
+
+**Production Deployment:**
+```bash
+# Deploy using the provided script
+zsh scripts/deploy-frontend.sh
+
+# Or deploy manually
+cd astro-frontend && npx wrangler deploy
+```
+
+Your site will be available at: `https://your-project-name.your-subdomain.workers.dev`
+
+💡 **Note:** Use `npx wrangler dev --remote` when testing features that require KV storage. The standard `npm run dev` runs Astro's dev server locally without Workers runtime.
+
+### Environment Variables
+
+The following environment variables are configured during setup:
+
+| Variable | Set By | Description |
+|----------|--------|-------------|
+| `PROJECT_NAME` | `setup.sh` | Your project name (derived from directory name) |
+| `DRUPAL_JSONAPI_URL` | `setup.sh` | Full URL to Drupal JSON:API endpoint |
+| `ASTRO_DEV_URL` | Manual | Astro dev server URL (default: `http://localhost:4321`) |
+| `WORKERS_DEV_URL` | Manual | Wrangler dev server URL (default: `http://localhost:8787`) |
+| `CLOUDFLARE_ACCOUNT_ID` | Manual | Your Cloudflare account ID (from dashboard) |
+| `CLOUDFLARE_API_TOKEN` | Manual | API token for Workers deployment |
+
+After running `./setup.sh`, update your `.env` file with the manual entries before deploying to Cloudflare.
 
 ### Expected Output
 
@@ -139,63 +246,6 @@ These are installed automatically by `setup-astro.sh`, but if you set up manuall
    npm install jsona drupal-jsonapi-params
    ```
 
-### Cloudflare Workers Setup (Optional)
-
-1. Create a KV Namespace:
-
-   ```bash
-   # Create a namespace for sessions
-   npx wrangler kv namespace create "SESSION"
-
-   # The command will output something like:
-   # 🌀  Creating namespace with title your-project-name-SESSION
-   # ✨  Success!
-   # Add the following to your configuration file:
-   # [[kv_namespaces]]
-   # binding = "SESSION"
-   # id = "<BINDING_ID>"
-   ```
-
-2. Update `wrangler.toml`:
-   - Open `wrangler.toml` in your project root
-   - Replace the placeholder KV namespace configuration with your actual namespace ID:
-
-     ```toml
-     [[kv_namespaces]]
-     binding = "SESSION"
-     id = "<BINDING_ID>"  # Replace with the ID from step 1
-     ```
-
-3. Verify Your Setup:
-
-   ```bash
-   # Verify your Cloudflare credentials
-   npx wrangler whoami
-
-   # List your KV namespaces
-   npx wrangler kv namespace list
-
-   # Test your KV namespace (optional)
-   npx wrangler kv key put --binding=SESSION "test" "value"
-   npx wrangler kv key get --binding=SESSION "test"
-   ```
-
-4. Development Notes:
-   - For local development with Workers: `npx wrangler dev`
-   - For production deployment: `npx wrangler deploy`
-   - Your site will be available at `https://your-project-name.your-subdomain.workers.dev`
-   - The SESSION binding is available for session management in your Astro components
-   - Observability is enabled - check Workers Logs in the Cloudflare Dashboard
-   - SSR is enabled by default - pages render on-demand in Workers
-   - You can manage your KV data through the Cloudflare Dashboard at:
-     [Workers & Pages > KV](https://dash.cloudflare.com/?to=/:account/workers/kv/namespaces)
-
-5. Troubleshooting:
-   - If you see "Invalid binding `SESSION`" in your build output, verify your KV namespace ID
-   - For local development, use `npx wrangler dev --remote` to connect to your Cloudflare KV
-   - Check the [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/) for more details
-   - For KV-specific help, see the [KV documentation](https://developers.cloudflare.com/kv/get-started/)
-
 ## 📚 Documentation
 
 - [Deployment Guide](docs/deployment.md) - How to deploy your site to Cloudflare Workers
@@ -207,15 +257,33 @@ These are installed automatically by `setup-astro.sh`, but if you set up manuall
 ## 🏗️ Project Structure
 
 ```plaintext
-my-saas-kit/
-├── astro-frontend/          # Astro frontend
-├── drupal-backend/          # Drupal backend
-├── scripts/                 # Setup and utility scripts
-├── docs/                    # Documentation
-├── wrangler.toml           # Cloudflare Workers configuration
-├── .env.example            # Environment template
-└── README.md               # This file
+Drupal_Astro_Kit/          # Root directory (your project name)
+├── wrangler.toml          # Cloudflare Workers config (lives at root)
+├── .env                   # Environment variables (generated by setup)
+├── .env.example           # Environment template
+├── setup.sh               # Main setup script
+├── astro-frontend/        # Astro frontend (created by setup)
+│   ├── src/               # Astro components and pages
+│   ├── dist/              # Build output (contains _worker.js/)
+│   └── package.json       # Frontend dependencies
+├── drupal-backend/        # Drupal backend (created by setup)
+│   ├── .ddev/             # DDEV configuration
+│   └── web/               # Drupal web root
+├── scripts/               # Automation scripts
+│   ├── deploy-frontend.sh # Deploy to Workers
+│   └── setup-mcp.sh       # MCP server setup
+├── setup/                 # Interactive setup CLI
+│   ├── cli.js             # CLI entry point
+│   └── ui.js              # Ink-based UI
+├── audit/                 # Project audit suite
+│   └── scripts/           # Audit modules
+└── docs/                  # Documentation
+    ├── architecture.md
+    ├── deployment.md
+    └── ...
 ```
+
+**Note:** `astro-frontend/` and `drupal-backend/` directories are created by the setup script and not committed to the repository.
 
 ## 🔧 Development
 
@@ -298,6 +366,74 @@ Audit results generate two files:
 - `audit/report/audit-report.json` - Detailed findings, recommendations, metadata
 - `audit/report/audit-report.md` - Human-readable summary with actionable steps
 
-## 📝 License
+## � Common Troubleshooting
+
+### Setup Issues
+
+**DDEV won't start:**
+```bash
+# Check Docker is running
+docker ps
+
+# Restart DDEV
+cd drupal-backend && ddev restart
+```
+
+**Permission errors during setup:**
+```bash
+# Make setup script executable
+chmod +x setup.sh
+
+# Check Node.js version (requires 20+)
+node --version
+```
+
+### Development Issues
+
+**"Cannot find module" errors in Astro:**
+```bash
+# Reinstall dependencies
+cd astro-frontend && rm -rf node_modules && npm install
+
+# Verify jsona and drupal-jsonapi-params are installed
+npm list jsona drupal-jsonapi-params
+```
+
+**KV binding not working in local dev:**
+```bash
+# Use --remote flag to access live KV
+npx wrangler dev --remote
+
+# Verify KV namespace exists
+npx wrangler kv namespace list
+```
+
+### Deployment Issues
+
+**"Invalid binding `SESSION`" error:**
+```bash
+# Check wrangler.toml has correct KV namespace ID
+cat wrangler.toml | grep -A 2 kv_namespaces
+
+# Recreate namespace if needed
+npx wrangler kv namespace create "SESSION"
+```
+
+**Build fails with "Cannot find module":**
+```bash
+# Clear build cache and rebuild
+cd astro-frontend
+rm -rf dist .astro
+npm run build
+```
+
+**API requests failing from Workers:**
+- Verify `DRUPAL_JSONAPI_URL` in `.env` is accessible from internet
+- Check CORS settings in Drupal (see [docs/troubleshooting.md](docs/troubleshooting.md))
+- Use `npx wrangler tail` to view live Worker logs
+
+For comprehensive troubleshooting, see [docs/troubleshooting.md](docs/troubleshooting.md).
+
+## �📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
