@@ -9,5 +9,5 @@ cd setup
 # Install dependencies
 npm install
 
-# Run the setup CLI
-./cli.js
+# Run the setup CLI with node
+node cli.js
