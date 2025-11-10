@@ -9,5 +9,6 @@ cd setup
 # Install dependencies
 npm install
 
-# Run the setup CLI with node
-node cli.js
+# Make cli.js executable and run it directly (shebang will work)
+chmod +x cli.js
+./cli.js
