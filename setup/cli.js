@@ -14,7 +14,7 @@ const createUi = require('./ui');
 
 		const {render, ...inkComponents} = inkModule;
 		const Spinner = SpinnerModule.default ?? SpinnerModule;
-		const execa = execaModule.default ?? execaModule;
+		const {execa} = execaModule;
 
 		const App = createUi({
 			React,

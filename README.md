@@ -51,6 +51,10 @@ A production-ready starter kit featuring an Astro frontend on Cloudflare Workers
    git clone https://github.com/yourusername/Drupal_Astro_Kit.git your-project-name
    cd your-project-name
 
+   # IMPORTANT: Project names must use hyphens (not underscores) for valid hostnames
+   # Good: my-project, rovomedia-com
+   # Bad:  my_project, rovomedia_com
+
    # Remove the original remote and set up your new repository
    git remote remove origin
 
