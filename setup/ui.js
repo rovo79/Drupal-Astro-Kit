@@ -284,10 +284,18 @@ module.exports = ({
 
                     updateStep('astro', {inProgress: true});
                     const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
+                    
+                    // Create Astro project
                     await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', astroTemplate, '--yes', '--no-git'], { cwd: projectRoot, stdin: 'ignore' });
+                    
+                    // Install additional dependencies (wrangler, Drupal libraries)
                     await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    await execa('npm', ['install', 'jsona', 'drupal-jsonapi-params'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    
+                    // Add Cloudflare adapter (this modifies package.json and astro.config.mjs)
                     await execa('npx', ['astro', 'add', 'cloudflare', '--yes'], {cwd: astroFrontendPath, stdin: 'ignore'});
 
+                    // Now update package.json name (AFTER all installs are complete)
                     const packageJsonPath = path.join(astroFrontendPath, 'package.json');
                     let packageContent = await fs.readFile(packageJsonPath, 'utf8');
                     const packageJson = JSON.parse(packageContent);
@@ -333,24 +341,26 @@ binding = "SESSION"
 id = "your-kv-namespace-id"
 `;
                     await fs.writeFile(path.join(projectRoot, 'wrangler.toml'), wranglerTomlContent);
-                    await execa('npm', ['install', 'jsona', 'drupal-jsonapi-params'], {cwd: astroFrontendPath, stdin: 'ignore'});
 
                     updateStep('astro', {inProgress: false, done: true});
                     updateStep('complete', {done: true});
                     
-                    console.log('\n');
-                    console.log('🎉 Next Steps:');
-                    console.log('');
-                    console.log('1. Start the Drupal backend:');
-                    console.log(`   cd drupal-backend && ddev launch`);
-                    console.log('');
-                    console.log('2. Start the Astro frontend:');
-                    console.log(`   cd astro-frontend && npm run dev`);
-                    console.log('');
-                    console.log('3. Your sites will be available at:');
-                    console.log(`   Drupal: http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`);
-                    console.log('   Astro:  http://localhost:4321');
-                    console.log('');
+                    // Small delay to let the UI render "Setup Complete!" first
+                    setTimeout(() => {
+                        console.log('\n');
+                        console.log('🎉 Next Steps:');
+                        console.log('');
+                        console.log('1. Start the Drupal backend:');
+                        console.log(`   cd drupal-backend && ddev launch`);
+                        console.log('');
+                        console.log('2. Start the Astro frontend:');
+                        console.log(`   cd astro-frontend && npm run dev`);
+                        console.log('');
+                        console.log('3. Your sites will be available at:');
+                        console.log(`   Drupal: http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`);
+                        console.log('   Astro:  http://localhost:4321');
+                        console.log('');
+                    }, 100);
                 } catch (error) {
                     markError(error.message);
                 }

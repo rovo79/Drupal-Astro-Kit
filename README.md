@@ -389,6 +389,22 @@ Audit results generate two files:
 
 ## � Common Troubleshooting
 
+### Starting Fresh / Cleanup
+
+If you need to completely reset and start over:
+
+```bash
+# Stop and remove DDEV project
+cd drupal-backend && ddev stop --unlist your-project-name
+
+# From project root, remove generated directories
+cd ..
+rm -rf astro-frontend drupal-backend .env wrangler.toml
+
+# Now you can re-run setup
+./setup.sh
+```
+
 ### Setup Issues
 
 **DDEV won't start:**
