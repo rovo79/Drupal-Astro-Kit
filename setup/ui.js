@@ -106,7 +106,7 @@ module.exports = ({
 
                 // 2) Detect Colima socket
                 try {
-                    const result = await execa('colima', ['status'], {timeout: 2000});
+                    const result = await execa('colima', ['status'], {timeout: 2000, stdin: 'ignore'});
                     const stdout = result.stdout || '';
                     const match = stdout.match(/docker socket:\s*(\S+)/i);
                     if (match && match[1]) {
@@ -121,7 +121,7 @@ module.exports = ({
 
                 // 3) Fallback to docker context inspect
                 try {
-                    const ctx = await execa('docker', ['context', 'inspect'], {timeout: 2000});
+                    const ctx = await execa('docker', ['context', 'inspect'], {timeout: 2000, stdin: 'ignore'});
                     const json = JSON.parse(ctx.stdout);
                     if (Array.isArray(json) && json.length > 0) {
                         const host = json[0]?.Endpoints?.docker?.Host;
@@ -288,9 +288,9 @@ module.exports = ({
                     updateStep('astro', {inProgress: true});
 
                     const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
-                    await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', 'basics', '--yes', '--no-git'], { cwd: projectRoot });
-                    await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath});
-                    await execa('npx', ['astro', 'add', 'cloudflare'], {cwd: astroFrontendPath});
+                    await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', 'basics', '--yes', '--no-git'], { cwd: projectRoot, stdin: 'ignore' });
+                    await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    await execa('npx', ['astro', 'add', 'cloudflare'], {cwd: astroFrontendPath, stdin: 'ignore'});
 
                     const packageJsonPath = path.join(astroFrontendPath, 'package.json');
                     let packageContent = await fs.readFile(packageJsonPath, 'utf8');
@@ -339,7 +339,7 @@ binding = "SESSION"
 id = "your-kv-namespace-id"
 `;
                     await fs.writeFile(path.join(projectRoot, 'wrangler.toml'), wranglerTomlContent);
-                    await execa('npm', ['install', 'jsona', 'drupal-jsonapi-params'], {cwd: astroFrontendPath});
+                    await execa('npm', ['install', 'jsona', 'drupal-jsonapi-params'], {cwd: astroFrontendPath, stdin: 'ignore'});
 
                     updateStep('astro', {inProgress: false, done: true});
                     updateStep('complete', {done: true});
