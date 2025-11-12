@@ -151,7 +151,8 @@ module.exports = ({
                 try {
                     await execa('docker', ['info', '--format', '{{json .ServerVersion}}'], {
                         env: {...process.env, ...extraEnv},
-                        timeout: 3000
+                        timeout: 3000,
+                        stdin: 'ignore'
                     });
                     return true;
                 } catch {
@@ -164,7 +165,9 @@ module.exports = ({
             };
             const runDdev = async (args, options) => {
                 try {
-                    return await execa('ddev', args, {...options, stdio: 'pipe'});
+                    // Use stdin: 'ignore' to prevent hanging on prompts since we use --auto, -y, --no-interaction flags
+                    // If you need user interaction, change to stdin: 'inherit' and remove automation flags
+                    return await execa('ddev', args, {...options, stdin: 'ignore'});
                 } catch (error) {
                     const errMsg = (error && (error.stderr || error.stdout || error.message)) || 'Unknown error';
                     throw new Error(errMsg);

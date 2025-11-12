@@ -48,7 +48,7 @@ A production-ready starter kit featuring an Astro frontend on Cloudflare Workers
 
    ```zsh
    # Clone the starter kit
-   git clone https://github.com/yourusername/Drupal_Astro_Kit.git your-project-name
+   git clone https://github.com/rovo79/Drupal_Astro_Kit.git your-project-name
    cd your-project-name
 
    # IMPORTANT: Project names must use hyphens (not underscores) for valid hostnames
@@ -68,8 +68,6 @@ A production-ready starter kit featuring an Astro frontend on Cloudflare Workers
    chmod +x setup.sh
    ./setup.sh
    ```
-
-   **Note:** The first run will download DDEV Docker images (~600MB+), which may take 5-15 minutes depending on your internet connection. The "Pulling DDEV images" step will show progress.
 
 3. After the setup is complete, commit and push your changes:
 
