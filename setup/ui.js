@@ -291,12 +291,26 @@ module.exports = ({
                     // Create Astro project
                     await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', astroTemplate, '--yes', '--no-git'], { cwd: projectRoot, stdin: 'ignore' });
                     
+                    // Ensure base dependencies are installed for the freshly created project
+                    try {
+                        await execa('npm', ['install'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    } catch (e) {
+                        // Proceed; we'll install specific deps below regardless
+                    }
+                    
                     // Install additional dependencies (wrangler, Drupal libraries)
                     await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath, stdin: 'ignore'});
                     await execa('npm', ['install', 'jsona', 'drupal-jsonapi-params', 'tslib'], {cwd: astroFrontendPath, stdin: 'ignore'});
                     
                     // Add Cloudflare adapter (this modifies package.json and astro.config.mjs)
                     await execa('npx', ['astro', 'add', 'cloudflare', '--yes'], {cwd: astroFrontendPath, stdin: 'ignore'});
+
+                    // Verify tslib is resolvable; install if still missing (belt and suspenders)
+                    try {
+                        await execa('node', ['-e', "require.resolve('tslib')"], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    } catch (_verifyErr) {
+                        await execa('npm', ['install', 'tslib'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    }
 
                     // Now update package.json name (AFTER all installs are complete)
                     const packageJsonPath = path.join(astroFrontendPath, 'package.json');
