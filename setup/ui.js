@@ -293,7 +293,7 @@ module.exports = ({
                     
                     // Install additional dependencies (wrangler, Drupal libraries)
                     await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath, stdin: 'ignore'});
-                    await execa('npm', ['install', 'jsona', 'drupal-jsonapi-params'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    await execa('npm', ['install', 'jsona', 'drupal-jsonapi-params', 'tslib'], {cwd: astroFrontendPath, stdin: 'ignore'});
                     
                     // Add Cloudflare adapter (this modifies package.json and astro.config.mjs)
                     await execa('npx', ['astro', 'add', 'cloudflare', '--yes'], {cwd: astroFrontendPath, stdin: 'ignore'});
