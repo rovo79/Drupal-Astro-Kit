@@ -79,8 +79,13 @@ A production-ready starter kit featuring an Astro frontend on Cloudflare Workers
    ```
 
 4. Start the development servers:
-   - Drupal backend: `ddev launch`
-   - Astro frontend: `cd astro-frontend && npm run dev`
+   ```bash
+   # Drupal backend
+   cd drupal-backend && ddev launch
+   
+   # Astro frontend (in a new terminal)
+   cd astro-frontend && npm run dev
+   ```
 
 ### Cloudflare Setup
 
@@ -293,9 +298,21 @@ Drupal_Astro_Kit/          # Root directory (your project name)
 
 ### Local Development
 
-- Drupal Backend: `http://your-project-name.ddev.site`
-- Astro Frontend (dev): `http://localhost:4321`
-- Astro Frontend (Cloudflare Workers dev): `http://localhost:8787`
+To start development, run these commands from your project root:
+
+```bash
+# Start Drupal backend
+cd drupal-backend && ddev launch
+
+# Start Astro frontend (in a new terminal, from project root)
+cd astro-frontend && npm run dev
+```
+
+Your sites will be available at:
+
+- **Drupal Backend**: `http://your-project-name.ddev.site`
+- **Astro Frontend (dev)**: `http://localhost:4321`
+- **Astro Frontend (Cloudflare Workers dev)**: `http://localhost:8787` (use `npx wrangler dev --remote`)
 
 ### Production Deployment
 

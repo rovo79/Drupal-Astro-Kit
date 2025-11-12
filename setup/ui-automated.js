@@ -4,8 +4,6 @@ module.exports = ({
     React,
     ink,
     Spinner,
-    TextInput,
-    SelectInput,
     execa,
     fs,
     path
@@ -13,41 +11,34 @@ module.exports = ({
     const {Text, Box} = ink;
     const {useState, useEffect} = React;
 
-    // Validation helpers
-    const validateProjectName = (name) => {
-        if (!name || name.trim().length === 0) return 'Project name cannot be empty';
-        if (name.includes('_')) return 'Project name cannot contain underscores (use hyphens instead)';
-        if (!/^[a-z0-9-]+$/.test(name)) return 'Project name can only contain lowercase letters, numbers, and hyphens';
-        return null;
-    };
-
     const Step = ({text, inProgress, done, error}) => {
         const contents = [];
-        if (inProgress) contents.push(React.createElement(Spinner, {type: 'dots', key: 'spinner'}));
-        if (done && !error) contents.push('✅');
-        if (error) contents.push('❌');
+
+        if (inProgress) {
+            contents.push(React.createElement(Spinner, {type: 'dots', key: 'spinner'}));
+        }
+
+        if (done && !error) {
+            contents.push('✅');
+        }
+
+        if (error) {
+            contents.push('❌');
+        }
+
         contents.push(' ');
         contents.push(text);
-        return React.createElement(Box, null, React.createElement(Text, null, ...contents));
+
+        return React.createElement(
+            Box,
+            null,
+            React.createElement(Text, null, ...contents)
+        );
     };
 
     const App = () => {
-        // Phase management
-        const [phase, setPhase] = useState('welcome'); // welcome -> prompts -> setup -> complete
-        
-        // User inputs
-        const [projectName, setProjectName] = useState(path.basename(path.resolve(process.cwd(), '..')));
-        const [projectNameError, setProjectNameError] = useState(null);
-        const [adminUsername, setAdminUsername] = useState('admin');
-        const [adminPassword, setAdminPassword] = useState('admin');
-        const [astroTemplate, setAstroTemplate] = useState('basics');
-        
-        // Current prompt step
-        const [promptStep, setPromptStep] = useState(0);
-        
-        // Setup steps
         const [steps, setSteps] = useState([
-            {id: 'env', text: 'Syncing .env file', inProgress: false, done: false, error: null},
+            {id: 'env', text: 'Syncing .env file', inProgress: true, done: false, error: null},
             {id: 'docker-socket', text: 'Checking Docker socket', inProgress: false, done: false, error: null},
             {id: 'ddev-config', text: 'Configuring DDEV', inProgress: false, done: false, error: null},
             {id: 'ddev-start', text: 'Starting DDEV', inProgress: false, done: false, error: null},
@@ -74,37 +65,8 @@ module.exports = ({
             setFailedMessage(message || 'Setup failed. See previous step for details.');
         };
 
-        // Handle prompt navigation
-        const handleProjectNameSubmit = (value) => {
-            const error = validateProjectName(value);
-            if (error) {
-                setProjectNameError(error);
-            } else {
-                setProjectName(value);
-                setProjectNameError(null);
-                setPromptStep(1);
-            }
-        };
-
-        const handleAdminUsernameSubmit = (value) => {
-            setAdminUsername(value || 'admin');
-            setPromptStep(2);
-        };
-
-        const handleAdminPasswordSubmit = (value) => {
-            setAdminPassword(value || 'admin');
-            setPromptStep(3);
-        };
-
-        const handleTemplateSelect = (item) => {
-            setAstroTemplate(item.value);
-            setPhase('setup');
-        };
-
-        // Setup execution (same as before, but uses user-provided values)
         useEffect(() => {
-            if (phase !== 'setup') return;
-
+            // Try to resolve Docker environment (e.g., Colima) and return env overrides
             const resolveDockerEnv = async () => {
                 const fsSync = require('node:fs');
                 const http = require('node:http');
@@ -129,6 +91,7 @@ module.exports = ({
                     });
                 };
 
+                // 1) If DOCKER_HOST is set, try to use it
                 if (process.env.DOCKER_HOST && process.env.DOCKER_HOST.trim() !== '') {
                     const unixPath = parseUnixSocketFromHost(process.env.DOCKER_HOST.trim());
                     if (unixPath) {
@@ -136,10 +99,12 @@ module.exports = ({
                             return {DOCKER_HOST: process.env.DOCKER_HOST.trim(), __socketPath: unixPath};
                         }
                     } else {
+                        // Non-unix DOCKER_HOST (tcp, npipe). Assume available and let ddev surface errors.
                         return {DOCKER_HOST: process.env.DOCKER_HOST.trim()};
                     }
                 }
 
+                // 2) Detect Colima socket
                 try {
                     const result = await execa('colima', ['status'], {timeout: 2000, stdin: 'ignore'});
                     const stdout = result.stdout || '';
@@ -150,8 +115,11 @@ module.exports = ({
                             return {DOCKER_HOST: `unix://${colimaSocket}` , __socketPath: colimaSocket};
                         }
                     }
-                } catch (e) {}
+                } catch (e) {
+                    // colima may not be installed; ignore and fallback
+                }
 
+                // 3) Fallback to docker context inspect
                 try {
                     const ctx = await execa('docker', ['context', 'inspect'], {timeout: 2000, stdin: 'ignore'});
                     const json = JSON.parse(ctx.stdout);
@@ -163,19 +131,22 @@ module.exports = ({
                                 return {DOCKER_HOST: `unix://${unixPath}`, __socketPath: unixPath};
                             }
                         } else if (host && typeof host === 'string') {
+                            // Non-unix host (tcp). Use it without probing.
                             return {DOCKER_HOST: host};
                         }
                     }
-                } catch (e) {}
+                } catch (e) {
+                    // Ignore; we'll proceed to default
+                }
 
+                // 4) Default unix socket
                 const defaultSocket = '/var/run/docker.sock';
                 if (await isDockerSocketAvailable(defaultSocket)) {
                     return {DOCKER_HOST: `unix://${defaultSocket}`, __socketPath: defaultSocket};
                 }
 
-                return {};
+                return {}; // not resolvable
             };
-
             const dockerInfoWorks = async (extraEnv = {}) => {
                 try {
                     await execa('docker', ['info', '--format', '{{json .ServerVersion}}'], {
@@ -188,29 +159,32 @@ module.exports = ({
                     return false;
                 }
             };
-
+            // FS and command helpers
             const pathExists = async (p) => {
                 try { await fs.access(p); return true; } catch { return false; }
             };
-
             const runDdev = async (args, options) => {
                 try {
+                    // Use stdin: 'ignore' to prevent hanging on prompts since we use --auto, -y, --no-interaction flags
+                    // If you need user interaction, change to stdin: 'inherit' and remove automation flags
                     return await execa('ddev', args, {...options, stdin: 'ignore'});
                 } catch (error) {
                     const errMsg = (error && (error.stderr || error.stdout || error.message)) || 'Unknown error';
                     throw new Error(errMsg);
                 }
             };
-
             const runSetup = async () => {
                 try {
                     const projectRoot = path.resolve(process.cwd(), '..');
+                    const projectName = path.basename(projectRoot);
                     const envPath = path.join(projectRoot, '.env');
                     const exampleEnvPath = path.join(projectRoot, '.env.example');
                     const dockerEnvCandidate = await resolveDockerEnv();
 
-                    updateStep('env', {inProgress: true});
-                    const envExists = await fs.access(envPath).then(() => true).catch(() => false);
+                    const envExists = await fs
+                        .access(envPath)
+                        .then(() => true)
+                        .catch(() => false);
 
                     if (!envExists) {
                         await fs.copyFile(exampleEnvPath, envPath);
@@ -220,8 +194,10 @@ module.exports = ({
                         content += `\nDRUPAL_API_URL=${drupalApiUrl}\n`;
                         await fs.writeFile(envPath, content);
                     }
+
                     updateStep('env', {inProgress: false, done: true});
 
+                    // Verify Docker availability using CLI; fallback to DOCKER_HOST if needed
                     updateStep('docker-socket', {inProgress: true});
                     let dockerEnv = {};
                     const canUseDockerCLI = await dockerInfoWorks();
@@ -234,29 +210,55 @@ module.exports = ({
                             dockerEnv = {DOCKER_HOST: dockerEnvCandidate.DOCKER_HOST};
                             updateStep('docker-socket', {inProgress: false, done: true});
                         } else {
-                            const hint = 'Docker daemon is not reachable. Start Docker Desktop or Colima.';
+                            const hint = 'Docker daemon is not reachable. Start Docker Desktop or Colima, or set DOCKER_HOST to your socket (e.g., unix:///Users/rob/.colima/default/docker.sock).';
                             updateStep('docker-socket', {inProgress: false, error: hint});
                             markError(hint);
                             return;
                         }
                     } else {
-                        const hint = 'Docker daemon is not reachable. Start Docker Desktop or Colima.';
+                        const hint = 'Docker daemon is not reachable. Start Docker Desktop or Colima, or set DOCKER_HOST to your socket (e.g., unix:///Users/rob/.colima/default/docker.sock).';
                         updateStep('docker-socket', {inProgress: false, error: hint});
                         markError(hint);
                         return;
                     }
 
                     updateStep('ddev-config', {inProgress: true});
+
                     const drupalBackendPath = path.join(projectRoot, 'drupal-backend');
                     await fs.mkdir(drupalBackendPath, {recursive: true});
                     
-                    await runDdev(['config', '--project-type=drupal11', '--php-version=8.3', '--docroot=web', `--project-name=${projectName}`, '--auto'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    try {
+                        await runDdev(['config', '--project-type=drupal11', '--php-version=8.3', '--docroot=web', `--project-name=${projectName}`, '--auto'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    } catch (error) {
+                        if (error.message.includes('not a valid project name') || error.message.includes('valid hostname')) {
+                            const sanitizedName = projectName.replace(/_/g, '-');
+                            const hint = `Project name "${projectName}" contains underscores which are not allowed in hostnames. Rename your project directory to use hyphens (e.g., "${sanitizedName}") and try again.`;
+                            updateStep('ddev-config', {inProgress: false, error: hint});
+                            markError(hint);
+                            return;
+                        }
+                        throw error;
+                    }
+                    
                     updateStep('ddev-config', {inProgress: false, done: true});
                     
+                    // Start DDEV with -y to auto-accept prompts (e.g., instrumentation/telemetry)
                     updateStep('ddev-start', {inProgress: true});
-                    await runDdev(['start', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}, timeout: 300000});
-                    updateStep('ddev-start', {inProgress: false, done: true});
 
+                    try {
+                        await runDdev(['start', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}, timeout: 300000});
+                    } catch (error) {
+                        if (error.timedOut) {
+                            const hint = 'DDEV start timed out after 5 minutes. This can happen with slow internet or resource constraints. Try running "ddev start" manually in drupal-backend/.';
+                            updateStep('ddev-start', {inProgress: false, error: hint});
+                            markError(hint);
+                            return;
+                        }
+                        throw error;
+                    }
+
+                    updateStep('ddev-start', {inProgress: false, done: true});
+                    // Idempotent create-project: skip if already present
                     const webCorePath = path.join(drupalBackendPath, 'web', 'core');
                     const composerJsonPath = path.join(drupalBackendPath, 'composer.json');
                     const hasDrupal = await pathExists(webCorePath) || await pathExists(composerJsonPath);
@@ -267,24 +269,26 @@ module.exports = ({
                     } else {
                         updateStep('ddev-composer-create', {inProgress: false, done: true});
                     }
-
                     updateStep('ddev-drush', {inProgress: true});
                     try {
                         await runDdev(['composer', 'require', 'drush/drush'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                    } catch (e) {}
-                    updateStep('ddev-drush', {inProgress: false, done: true});
+                    } catch (e) {
+                        // Drush might already be installed; continue
+                    }
 
+                    updateStep('ddev-drush', {inProgress: false, done: true});
                     updateStep('ddev-site-install', {inProgress: true});
                     const settingsPhp = path.join(drupalBackendPath, 'web', 'sites', 'default', 'settings.php');
                     const isInstalled = await pathExists(settingsPhp);
                     if (!isInstalled) {
-                        await runDdev(['exec', 'drush', 'site:install', `--account-name=${adminUsername}`, `--account-pass=${adminPassword}`, '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                        await runDdev(['exec', 'drush', 'site:install', '--account-name=admin', '--account-pass=admin', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
                     }
-                    updateStep('ddev-site-install', {inProgress: false, done: true});
 
+                    updateStep('ddev-site-install', {inProgress: false, done: true});
                     updateStep('astro', {inProgress: true});
+
                     const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
-                    await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', astroTemplate, '--yes', '--no-git'], { cwd: projectRoot, stdin: 'ignore' });
+                    await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', 'basics', '--yes', '--no-git'], { cwd: projectRoot, stdin: 'ignore' });
                     await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath, stdin: 'ignore'});
                     await execa('npx', ['astro', 'add', 'cloudflare', '--yes'], {cwd: astroFrontendPath, stdin: 'ignore'});
 
@@ -294,7 +298,8 @@ module.exports = ({
                     packageJson.name = `${projectName}-frontend`;
                     await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
-                    const astroConfigContent = `import { defineConfig } from 'astro/config';
+                    const astroConfigContent = `
+import { defineConfig } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
@@ -313,7 +318,8 @@ export default defineConfig({
                     await fs.writeFile(path.join(astroFrontendPath, 'astro.config.mjs'), astroConfigContent);
                     await fs.copyFile(envPath, path.join(astroFrontendPath, '.env'));
 
-                    const wranglerTomlContent = `name = "${projectName}"
+                    const wranglerTomlContent = `
+name = "${projectName}"
 main = "./astro-frontend/dist/_worker.js/index.js"
 compatibility_date = "${new Date().toISOString().split('T')[0]}"
 compatibility_flags = ["nodejs_compat"]
@@ -338,6 +344,7 @@ id = "your-kv-namespace-id"
                     updateStep('astro', {inProgress: false, done: true});
                     updateStep('complete', {done: true});
                     
+                    // Show next steps after successful completion
                     console.log('\n');
                     console.log('🎉 Next Steps:');
                     console.log('');
@@ -348,7 +355,7 @@ id = "your-kv-namespace-id"
                     console.log(`   cd astro-frontend && npm run dev`);
                     console.log('');
                     console.log('3. Your sites will be available at:');
-                    console.log(`   Drupal: http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`);
+                    console.log(`   Drupal: http://${projectName}.ddev.site`);
                     console.log('   Astro:  http://localhost:4321');
                     console.log('');
                 } catch (error) {
@@ -357,121 +364,19 @@ id = "your-kv-namespace-id"
             };
 
             runSetup();
-        }, [phase, projectName, adminUsername, adminPassword, astroTemplate]);
+        }, []);
 
-        // Render different phases
-        if (phase === 'welcome') {
-            return React.createElement(
-                Box,
-                {flexDirection: 'column', paddingY: 1},
-                React.createElement(Text, {bold: true, color: 'cyan'}, '🚀 Drupal + Astro + Cloudflare Starter Kit'),
-                React.createElement(Text, null, ''),
-                React.createElement(Text, {dimColor: true}, 'Let\'s get you set up! Press Enter to continue...'),
-                React.createElement(TextInput, {
-                    value: '',
-                    onChange: () => {},
-                    onSubmit: () => setPhase('prompts')
-                })
-            );
-        }
+        const stepElements = steps
+            .filter(step => step.id !== 'complete' || step.done)
+            .map(step => React.createElement(Step, {...step, key: step.id}));
 
-        if (phase === 'prompts') {
-            const templates = [
-                {label: 'Basics (minimal starter)', value: 'basics'},
-                {label: 'Blog (with content collections)', value: 'blog'},
-                {label: 'Portfolio (showcase your work)', value: 'portfolio'},
-                {label: 'Minimal (bare bones)', value: 'minimal'}
-            ];
-
-            if (promptStep === 0) {
-                return React.createElement(
-                    Box,
-                    {flexDirection: 'column', paddingY: 1},
-                    React.createElement(Text, {bold: true}, '🚀 Drupal + Astro + Cloudflare Setup'),
-                    React.createElement(Text, null, ''),
-                    React.createElement(Text, null, 'Project name (lowercase, hyphens only):'),
-                    React.createElement(TextInput, {
-                        value: projectName,
-                        onChange: setProjectName,
-                        onSubmit: handleProjectNameSubmit
-                    }),
-                    projectNameError ? React.createElement(Text, {color: 'red'}, `  ⚠️  ${projectNameError}`) : null
-                );
-            }
-
-            if (promptStep === 1) {
-                return React.createElement(
-                    Box,
-                    {flexDirection: 'column', paddingY: 1},
-                    React.createElement(Text, {bold: true}, '🚀 Drupal + Astro + Cloudflare Setup'),
-                    React.createElement(Text, null, ''),
-                    React.createElement(Text, {dimColor: true}, `✓ Project name: ${projectName}`),
-                    React.createElement(Text, null, ''),
-                    React.createElement(Text, null, 'Drupal admin username:'),
-                    React.createElement(TextInput, {
-                        value: adminUsername,
-                        onChange: setAdminUsername,
-                        onSubmit: handleAdminUsernameSubmit,
-                        placeholder: 'admin'
-                    })
-                );
-            }
-
-            if (promptStep === 2) {
-                return React.createElement(
-                    Box,
-                    {flexDirection: 'column', paddingY: 1},
-                    React.createElement(Text, {bold: true}, '🚀 Drupal + Astro + Cloudflare Setup'),
-                    React.createElement(Text, null, ''),
-                    React.createElement(Text, {dimColor: true}, `✓ Project name: ${projectName}`),
-                    React.createElement(Text, {dimColor: true}, `✓ Admin username: ${adminUsername}`),
-                    React.createElement(Text, null, ''),
-                    React.createElement(Text, null, 'Drupal admin password:'),
-                    React.createElement(TextInput, {
-                        value: adminPassword,
-                        onChange: setAdminPassword,
-                        onSubmit: handleAdminPasswordSubmit,
-                        placeholder: 'admin',
-                        mask: '•'
-                    })
-                );
-            }
-
-            if (promptStep === 3) {
-                return React.createElement(
-                    Box,
-                    {flexDirection: 'column', paddingY: 1},
-                    React.createElement(Text, {bold: true}, '🚀 Drupal + Astro + Cloudflare Setup'),
-                    React.createElement(Text, null, ''),
-                    React.createElement(Text, {dimColor: true}, `✓ Project name: ${projectName}`),
-                    React.createElement(Text, {dimColor: true}, `✓ Admin username: ${adminUsername}`),
-                    React.createElement(Text, {dimColor: true}, `✓ Admin password: ${'•'.repeat(adminPassword.length)}`),
-                    React.createElement(Text, null, ''),
-                    React.createElement(Text, null, 'Choose Astro template:'),
-                    React.createElement(SelectInput, {
-                        items: templates,
-                        onSelect: handleTemplateSelect
-                    })
-                );
-            }
-        }
-
-        if (phase === 'setup') {
-            const stepElements = steps
-                .filter(step => step.id !== 'complete' || step.done)
-                .map(step => React.createElement(Step, {...step, key: step.id}));
-
-            return React.createElement(
-                Box,
-                {flexDirection: 'column'},
-                React.createElement(Text, {bold: true, color: 'cyan'}, `🔧 Setting up ${projectName}...`),
-                React.createElement(Text, null, ''),
-                failedMessage ? React.createElement(Text, {color: 'red'}, `\n❌ Setup failed: ${failedMessage}\n`) : null,
-                ...stepElements
-            );
-        }
-
-        return null;
+        return React.createElement(
+            Box,
+            {flexDirection: 'column'},
+            React.createElement(Text, {bold: true}, 'Drupal + Astro + Cloudflare Setup'),
+            failedMessage ? React.createElement(Text, {color: 'red'}, `\nSetup failed: ${failedMessage}\n`) : null,
+            ...stepElements
+        );
     };
 
     return App;
