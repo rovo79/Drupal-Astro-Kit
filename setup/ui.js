@@ -58,6 +58,7 @@ module.exports = ({
             {id: 'complete', text: 'Setup Complete!', inProgress: false, done: false, error: null}
         ]);
         const [failedMessage, setFailedMessage] = useState(null);
+        const [showNextSteps, setShowNextSteps] = useState(false);
 
         const updateStep = (id, updates) => {
             setSteps(prevSteps =>
@@ -104,6 +105,8 @@ module.exports = ({
         // Setup execution (same as before, but uses user-provided values)
         useEffect(() => {
             if (phase !== 'setup') return;
+
+            setShowNextSteps(false);
 
             const resolveDockerEnv = async () => {
                 const fsSync = require('node:fs');
@@ -300,6 +303,16 @@ module.exports = ({
                     let packageContent = await fs.readFile(packageJsonPath, 'utf8');
                     const packageJson = JSON.parse(packageContent);
                     packageJson.name = `${projectName}-frontend`;
+
+                    // Ensure required Astro scripts exist (create-astro sometimes skips installs in non-interactive runs)
+                    const scripts = {...(packageJson.scripts ?? {})};
+                    if (!scripts.dev) scripts.dev = 'astro dev';
+                    if (!scripts.start) scripts.start = scripts.dev;
+                    if (!scripts.build) scripts.build = 'astro build';
+                    if (!scripts.preview) scripts.preview = 'astro preview';
+                    if (!scripts.astro) scripts.astro = 'astro';
+                    packageJson.scripts = scripts;
+
                     await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
                     const astroConfigContent = `import { defineConfig } from 'astro/config';
@@ -344,23 +357,7 @@ id = "your-kv-namespace-id"
 
                     updateStep('astro', {inProgress: false, done: true});
                     updateStep('complete', {done: true});
-                    
-                    // Small delay to let the UI render "Setup Complete!" first
-                    setTimeout(() => {
-                        console.log('\n');
-                        console.log('🎉 Next Steps:');
-                        console.log('');
-                        console.log('1. Start the Drupal backend:');
-                        console.log(`   cd drupal-backend && ddev launch`);
-                        console.log('');
-                        console.log('2. Start the Astro frontend:');
-                        console.log(`   cd astro-frontend && npm run dev`);
-                        console.log('');
-                        console.log('3. Your sites will be available at:');
-                        console.log(`   Drupal: http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`);
-                        console.log('   Astro:  http://localhost:4321');
-                        console.log('');
-                    }, 100);
+                    setShowNextSteps(true);
                 } catch (error) {
                     markError(error.message);
                 }
@@ -470,14 +467,29 @@ id = "your-kv-namespace-id"
             const stepElements = steps
                 .filter(step => step.id !== 'complete' || step.done)
                 .map(step => React.createElement(Step, {...step, key: step.id}));
+            const nextStepsElements = showNextSteps ? [
+                React.createElement(Text, {key: 'next-gap'}, ''),
+                React.createElement(Text, {key: 'next-title', bold: true}, '🎉 Next Steps:'),
+                React.createElement(Text, {key: 'next-1'}, '  1. Start the Drupal backend:'),
+                React.createElement(Text, {key: 'next-1-cmd', dimColor: true}, '     cd drupal-backend && ddev launch'),
+                React.createElement(Text, {key: 'next-2'}, '  2. Start the Astro frontend:'),
+                React.createElement(Text, {key: 'next-2-cmd', dimColor: true}, '     cd astro-frontend && npm run dev'),
+                React.createElement(Text, {key: 'next-3'}, '  3. Your sites will be available at:'),
+                React.createElement(Text, {key: 'next-3-drupal', dimColor: true}, `     Drupal: http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`),
+                React.createElement(Text, {key: 'next-3-astro', dimColor: true}, '     Astro:  http://localhost:4321'),
+                React.createElement(Text, {key: 'next-end'}, '')
+            ] : [];
+            const headerColor = showNextSteps ? 'green' : 'cyan';
+            const headerText = showNextSteps ? `✅ ${projectName} is ready!` : `🔧 Setting up ${projectName}...`;
 
             return React.createElement(
                 Box,
                 {flexDirection: 'column'},
-                React.createElement(Text, {bold: true, color: 'cyan'}, `🔧 Setting up ${projectName}...`),
+                React.createElement(Text, {bold: true, color: headerColor}, headerText),
                 React.createElement(Text, null, ''),
                 failedMessage ? React.createElement(Text, {color: 'red'}, `\n❌ Setup failed: ${failedMessage}\n`) : null,
-                ...stepElements
+                ...stepElements,
+                ...nextStepsElements
             );
         }
 
