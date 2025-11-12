@@ -1,23 +1,33 @@
-
 #!/usr/bin/env node
 'use strict';
+
 const React = require('react');
-const importJsx = require('import-jsx');
-const {render} = require('ink');
-const meow = require('meow');
+const path = require('path');
+const fs = require('fs');
+const createUi = require('./ui');
 
-const ui = importJsx('./ui');
+(async () => {
+	try {
+		const inkModule = await import('ink');
+		const SpinnerModule = await import('ink-spinner');
+		const execaModule = await import('execa');
 
-const cli = meow(`
-	Usage
-	  $ setup
+		const {render, ...inkComponents} = inkModule;
+		const Spinner = SpinnerModule.default ?? SpinnerModule;
+		const execa = execaModule.default ?? execaModule;
 
-	Options
-		--name  Your name
+		const App = createUi({
+			React,
+			ink: inkComponents,
+			Spinner,
+			execa,
+			fs: fs.promises,
+			path
+		});
 
-	Examples
-	  $ setup --name=Jane
-	  Hello, Jane
-`);
-
-render(React.createElement(ui, cli.flags));
+		render(React.createElement(App, {}));
+	} catch (error) {
+		console.error('Failed to launch setup CLI:', error);
+		process.exit(1);
+	}
+})();
