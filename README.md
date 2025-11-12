@@ -69,6 +69,8 @@ A production-ready starter kit featuring an Astro frontend on Cloudflare Workers
    ./setup.sh
    ```
 
+   **Note:** The first run will download DDEV Docker images (~600MB+), which may take 5-15 minutes depending on your internet connection. The "Pulling DDEV images" step will show progress.
+
 3. After the setup is complete, commit and push your changes:
 
    ```zsh

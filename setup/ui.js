@@ -164,7 +164,7 @@ module.exports = ({
             };
             const runDdev = async (args, options) => {
                 try {
-                    return await execa('ddev', args, options);
+                    return await execa('ddev', args, {...options, stdio: 'pipe'});
                 } catch (error) {
                     const errMsg = (error && (error.stderr || error.stdout || error.message)) || 'Unknown error';
                     throw new Error(errMsg);
@@ -238,9 +238,21 @@ module.exports = ({
                     }
                     
                     updateStep('ddev-config', {inProgress: false, done: true});
+                    
+                    // Start DDEV with -y to auto-accept prompts (e.g., instrumentation/telemetry)
                     updateStep('ddev-start', {inProgress: true});
 
-                    await runDdev(['start'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    try {
+                        await runDdev(['start', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}, timeout: 300000});
+                    } catch (error) {
+                        if (error.timedOut) {
+                            const hint = 'DDEV start timed out after 5 minutes. This can happen with slow internet or resource constraints. Try running "ddev start" manually in drupal-backend/.';
+                            updateStep('ddev-start', {inProgress: false, error: hint});
+                            markError(hint);
+                            return;
+                        }
+                        throw error;
+                    }
 
                     updateStep('ddev-start', {inProgress: false, done: true});
                     // Idempotent create-project: skip if already present
