@@ -158,6 +158,7 @@ npx wrangler kv key get --binding=SESSION "test"
 #### 4. Development & Deployment
 
 **Local Development:**
+
 ```bash
 # For local dev with live KV access (recommended for KV testing)
 npx wrangler dev --remote
@@ -167,6 +168,7 @@ cd astro-frontend && npm run dev
 ```
 
 **Production Deployment:**
+
 ```bash
 # Deploy using the provided script
 zsh scripts/deploy-frontend.sh
@@ -248,11 +250,12 @@ The Astro frontend expects the following packages to be installed:
 
 - [jsona](https://www.npmjs.com/package/jsona)
 - [drupal-jsonapi-params](https://www.npmjs.com/package/drupal-jsonapi-params)
+- [tslib](https://www.npmjs.com/package/tslib)
 
-These are installed automatically by `setup-astro.sh`, but if you set up manually, run:
+These are installed automatically by the interactive setup (via `./setup.sh`). If you set up manually, run:
 
    ```zsh
-   npm install jsona drupal-jsonapi-params
+   npm install jsona drupal-jsonapi-params tslib
    ```
 
 ## 📚 Documentation
@@ -465,6 +468,7 @@ npm run build
 ```
 
 **API requests failing from Workers:**
+
 - Verify `DRUPAL_JSONAPI_URL` in `.env` is accessible from internet
 - Check CORS settings in Drupal (see [docs/troubleshooting.md](docs/troubleshooting.md))
 - Use `npx wrangler tail` to view live Worker logs

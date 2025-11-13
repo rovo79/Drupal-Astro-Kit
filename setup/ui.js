@@ -300,16 +300,22 @@ module.exports = ({
                     
                     // Install additional dependencies (wrangler, Drupal libraries)
                     await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath, stdin: 'ignore'});
-                    await execa('npm', ['install', 'jsona', 'drupal-jsonapi-params', 'tslib'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    // Pin tslib to 2.6.2 for stable runtime resolution on Node 20/Workers
+                    await execa('npm', ['install', '--save', 'jsona', 'drupal-jsonapi-params', 'tslib@2.6.2'], {cwd: astroFrontendPath, stdin: 'ignore'});
                     
                     // Add Cloudflare adapter (this modifies package.json and astro.config.mjs)
                     await execa('npx', ['astro', 'add', 'cloudflare', '--yes'], {cwd: astroFrontendPath, stdin: 'ignore'});
+
+                    // Ensure any adapter-added dependencies are installed
+                    try {
+                        await execa('npm', ['install'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    } catch (_) {}
 
                     // Verify tslib is resolvable; install if still missing (belt and suspenders)
                     try {
                         await execa('node', ['-e', "require.resolve('tslib')"], {cwd: astroFrontendPath, stdin: 'ignore'});
                     } catch (_verifyErr) {
-                        await execa('npm', ['install', 'tslib'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                        await execa('npm', ['install', '--save', 'tslib@2.6.2'], {cwd: astroFrontendPath, stdin: 'ignore'});
                     }
 
                     // Now update package.json name (AFTER all installs are complete)
@@ -317,6 +323,20 @@ module.exports = ({
                     let packageContent = await fs.readFile(packageJsonPath, 'utf8');
                     const packageJson = JSON.parse(packageContent);
                     packageJson.name = `${projectName}-frontend`;
+
+                    // Ensure Node engine (prefer Node 20 for local dev and Workers compat)
+                    const engines = {...(packageJson.engines ?? {})};
+                    engines.node = ">=20 <21";
+                    packageJson.engines = engines;
+
+                    // Ensure tslib is pinned to 2.6.2
+                    const deps = {...(packageJson.dependencies ?? {})};
+                    if (deps.tslib && deps.tslib !== '2.6.2') {
+                      deps.tslib = '2.6.2';
+                    } else if (!deps.tslib) {
+                      deps.tslib = '2.6.2';
+                    }
+                    packageJson.dependencies = deps;
 
                     // Ensure required Astro scripts exist (create-astro sometimes skips installs in non-interactive runs)
                     const scripts = {...(packageJson.scripts ?? {})};
@@ -328,6 +348,9 @@ module.exports = ({
                     packageJson.scripts = scripts;
 
                     await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+
+                    // Write an .nvmrc to pin local dev to Node 20
+                    await fs.writeFile(path.join(astroFrontendPath, '.nvmrc'), '20\n');
 
                     const astroConfigContent = `import { defineConfig } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';

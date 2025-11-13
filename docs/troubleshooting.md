@@ -77,6 +77,34 @@ This guide covers common issues and their solutions for the Drupal + Astro start
    rm -rf dist
    ```
 
+### Runtime Errors (dev server)
+
+1. **Cannot find package 'tslib' imported from @swc/helpers/esm/_ts_decorate.js**
+
+   This means the TypeScript runtime helpers package `tslib` is missing. Some SWC helpers (e.g., for decorators) import from `tslib` at runtime.
+
+   Fix:
+
+   ```bash
+   cd astro-frontend
+   # install as a regular dependency (not dev)
+   npm install tslib
+
+   # optional but helpful checks
+   node -p "require.resolve('tslib')"   # should print a path
+
+   # restart dev server
+   npm run dev
+   ```
+
+   If the error persists, do a clean install:
+
+   ```bash
+   rm -rf node_modules package-lock.json
+   npm install
+   npm run dev
+   ```
+
 ## Cloudflare Workers Issues
 
 ### Deployment Problems
