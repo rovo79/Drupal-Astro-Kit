@@ -47,6 +47,11 @@ const createRecommendation = ({
  */
 const TEST_RESOURCES = [
   {
+    type: 'node--page',
+    name: 'Pages',
+    description: 'Basic page nodes'
+  },
+  {
     type: 'node--article',
     name: 'Articles',
     description: 'Sample article nodes'
@@ -253,6 +258,9 @@ export const run = async ({ target = AUDIT_TARGETS.API } = {}) => {
 
   // Analyze results
   const failedCount = TEST_RESOURCES.length - successCount;
+
+  // T027: TODO: Add performance audit (cache headers check)
+  // T028: TODO: Add security audit (anonymous user access check)
 
   if (failedCount === TEST_RESOURCES.length) {
     findings.push(

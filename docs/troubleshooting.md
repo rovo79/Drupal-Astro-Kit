@@ -243,3 +243,17 @@ This guide covers common issues and their solutions for the Drupal + Astro start
    - Regular backups
    - Security patches
    - Performance optimization
+
+## CORS Issues
+
+1. **Allowed Origins**
+   The allowed origins are derived from your `PROJECT_NAME` in `.env`.
+   - Local: `http://localhost:4321`
+   - Production: `https://<project-name>.workers.dev`
+   If you change your project name or domain, you must update `services.yml` or re-run the setup configuration.
+
+## Security Restrictions
+
+1. **User Endpoint Access**
+   By default, the `/jsonapi/user/user` endpoint is restricted for anonymous users to prevent user enumeration. Ensure you are authenticated if you need to access user data.
+

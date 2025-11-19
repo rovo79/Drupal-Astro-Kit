@@ -179,3 +179,15 @@ The data flow above shows:
 ```
 
 This deployment flow shows how code moves from development to production through the Cloudflare Workers platform.
+
+## Content Modeling Conventions
+
+- **Machine Names**: Use `field_` prefix for all custom fields (e.g., `field_slug`, `field_summary`).
+- **Bundles**: Use singular names for content types (e.g., `page`, `article`).
+- **Vocabularies**: Use singular names (e.g., `tag`, `category`).
+
+## Configuration Management (Future)
+
+- **Config Split**: In V2+, we plan to use Config Split to manage environment-specific configurations (local vs production).
+- **CMI**: Configuration is exported to `config/sync` and committed to git.
+
