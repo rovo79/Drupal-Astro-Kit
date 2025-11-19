@@ -308,6 +308,13 @@ module.exports = ({
 
                     updateStep('configure-drupal', {inProgress: true});
                     
+                    // Enable JSON:API module (core)
+                    try {
+                        await runDdev(['exec', 'drush', 'en', 'jsonapi', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    } catch (e) {
+                        // Ignore if already enabled or fails (will be caught by audit)
+                    }
+
                     // T012: Inject CORS configuration
                     // T024: Add services.yml CORS section cross-reference
                     const servicesYmlPath = path.join(drupalBackendPath, 'web', 'sites', 'default', 'services.yml');
