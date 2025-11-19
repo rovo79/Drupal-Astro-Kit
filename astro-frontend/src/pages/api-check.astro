@@ -3,10 +3,15 @@
 // Tests fetching and rendering Drupal content via JSON:API
 // Used by collect_snapshots.js in SSR parity audit
 
-import { createJsonApiClient } from '../../../audit/scripts/util/jsonapiClient.js';
+// T018: Ensure jsona deserialization pattern
+import Jsona from 'jsona';
+import { DrupalJsonApiParams } from 'drupal-jsonapi-params';
 
-let articles = [];
-let error = null;
+// T020: Contract reference: specs/002-drupal-api-config/contracts/openapi.yaml
+
+let pages: any[] = [];
+let error: string | null = null;
+let corsHeaders: any = {};
 
 try {
   const apiUrl = import.meta.env.DRUPAL_API_URL;
@@ -14,15 +19,43 @@ try {
   if (!apiUrl) {
     error = 'DRUPAL_API_URL not configured in environment';
   } else {
-    const client = createJsonApiClient({ baseUrl: apiUrl });
-    const result = await client.fetchCollection('node--article', {
-      'page[limit]': 5
-    });
+    // T016: Sparse fieldset example
+    // T017: Sorting example
+    const params = new DrupalJsonApiParams();
+    params.addFilter('status', '1');
+    params.addFields('node--page', ['title', 'field_slug', 'field_summary', 'field_body', 'changed']);
+    params.addSort('-changed');
+    params.addPageLimit(5);
+
+    const queryString = params.getQueryString();
+    const endpoint = `${apiUrl}/node/page?${queryString}`;
+
+    console.log(`Fetching from: ${endpoint}`);
+
+    const response = await fetch(endpoint);
     
-    articles = Array.isArray(result.data) ? result.data.slice(0, 5) : [];
+    // T022: CORS header verification log
+    console.log('CORS Headers:', {
+      'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+      'access-control-allow-methods': response.headers.get('access-control-allow-methods')
+    });
+    corsHeaders = {
+        origin: response.headers.get('access-control-allow-origin'),
+        methods: response.headers.get('access-control-allow-methods')
+    };
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const json = await response.json();
+    const dataFormatter = new Jsona();
+    pages = dataFormatter.deserialize(json);
   }
 } catch (err) {
-  error = err instanceof Error ? err.message : 'Unknown error fetching articles';
+  // T019: Error handling
+  error = err instanceof Error ? err.message : 'Unknown error fetching pages';
+  console.error('Fetch error:', err);
 }
 ---
 
@@ -58,18 +91,22 @@ try {
       border: 1px solid #f5c6cb;
       color: #721c24;
     }
-    .articles {
+    .pages {
       margin-top: 2rem;
     }
-    .article {
+    .page {
       padding: 1rem;
       border: 1px solid #ddd;
       border-radius: 6px;
       margin-bottom: 1rem;
       background-color: #f9f9f9;
     }
-    .article h3 {
+    .page h3 {
       margin-top: 0;
+    }
+    .meta {
+        font-size: 0.85rem;
+        color: #666;
     }
   </style>
 </head>
@@ -82,25 +119,22 @@ try {
     </div>
   ) : (
     <div class="status success">
-      <strong>Success:</strong> JSON:API integration working. Fetched {articles.length} article(s).
+      <strong>Success:</strong> JSON:API integration working. Fetched {pages.length} page(s).
+      <br/>
+      <small>CORS Origin: {corsHeaders.origin || 'null'}</small>
     </div>
   )}
 
-  {articles.length > 0 && (
-    <div class="articles">
-      <h2>Sample Articles</h2>
-      {articles.map((article) => (
-        <div class="article">
-          <h3>{article.title || '(untitled)'}</h3>
-          <p>
-            <strong>Type:</strong> {article.type || 'unknown'}
-            {article.created && (
-              <>
-                <br />
-                <strong>Created:</strong> {new Date(article.created).toLocaleDateString()}
-              </>
-            )}
-          </p>
+  {pages.length > 0 && (
+    <div class="pages">
+      <h2>Sample Pages</h2>
+      {pages.map((page) => (
+        <div class="page">
+          <h3>{page.title || '(untitled)'}</h3>
+          <div class="meta">
+            Slug: {page.field_slug} | Changed: {page.changed}
+          </div>
+          <p>{page.field_summary}</p>
         </div>
       ))}
     </div>
@@ -109,6 +143,9 @@ try {
   <hr />
   <p style="color: #666; font-size: 0.9rem;">
     This page is used by the audit suite to verify Drupal JSON:API integration.
+    <br/>
+    <!-- T021: Link to quickstart -->
+    See <a href="/specs/002-drupal-api-config/quickstart.md">Quickstart Guide</a> for manual validation steps.
   </p>
 </body>
 </html>

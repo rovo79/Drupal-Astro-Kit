@@ -150,6 +150,8 @@ The project uses a **manual testing workflow** (no automated tests yet):
 ## Active Technologies
 - Bash (automation scripts), Node.js 20 (Astro + Workers dev), PHP 8.3 (Drupal via DDEV) + Astro (SSR, Cloudflare adapter), Drupal 11 (JSON:API), jsona, drupal-jsonapi-params, Wrangler CLI, DDEV, Ink + execa (setup CLI) (001-project-audit-optimization)
 - Drupal DB (MariaDB/PostgreSQL via DDEV internal), Cloudflare KV (SESSION) (001-project-audit-optimization)
+- PHP 8.3 (Drupal 11), Node.js 20 (Astro/Workers dev), Bash 5+ + Drupal 11 core (`jsonapi`), DDEV, Drush; Astro with `@astrojs/cloudflare` (SSR), `jsona`, `drupal-jsonapi-params`, Wrangler CLI (002-drupal-api-config)
+- MariaDB/PostgreSQL via DDEV for Drupal; Cloudflare KV (SESSION) for frontend session management (not directly used by this feature) (002-drupal-api-config)
 
 ## Recent Changes
 - 001-project-audit-optimization: Added Bash (automation scripts), Node.js 20 (Astro + Workers dev), PHP 8.3 (Drupal via DDEV) + Astro (SSR, Cloudflare adapter), Drupal 11 (JSON:API), jsona, drupal-jsonapi-params, Wrangler CLI, DDEV, Ink + execa (setup CLI)

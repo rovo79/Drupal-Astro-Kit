@@ -1,0 +1,96 @@
+openapi: 3.1.0
+info:
+  title: Drupal JSON:API — Page Endpoint (V1 Minimal)
+  version: 1.0.0
+  description: |
+    Minimal contract for consuming Drupal core JSON:API for the `page` content type.
+    This represents a baseline for frontend integration in V1.
+servers:
+  - url: http://{project}.ddev.site/jsonapi
+    variables:
+      project:
+        default: your-project
+        description: Project name from .env (PROJECT_NAME)
+paths:
+  /node/page:
+    get:
+      summary: List published Page nodes
+      description: Returns Page nodes with optional sparse fieldset and sorting.
+      parameters:
+        - in: query
+          name: filter[status]
+          schema:
+            type: string
+            enum: ["1", "0"]
+          description: Filter by published status (1 = published)
+        - in: query
+          name: fields[node--page]
+          schema:
+            type: string
+          description: Comma-separated list of fields to include in attributes
+        - in: query
+          name: sort
+          schema:
+            type: string
+          description: Sort by field, e.g., -changed for most recently updated first
+        - in: header
+          name: Accept
+          schema:
+            type: string
+            default: application/vnd.api+json
+          required: false
+          description: JSON:API media type
+      responses:
+        "200":
+          description: Successful response containing a JSON:API document
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiDocument'
+components:
+  schemas:
+    JsonApiDocument:
+      type: object
+      properties:
+        jsonapi:
+          type: object
+          properties:
+            version:
+              type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/JsonApiResource'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+    JsonApiResource:
+      type: object
+      required: [id, type, attributes]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: ["node--page"]
+        attributes:
+          type: object
+          properties:
+            title:
+              type: string
+            field_slug:
+              type: string
+            field_summary:
+              type: string
+            field_body:
+              type: string
+          additionalProperties: true
+        relationships:
+          type: object
+          additionalProperties: true
+        links:
+          type: object
+          additionalProperties: true

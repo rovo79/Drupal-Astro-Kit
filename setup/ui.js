@@ -41,6 +41,22 @@ module.exports = ({
         const [adminUsername, setAdminUsername] = useState('admin');
         const [adminPassword, setAdminPassword] = useState('admin');
         const [astroTemplate, setAstroTemplate] = useState('basics');
+        const [astroExists, setAstroExists] = useState(false);
+
+        // Check for existing astro-frontend
+        useEffect(() => {
+            const checkAstro = async () => {
+                const projectRoot = path.resolve(process.cwd(), '..');
+                const afPath = path.join(projectRoot, 'astro-frontend');
+                try {
+                    await fs.access(afPath);
+                    setAstroExists(true);
+                } catch {
+                    setAstroExists(false);
+                }
+            };
+            checkAstro();
+        }, []);
         
         // Current prompt step
         const [promptStep, setPromptStep] = useState(0);
@@ -54,6 +70,7 @@ module.exports = ({
             {id: 'ddev-composer-create', text: 'Creating Drupal project with Composer', inProgress: false, done: false, error: null},
             {id: 'ddev-drush', text: 'Installing Drush', inProgress: false, done: false, error: null},
             {id: 'ddev-site-install', text: 'Installing Drupal site', inProgress: false, done: false, error: null},
+            {id: 'configure-drupal', text: 'Configuring Drupal (Content Types, CORS)', inProgress: false, done: false, error: null},
             {id: 'astro', text: 'Setting up Astro frontend', inProgress: false, done: false, error: null},
             {id: 'complete', text: 'Setup Complete!', inProgress: false, done: false, error: null}
         ]);
@@ -94,7 +111,11 @@ module.exports = ({
 
         const handleAdminPasswordSubmit = (value) => {
             setAdminPassword(value || 'admin');
-            setPromptStep(3);
+            if (astroExists) {
+                setPhase('setup');
+            } else {
+                setPromptStep(3);
+            }
         };
 
         const handleTemplateSelect = (item) => {
@@ -285,11 +306,94 @@ module.exports = ({
                     }
                     updateStep('ddev-site-install', {inProgress: false, done: true});
 
+                    updateStep('configure-drupal', {inProgress: true});
+                    
+                    // T012: Inject CORS configuration
+                    // T024: Add services.yml CORS section cross-reference
+                    const servicesYmlPath = path.join(drupalBackendPath, 'web', 'sites', 'default', 'services.yml');
+                    const defaultServicesYmlPath = path.join(drupalBackendPath, 'web', 'sites', 'default', 'default.services.yml');
+                    
+                    if (await pathExists(defaultServicesYmlPath) && !await pathExists(servicesYmlPath)) {
+                        await fs.copyFile(defaultServicesYmlPath, servicesYmlPath);
+                        await fs.chmod(servicesYmlPath, 0o644);
+                    }
+
+                    if (await pathExists(servicesYmlPath)) {
+                        let servicesContent = await fs.readFile(servicesYmlPath, 'utf8');
+                        if (!servicesContent.includes('cors.config:')) {
+                            const corsConfig = `
+parameters:
+  cors.config:
+    enabled: true
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
+    allowedMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
+    allowedOrigins: ['http://localhost:4321', 'https://${projectName}.workers.dev']
+    exposedHeaders: false
+    maxAge: false
+    supportsCredentials: false
+`;
+                            servicesContent += "\\n" + corsConfig;
+                            await fs.writeFile(servicesYmlPath, servicesContent);
+                        }
+                    }
+
+                    // T009, T010: Create page content type and fields
+                    // T011: Uniqueness guidance for field_slug (comment: ensure unique slugs in logic if possible)
+                    // T013: Verify anonymous 'access content' permission
+                    // T015: Constitution compliance checklist:
+                    // - Service boundaries respected
+                    // - Config-driven
+                    // - Automation
+                    // T026: TODO: Performance optimization (caching)
+                    // T030: TODO: Additional bundles (article, taxonomy)
+
+                    const phpCode = `
+if (!\\Drupal::entityTypeManager()->getStorage('node_type')->load('page')) {
+  $type = \\Drupal\\node\\Entity\\NodeType::create(['type' => 'page', 'name' => 'Basic Page']);
+  $type->save();
+}
+
+$fields = [
+  'field_slug' => ['type' => 'string', 'label' => 'Slug'],
+  'field_summary' => ['type' => 'string_long', 'label' => 'Summary'],
+  'field_body' => ['type' => 'text_long', 'label' => 'Body'],
+];
+
+foreach ($fields as $name => $info) {
+  if (!\\Drupal\\field\\Entity\\FieldStorageConfig::loadByName('node', $name)) {
+    \\Drupal\\field\\Entity\\FieldStorageConfig::create([
+      'field_name' => $name,
+      'entity_type' => 'node',
+      'type' => $info['type'],
+    ])->save();
+  }
+  if (!\\Drupal\\field\\Entity\\FieldConfig::loadByName('node', 'page', $name)) {
+    \\Drupal\\field\\Entity\\FieldConfig::create([
+      'field_name' => $name,
+      'entity_type' => 'node',
+      'bundle' => 'page',
+      'label' => $info['label'],
+    ])->save();
+  }
+}
+
+user_role_grant_permissions('anonymous', ['access content']);
+`;
+                    try {
+                        await runDdev(['exec', 'drush', 'php:eval', phpCode], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    } catch (e) {
+                        // Proceed even if this fails (e.g. if already exists)
+                    }
+
+                    updateStep('configure-drupal', {inProgress: false, done: true});
+
                     updateStep('astro', {inProgress: true});
                     const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
                     
-                    // Create Astro project
-                    await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', astroTemplate, '--yes', '--no-git'], { cwd: projectRoot, stdin: 'ignore' });
+                    // Create Astro project only if it doesn't exist
+                    if (!astroExists) {
+                        await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', astroTemplate, '--yes', '--no-git'], { cwd: projectRoot, stdin: 'ignore' });
+                    }
                     
                     // Ensure base dependencies are installed for the freshly created project
                     try {

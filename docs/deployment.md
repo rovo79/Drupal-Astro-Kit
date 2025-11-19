@@ -69,6 +69,14 @@ This guide covers how to deploy your Drupal + Astro site to production.
    ddev drush deploy
    ```
 
+### Configuration Export
+
+- **JSON:API Extras**: If you use `jsonapi_extras` to customize resource names, ensure you export the configuration:
+  ```bash
+  ddev drush config:export -y
+  ```
+  TODO: Automate this in the deployment pipeline.
+
 ## CI/CD Pipeline
 
 ### GitHub Actions

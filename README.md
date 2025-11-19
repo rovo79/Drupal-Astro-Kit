@@ -265,6 +265,7 @@ These are installed automatically by the interactive setup (via `./setup.sh`). I
 - [GitHub Actions](docs/github-actions.md) - CI/CD workflow for Workers deployment
 - [Cloudflare Setup](docs/cloudflare-setup.md) - Workers and KV configuration
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+- [API Contract (OpenAPI)](specs/002-drupal-api-config/contracts/openapi.yaml) - JSON:API specification for this project
 
 ## 🏗️ Project Structure
 
