@@ -274,6 +274,13 @@ module.exports = ({
                     const drupalBackendPath = path.join(projectRoot, 'drupal-backend');
                     await fs.mkdir(drupalBackendPath, {recursive: true});
                     
+                    // Remove any stale DDEV project with same name but different path
+                    try {
+                        await runDdev(['stop', '--unlist', projectName], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    } catch (e) {
+                        // Ignore if project doesn't exist
+                    }
+                    
                     await runDdev(['config', '--project-type=drupal11', '--php-version=8.3', '--docroot=web', `--project-name=${projectName}`, '--auto'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
                     updateStep('ddev-config', {inProgress: false, done: true});
                     
@@ -627,7 +634,7 @@ id = "your-kv-namespace-id"
                 React.createElement(Text, {key: 'next-title', bold: true}, '🎉 Next Steps:'),
                 React.createElement(Text, {key: 'next-1'}, '  1. Start the Drupal backend:'),
                 React.createElement(Text, {key: 'next-1-cmd', dimColor: true}, '     cd drupal-backend && ddev launch'),
-                React.createElement(Text, {key: 'next-2'}, '  2. Start the Astro frontend:'),
+                React.createElement(Text, {key: 'next-2'}, '  2. Start the Astro frontend (in a new terminal from project root):'),
                 React.createElement(Text, {key: 'next-2-cmd', dimColor: true}, '     cd astro-frontend && npm run dev'),
                 React.createElement(Text, {key: 'next-3'}, '  3. Your sites will be available at:'),
                 React.createElement(Text, {key: 'next-3-drupal', dimColor: true}, `     Drupal: http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`),
