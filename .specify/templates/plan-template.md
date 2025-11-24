@@ -31,16 +31,7 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-The following MUST be verified against `.specify/memory/constitution.md`:
-
-- Service boundaries respected: Drupal ⇄ Astro ⇄ Workers communicate ONLY via JSON:API and env bindings.
-- Config-driven: No hard-coded URLs; all values come from `.env` and derive from `PROJECT_NAME`.
-- Automation: Setup flow uses `setup.sh` (Ink CLI); no extra manual steps beyond KV namespace ID.
-- UX consistency: Scripts print color-coded status and actionable recovery steps.
-- Rendering: SSR default (`output: 'server'`); static pages MUST justify `export const prerender = true`.
-- Workers build path: If changing Astro output, update `wrangler.toml` `main` and `[assets]` accordingly.
-- KV usage: `SESSION` KV binding present in `wrangler.toml` and used appropriately.
-- Quality gates: Plan includes checkpoints for Setup, Integration, and Deployment validation.
+[Gates determined based on constitution file]
 
 ## Project Structure
 

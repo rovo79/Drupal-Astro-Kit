@@ -341,63 +341,80 @@ module.exports = ({
 
                     if (await pathExists(servicesYmlPath)) {
                         let servicesContent = await fs.readFile(servicesYmlPath, 'utf8');
-                        if (!servicesContent.includes('cors.config:')) {
-                            const corsConfig = `
-parameters:
-  cors.config:
+                        // Check if CORS is already enabled (not just present but disabled)
+                        const corsAlreadyEnabled = servicesContent.includes('cors.config:') && 
+                            servicesContent.match(/cors\.config:[\s\S]*?enabled:\s*true/);
+                        
+                        if (!corsAlreadyEnabled) {
+                            // Replace the existing disabled cors.config or add new one
+                            // Match the default Drupal cors.config block (enabled: false with all comments)
+                            const corsBlockRegex = /(\s*cors\.config:[\s\S]*?supportsCredentials:\s*false)/;
+                            
+                            const newCorsConfig = `  cors.config:
     enabled: true
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
     allowedMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
-    allowedOrigins: ['http://localhost:4321', 'https://${projectName}.workers.dev']
+    allowedOrigins: ['http://localhost:4321', 'https://${projectName}.workers.dev', '*']
+    allowedOriginsPatterns: []
     exposedHeaders: false
     maxAge: false
-    supportsCredentials: false
-`;
-                            servicesContent += "\\n" + corsConfig;
+    supportsCredentials: false`;
+
+                            if (servicesContent.match(corsBlockRegex)) {
+                                // Replace existing cors.config block
+                                servicesContent = servicesContent.replace(corsBlockRegex, newCorsConfig);
+                            } else {
+                                // Append new cors.config if somehow not present
+                                servicesContent += `\n\nparameters:\n${newCorsConfig}\n`;
+                            }
                             await fs.writeFile(servicesYmlPath, servicesContent);
                         }
                     }
 
-                    // T009, T010: Create page content type and fields
-                    // T011: Uniqueness guidance for field_slug (comment: ensure unique slugs in logic if possible)
+                    // T009: Create page content type (using built-in Drupal fields)
                     // T013: Verify anonymous 'access content' permission
                     // T015: Constitution compliance checklist:
-                    // - Service boundaries respected
+                    // - Service boundaries respected (using Drupal core fields)
                     // - Config-driven
                     // - Automation
-                    // T026: TODO: Performance optimization (caching)
-                    // T030: TODO: Additional bundles (article, taxonomy)
+                    // 
+                    // Built-in fields used:
+                    // - title: Node title
+                    // - body: Rich text content (standard profile)
+                    // - path.alias: URL-friendly slug (e.g., /about-us)
+                    // - created, changed: Timestamps
+                    // - status: Published/unpublished
 
                     const phpCode = `
+// Create Basic Page content type if it doesn't exist
 if (!\\Drupal::entityTypeManager()->getStorage('node_type')->load('page')) {
-  $type = \\Drupal\\node\\Entity\\NodeType::create(['type' => 'page', 'name' => 'Basic Page']);
-  $type->save();
-}
-
-$fields = [
-  'field_slug' => ['type' => 'string', 'label' => 'Slug'],
-  'field_summary' => ['type' => 'string_long', 'label' => 'Summary'],
-  'field_body' => ['type' => 'text_long', 'label' => 'Body'],
-];
-
-foreach ($fields as $name => $info) {
-  if (!\\Drupal\\field\\Entity\\FieldStorageConfig::loadByName('node', $name)) {
-    \\Drupal\\field\\Entity\\FieldStorageConfig::create([
-      'field_name' => $name,
-      'entity_type' => 'node',
-      'type' => $info['type'],
-    ])->save();
-  }
-  if (!\\Drupal\\field\\Entity\\FieldConfig::loadByName('node', 'page', $name)) {
-    \\Drupal\\field\\Entity\\FieldConfig::create([
-      'field_name' => $name,
-      'entity_type' => 'node',
-      'bundle' => 'page',
-      'label' => $info['label'],
-    ])->save();
+  \\Drupal\\node\\Entity\\NodeType::create([
+    'type' => 'page',
+    'name' => 'Basic Page',
+    'description' => 'Use basic pages for static content like About or Contact.',
+  ])->save();
+  
+  // Add body field to the new content type
+  if (\\Drupal::moduleHandler()->moduleExists('text')) {
+    if (!\\Drupal\\field\\Entity\\FieldStorageConfig::loadByName('node', 'body')) {
+      \\Drupal\\field\\Entity\\FieldStorageConfig::create([
+        'field_name' => 'body',
+        'entity_type' => 'node',
+        'type' => 'text_with_summary',
+      ])->save();
+    }
+    if (!\\Drupal\\field\\Entity\\FieldConfig::loadByName('node', 'page', 'body')) {
+      \\Drupal\\field\\Entity\\FieldConfig::create([
+        'field_name' => 'body',
+        'entity_type' => 'node',
+        'bundle' => 'page',
+        'label' => 'Body',
+      ])->save();
+    }
   }
 }
 
+// Grant anonymous users permission to view content
 user_role_grant_permissions('anonymous', ['access content']);
 `;
                     try {

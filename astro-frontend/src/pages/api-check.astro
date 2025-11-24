@@ -4,7 +4,8 @@
 // Used by collect_snapshots.js in SSR parity audit
 
 // T018: Ensure jsona deserialization pattern
-import Jsona from 'jsona';
+// Use named import for Vite SSR compatibility (CJS/ESM interop)
+import { Jsona } from 'jsona';
 import { DrupalJsonApiParams } from 'drupal-jsonapi-params';
 
 // T020: Contract reference: specs/002-drupal-api-config/contracts/openapi.yaml
@@ -19,11 +20,12 @@ try {
   if (!apiUrl) {
     error = 'DRUPAL_API_URL not configured in environment';
   } else {
-    // T016: Sparse fieldset example
+    // T016: Sparse fieldset example (using Drupal's built-in fields)
     // T017: Sorting example
     const params = new DrupalJsonApiParams();
     params.addFilter('status', '1');
-    params.addFields('node--page', ['title', 'field_slug', 'field_summary', 'field_body', 'changed']);
+    // Using built-in Drupal fields: title, body, path (for URL alias), changed
+    params.addFields('node--page', ['title', 'body', 'path', 'changed']);
     params.addSort('-changed');
     params.addPageLimit(5);
 
@@ -132,9 +134,10 @@ try {
         <div class="page">
           <h3>{page.title || '(untitled)'}</h3>
           <div class="meta">
-            Slug: {page.field_slug} | Changed: {page.changed}
+            Path: {page.path?.alias || '/node/' + page.id} | Changed: {page.changed}
           </div>
-          <p>{page.field_summary}</p>
+          {page.body?.processed && <div set:html={page.body.processed} />}
+          {page.body?.summary && <p class="summary">{page.body.summary}</p>}
         </div>
       ))}
     </div>
