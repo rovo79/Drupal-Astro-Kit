@@ -299,8 +299,15 @@ module.exports = ({
                     updateStep('ddev-drush', {inProgress: false, done: true});
 
                     updateStep('ddev-site-install', {inProgress: true});
-                    const settingsPhp = path.join(drupalBackendPath, 'web', 'sites', 'default', 'settings.php');
-                    const isInstalled = await pathExists(settingsPhp);
+                    let isInstalled = false;
+                    try {
+                        // Check if Drupal is already installed by querying the users table
+                        await runDdev(['exec', 'drush', 'sql:query', 'SELECT count(*) FROM users LIMIT 1'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                        isInstalled = true;
+                    } catch (e) {
+                        isInstalled = false;
+                    }
+
                     if (!isInstalled) {
                         await runDdev(['exec', 'drush', 'site:install', `--account-name=${adminUsername}`, `--account-pass=${adminPassword}`, '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
                     }
