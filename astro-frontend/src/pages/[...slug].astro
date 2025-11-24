@@ -1,0 +1,141 @@
+---
+/**
+ * Dynamic catch-all route for Drupal pages
+ * 
+ * Matches URLs like /hello-world, /about-us, /nested/path
+ * against Drupal's path aliases using the Decoupled Router module.
+ * 
+ * This is the core pattern for headless CMS routing:
+ * 1. Capture the URL path
+ * 2. Use Decoupled Router to resolve path → entity
+ * 3. Fetch the entity via JSON:API
+ * 4. Render the content (or 404 if not found)
+ * 
+ * Requires: drupal/decoupled_router module
+ */
+import { Jsona } from 'jsona';
+
+const { slug } = Astro.params;
+const path = '/' + (slug || '');
+
+let page: any = null;
+let error: string | null = null;
+
+try {
+  const apiUrl = import.meta.env.DRUPAL_API_URL;
+  
+  if (!apiUrl) {
+    throw new Error('DRUPAL_API_URL not configured');
+  }
+
+  // Extract base URL from JSON:API URL (remove /jsonapi suffix)
+  const baseUrl = apiUrl.replace(/\/jsonapi\/?$/, '');
+
+  // Step 1: Use Decoupled Router to resolve the path to an entity
+  const routerResponse = await fetch(`${baseUrl}/router/translate-path?path=${encodeURIComponent(path)}`);
+  
+  if (routerResponse.status === 404) {
+    // Path doesn't exist in Drupal
+    return new Response(null, { status: 404, statusText: 'Not Found' });
+  }
+  
+  if (!routerResponse.ok) {
+    throw new Error(`Router error: ${routerResponse.status}`);
+  }
+
+  const routerData = await routerResponse.json();
+  
+  // Step 2: Fetch the entity from JSON:API using the individual URL
+  if (!routerData.jsonapi?.individual) {
+    throw new Error('No JSON:API URL returned from router');
+  }
+
+  const entityResponse = await fetch(routerData.jsonapi.individual);
+  
+  if (!entityResponse.ok) {
+    throw new Error(`Entity fetch error: ${entityResponse.status}`);
+  }
+
+  const json = await entityResponse.json();
+  const dataFormatter = new Jsona();
+  page = dataFormatter.deserialize(json);
+
+} catch (err) {
+  error = err instanceof Error ? err.message : 'Unknown error';
+  console.error(`Error fetching page for path "${path}":`, err);
+}
+
+// Return 404 if no page found
+if (!page && !error) {
+  return new Response(null, { status: 404, statusText: 'Not Found' });
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{page?.title || 'Page Not Found'}</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+      line-height: 1.6;
+      color: #333;
+    }
+    h1 {
+      color: #1a1a1a;
+      margin-bottom: 0.5rem;
+    }
+    .meta {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+    .content {
+      font-size: 1.1rem;
+    }
+    .content p {
+      margin-bottom: 1rem;
+    }
+    .error {
+      background: #fee;
+      border: 1px solid #fcc;
+      padding: 1rem;
+      border-radius: 4px;
+      color: #c00;
+    }
+  </style>
+</head>
+<body>
+  {error ? (
+    <div class="error">
+      <h1>Error</h1>
+      <p>{error}</p>
+    </div>
+  ) : page ? (
+    <>
+      <h1>{page.title}</h1>
+      <div class="meta">
+        Last updated: {new Date(page.changed).toLocaleDateString()}
+      </div>
+      <div class="content">
+        {page.body?.processed ? (
+          <div set:html={page.body.processed} />
+        ) : (
+          <p><em>No content</em></p>
+        )}
+      </div>
+    </>
+  ) : (
+    <div>
+      <h1>404 - Page Not Found</h1>
+      <p>The page "{path}" does not exist.</p>
+      <p><a href="/">Return home</a></p>
+    </div>
+  )}
+</body>
+</html>

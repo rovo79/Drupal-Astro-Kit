@@ -329,6 +329,15 @@ module.exports = ({
                         // Ignore if already enabled or fails (will be caught by audit)
                     }
 
+                    // Install and enable Decoupled Router for path alias resolution
+                    // This module provides /router/translate-path endpoint for headless routing
+                    try {
+                        await runDdev(['composer', 'require', 'drupal/decoupled_router'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                        await runDdev(['exec', 'drush', 'en', 'decoupled_router', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    } catch (e) {
+                        // Proceed even if this fails
+                    }
+
                     // T012: Inject CORS configuration
                     // T024: Add services.yml CORS section cross-reference
                     const servicesYmlPath = path.join(drupalBackendPath, 'web', 'sites', 'default', 'services.yml');
