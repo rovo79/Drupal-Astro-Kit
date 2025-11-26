@@ -1,481 +1,387 @@
 # 🚀 Drupal + Astro + Cloudflare Starter Kit
 
-[![CI/CD Pipeline](https://github.com/rovo79/Drupal_Astro_Kit/actions/workflows/deploy.yml/badge.svg)](https://github.com/rovo79/Drupal_Astro_Kit/actions/workflows/deploy.yml)
+Local Drupal CMS → Astro Static Site → Cloudflare Pages
 
-A production-ready starter kit featuring an Astro frontend on Cloudflare Workers, powered by a Drupal 11 backend running via DDEV.
+This starter kit turns Drupal 11 into a local-only CMS and uses Astro to generate a fully static site that deploys to Cloudflare Pages. You get modern frontend development with the stability of Drupal—but your production site is static, fast, secure, and free to host.
+
+If you want optional server-side rendering (SSR) on Cloudflare Workers, you can enable that in advanced mode. But the default, recommended flow is static-first.
+
+This is built for Drupal developers who want to escape Twig templating hell and ship modern frontends with minimal friction.
+
+---
+
+## 🌟 What You Get
+
+Core (Static-first)
+
+- Astro Static Frontend — Pre-rendered pages, built locally, deployed to Cloudflare Pages
+- Local Drupal 11 CMS — Fully managed inside DDEV
+- Instant Bootstrap — One interactive CLI creates both Drupal and Astro projects
+- Type-Safe API Access — jsona + drupal-jsonapi-params
+- Simple Build Pipeline — Build locally, deploy static output
+- Clean Routing — Drupal aliases mapped to Astro routes
+- Zero Runtime Dependencies — Production site does not require Drupal at all
+
+Optional (Advanced)
+
+- Cloudflare Workers SSR mode — For hosted-Drupal scenarios
+- Workers KV support — For sessions or dynamic endpoints
+- CI/CD Ready — GitHub Actions support for both Pages and Workers mode
+
+---
 
 ## 📋 Table of Contents
 
-- [What You Get](#-what-you-get)
-- [Prerequisites](#prerequisites)
-- [Quick Start](#-quick-start)
-- [Cloudflare Setup](#cloudflare-setup)
-- [Documentation](#-documentation)
-- [Project Structure](#️-project-structure)
-- [Development](#-development)
-- [Project Audit Suite](#-project-audit-suite)
-- [Common Troubleshooting](#-common-troubleshooting)
+- Features
+- Prerequisites
+- Quick Start
+- Local Development Flow
+- Build & Deployment
+- Architecture
+- Advanced: Workers Mode (Optional)
+- Project Structure
+- Troubleshooting
 
-## ✨ What You Get
+---
 
-- **Astro SSR Frontend** - Server-side rendering on Cloudflare Workers with edge distribution
-- **Drupal 11 Backend** - Headless CMS with JSON:API, managed via DDEV
-- **Instant Setup** - Interactive CLI installer configures everything in one command
-- **KV Session Storage** - Built-in session management with Workers KV
-- **CI/CD Ready** - GitHub Actions workflows for automated deployment
-- **Type-Safe API** - `jsona` + `drupal-jsonapi-params` for structured Drupal data
-- **Comprehensive Audit Suite** - Validates setup, SSR, API, KV, CI/CD, and docs
+## ✨ Features
+
+🟩 Static-first (default)
+
+This kit assumes:
+
+- Drupal lives locally
+- Astro fetches content at build time only
+- Cloudflare Pages serves a static site
+- No SSR dependency on Drupal in production
+
+🟩 One-command Bootstrap
+
+The interactive CLI:
+
+- Creates a Drupal 11 project under DDEV
+- Installs JSON:API, CORS configuration, and a starter content type
+- Creates an Astro project
+- Wires Drupal → Astro environment variables
+- Generates example routes that map Drupal aliases into Astro pages
+
+🟩 Modern Frontend for Drupal
+
+Astro replaces Twig entirely.
+
+Use React/Svelte/Solid/Vue islands if you want interactivity.
+
+🟩 Clean Separation
+
+- Drupal → content
+- Astro → presentation
+- Cloudflare Pages → hosting
+
+🟧 Optional SSR (Phase 2)
+
+If you later choose to host Drupal somewhere publicly accessible, you can:
+
+- Switch Astro to server mode
+- Deploy to Cloudflare Workers instead
+- Use live JSON:API reading at request time
+- Add previews, authenticated routes, etc.
+
+But the base kit no longer implies that.
+
+---
+
+## 🧰 Prerequisites
+
+Tool | Version | Install
+--- | --- | ---
+Node.js | 20+ | brew install node@20
+DDEV | Latest | brew install ddev/ddev/ddev
+Docker | Latest | brew install --cask docker
+Composer | Latest | brew install composer
+Cloudflare Account | Free | <https://dash.cloudflare.com>
+
+Important: In static mode, Drupal does not need to be hosted anywhere. It only needs to run locally when building the Astro site.
+
+---
 
 ## 🚦 Quick Start
 
-### Prerequisites
-
-### Prerequisites
-
-| Requirement | Version | Installation |
-|------------|---------|--------------|
-| **Node.js** | 20+ | `brew install node@20` |
-| **DDEV** | Latest | `brew install ddev/ddev/ddev` |
-| **Docker** | Latest | `brew install --cask docker` |
-| **PHP** | 8.3+ | Managed by DDEV |
-| **Composer** | Latest | `brew install composer` |
-| **Wrangler CLI** | v3+ | `npm install -g wrangler` |
-| **Cloudflare Account** | Free tier+ | [Sign up here](https://dash.cloudflare.com/sign-up) |
-
-### Installation
-
-1. Clone the repository and set up your project:
-
-   ```zsh
-   # Clone the starter kit
-   git clone https://github.com/rovo79/Drupal_Astro_Kit.git your-project-name
-   cd your-project-name
-
-   # IMPORTANT: Project names must use hyphens (not underscores) for valid hostnames
-   # Good: my-project, rovomedia-com
-   # Bad:  my_project, rovomedia_com
-
-   # Remove the original remote and set up your new repository
-   git remote remove origin
-
-   # Create a new repository on GitHub first, then:
-   git remote add origin https://github.com/your-username/new-repo-name.git
-   ```
-
-2. Run the setup script:
-
-   ```zsh
-   chmod +x setup.sh
-   ./setup.sh
-   ```
-
-3. After the setup is complete, commit and push your changes:
-
-   ```zsh
-   # Add all the new files created during setup
-   git add .
-   git commit -m "Initial project setup"
-   git push -u origin main
-   ```
-
-4. Start the development servers:
-   ```bash
-   # Drupal backend
-   cd drupal-backend && ddev launch
-   
-   # Astro frontend (in a new terminal)
-   cd astro-frontend && npm run dev
-   ```
-
-### Cloudflare Setup
-
-#### 1. API Token Configuration
-
-Before deploying to Cloudflare Workers, set up your API token:
-
-1. Go to [Cloudflare Dashboard > API Tokens](https://dash.cloudflare.com/profile/api-tokens)
-2. Click "Create Token" → "Create Custom Token"
-3. Set the following permissions:
-
-   **Account-level permissions:**
-   - `Workers Scripts Read` and `Workers Scripts Edit` (for Workers deployment)
-   - `Workers KV Storage Read` and `Workers KV Storage Edit` (for KV namespaces)
-
-   **Zone-level permissions** (if using custom domains):
-   - `Workers Routes Read` and `Workers Routes Edit` (for routing)
-   - `DNS Read` and `DNS Write` (for DNS management)
-   - `SSL and Certificates Read` and `SSL and Certificates Write` (for HTTPS)
-
-   **Optional but recommended:**
-   - `Account Analytics Read` (for monitoring)
-   - `Account Settings Read` (for configuration)
-
-4. Set the token's TTL (Time To Live) according to your security requirements
-5. Create the token and copy it securely
-6. Add the token to your `.env` file as `CLOUDFLARE_API_TOKEN`
-
-⚠️ **Security Note:** Keep your API token secure and never commit it to version control. The `.env` file is automatically added to `.gitignore`.
-
-#### 2. KV Namespace Setup
-
-Create a KV namespace for session management:
+1. Clone this kit and initialize your project
 
 ```bash
-# Create a namespace for sessions
-npx wrangler kv namespace create "SESSION"
-
-# The command will output something like:
-# 🌀  Creating namespace with title your-project-name-SESSION
-# ✨  Success!
-# Add the following to your configuration file:
-# [[kv_namespaces]]
-# binding = "SESSION"
-# id = "<BINDING_ID>"
+git clone https://github.com/rovo79/Drupal_Astro_Kit.git my-project
+cd my-project
+git remote remove origin
 ```
 
-Update `wrangler.toml` in your project root:
-
-```toml
-[[kv_namespaces]]
-binding = "SESSION"
-id = "<BINDING_ID>"  # Replace with the ID from the command output
-```
-
-#### 3. Verify Your Setup
+Add your own GitHub repo:
 
 ```bash
-# Verify your Cloudflare credentials
-npx wrangler whoami
-
-# List your KV namespaces
-npx wrangler kv namespace list
-
-# Test your KV namespace (optional)
-npx wrangler kv key put --binding=SESSION "test" "value"
-npx wrangler kv key get --binding=SESSION "test"
+git remote add origin https://github.com/your-user/my-project.git
 ```
 
-#### 4. Development & Deployment
-
-**Local Development:**
+1. Run the setup
 
 ```bash
-# For local dev with live KV access (recommended for KV testing)
-npx wrangler dev --remote
-
-# For local dev without KV (faster, but SESSION binding won't work)
-cd astro-frontend && npm run dev
-```
-
-**Production Deployment:**
-
-```bash
-# Deploy using the provided script
-zsh scripts/deploy-frontend.sh
-
-# Or deploy manually
-cd astro-frontend && npx wrangler deploy
-```
-
-Your site will be available at: `https://your-project-name.your-subdomain.workers.dev`
-
-💡 **Note:** Use `npx wrangler dev --remote` when testing features that require KV storage. The standard `npm run dev` runs Astro's dev server locally without Workers runtime.
-
-### Environment Variables
-
-The following environment variables are configured during setup:
-
-| Variable | Set By | Description |
-|----------|--------|-------------|
-| `PROJECT_NAME` | `setup.sh` | Your project name (derived from directory name) |
-| `DRUPAL_JSONAPI_URL` | `setup.sh` | Full URL to Drupal JSON:API endpoint |
-| `ASTRO_DEV_URL` | Manual | Astro dev server URL (default: `http://localhost:4321`) |
-| `WORKERS_DEV_URL` | Manual | Wrangler dev server URL (default: `http://localhost:8787`) |
-| `CLOUDFLARE_ACCOUNT_ID` | Manual | Your Cloudflare account ID (from dashboard) |
-| `CLOUDFLARE_API_TOKEN` | Manual | API token for Workers deployment |
-
-After running `./setup.sh`, update your `.env` file with the manual entries before deploying to Cloudflare.
-
-### Expected Output
-
-After running the setup scripts, you should see:
-
-1. From `env-sync.sh`:
-
-   ```zsh
-   ✅ .env created from .env.example and updated with project-specific values
-   📝 Project name: your-project-name
-   🌐 Drupal API URL: http://your-project-name.ddev.site/jsonapi
-   ```
-
-2. From `setup-ddev.sh`:
-
-   ```zsh
-   ==> Checking dependencies...
-   ==> Setting up Drupal backend for project: your-project-name
-   ...
-   ✅ Drupal backend setup complete!
-   Next steps:
-   1. Run 'ddev launch' to open your Drupal site
-   2. Your project name is: your-project-name
-   3. DDEV site URL: http://your-project-name.ddev.site
-   ```
-
-3. From `setup-astro.sh`:
-
-   ```bash
-   ==> Setting up Astro frontend for project: your-project-name
-   ...
-   ✅ Astro frontend setup complete!
-   Next steps:
-   1. Run 'npm run dev' to start the development server
-   2. Your project is configured for Cloudflare Workers deployment (SSR)
-   3. Environment variables are set up from your .env file
-
-   Cloudflare Setup Required:
-   1. Create a KV namespace: npx wrangler kv namespace create "SESSION"
-   2. Update wrangler.toml with your namespace ID
-   3. Verify setup: npx wrangler kv:namespace list
-
-   Development Notes:
-   1. For local development with Workers: npx wrangler dev
-   2. The SESSION binding is available for session management
-   3. Observability is enabled for monitoring and debugging
-   4. SSR is enabled - pages render on-demand in Workers
-   ```
-
-## Astro Frontend Requirements
-
-The Astro frontend expects the following packages to be installed:
-
-- [jsona](https://www.npmjs.com/package/jsona)
-- [drupal-jsonapi-params](https://www.npmjs.com/package/drupal-jsonapi-params)
-- [tslib](https://www.npmjs.com/package/tslib)
-
-These are installed automatically by the interactive setup (via `./setup.sh`). If you set up manually, run:
-
-   ```zsh
-   npm install jsona drupal-jsonapi-params tslib
-   ```
-
-## 📚 Documentation
-
-- [Deployment Guide](docs/deployment.md) - How to deploy your site to Cloudflare Workers
-- [SSR Guide](docs/ssr-guide.md) - Server-side rendering with Workers configuration
-- [GitHub Actions](docs/github-actions.md) - CI/CD workflow for Workers deployment
-- [Cloudflare Setup](docs/cloudflare-setup.md) - Workers and KV configuration
-- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
-- [API Contract (OpenAPI)](specs/002-drupal-api-config/contracts/openapi.yaml) - JSON:API specification for this project
-
-## 🏗️ Project Structure
-
-```plaintext
-Drupal_Astro_Kit/          # Root directory (your project name)
-├── wrangler.toml          # Cloudflare Workers config (lives at root)
-├── .env                   # Environment variables (generated by setup)
-├── .env.example           # Environment template
-├── setup.sh               # Main setup script
-├── astro-frontend/        # Astro frontend (created by setup)
-│   ├── src/               # Astro components and pages
-│   ├── dist/              # Build output (contains _worker.js/)
-│   └── package.json       # Frontend dependencies
-├── drupal-backend/        # Drupal backend (created by setup)
-│   ├── .ddev/             # DDEV configuration
-│   └── web/               # Drupal web root
-├── scripts/               # Automation scripts
-│   ├── deploy-frontend.sh # Deploy to Workers
-│   └── setup-mcp.sh       # MCP server setup
-├── setup/                 # Interactive setup CLI
-│   ├── cli.js             # CLI entry point
-│   └── ui.js              # Ink-based UI
-├── audit/                 # Project audit suite
-│   └── scripts/           # Audit modules
-└── docs/                  # Documentation
-    ├── architecture.md
-    ├── deployment.md
-    └── ...
-```
-
-**Note:** `astro-frontend/` and `drupal-backend/` directories are created by the setup script and not committed to the repository.
-
-## 🔧 Development
-
-### Local Development
-
-To start development, run these commands from your project root:
-
-```bash
-# Start Drupal backend
-cd drupal-backend && ddev launch
-
-# Start Astro frontend (in a new terminal, from project root)
-cd astro-frontend && npm run dev
-```
-
-Your sites will be available at:
-
-- **Drupal Backend**: `http://your-project-name.ddev.site`
-- **Astro Frontend (dev)**: `http://localhost:4321`
-- **Astro Frontend (Cloudflare Workers dev)**: `http://localhost:8787` (use `npx wrangler dev --remote`)
-
-### Production Deployment
-
-To deploy your frontend to Cloudflare Workers:
-
-```bash
-# Deploy using the provided script
-zsh scripts/deploy-frontend.sh
-
-# Or deploy manually
-cd astro-frontend
-npx wrangler deploy
-```
-
-Your site will be available at: `https://your-project-name.your-subdomain.workers.dev`
-
-### Cloudflare Workers Features
-
-This starter kit leverages several Cloudflare Workers capabilities:
-
-- **Server-Side Rendering (SSR)**: Pages render on-demand in Workers
-- **KV Storage**: Session management and caching with Workers KV
-- **Edge Computing**: Global distribution with minimal latency
-- **Observability**: Built-in monitoring and logging
-- **Serverless Primitives**: Ready for D1, R2, and other Workers services
-
-### Available Scripts
-
-- `setup.sh` - The main setup script for the project.
-- `scripts/deploy-frontend.sh` - Deploy frontend to Cloudflare Workers
-
-## 🔍 Project Audit Suite
-
-A comprehensive audit tool validates your setup, SSR configuration, API integration, KV storage, CI/CD pipeline, and documentation accuracy.
-
-### Running Audits
-
-```bash
-cd audit
-npm install  # One-time setup
-
-# Run all audits
-node index.js
-
-# Run specific audit target
-node index.js --target setup
-node index.js --target ssr
-node index.js --target api
-node index.js --target kv
-node index.js --target ci
-node index.js --target docs
-
-# Generate enhanced reports
-node scripts/generate-report.js
-```
-
-### Audit Targets
-
-| Target | Purpose | Checks |
-|--------|---------|--------|
-| **setup** | Project initialization | .env, wrangler.toml, required commands, Drupal reachability |
-| **ssr** | SSR parity | Astro dev vs Workers dev rendering consistency |
-| **api** | JSON:API integration | Drupal connectivity, jsona deserialization |
-| **kv** | KV namespace | SESSION namespace read/write/delete cycle |
-| **ci** | CI/CD pipeline | GitHub Actions workflow validation, required jobs |
-| **docs** | Documentation drift | Path references, config mentions, link validation |
-
-### Reports
-
-Audit results generate two files:
-
-- `audit/report/audit-report.json` - Detailed findings, recommendations, metadata
-- `audit/report/audit-report.md` - Human-readable summary with actionable steps
-
-## � Common Troubleshooting
-
-### Starting Fresh / Cleanup
-
-If you need to completely reset and start over:
-
-```bash
-# Stop and remove DDEV project
-cd drupal-backend && ddev stop --unlist your-project-name
-
-# From project root, remove generated directories
-cd ..
-rm -rf astro-frontend drupal-backend .env wrangler.toml
-
-# Now you can re-run setup
+chmod +x setup.sh
 ./setup.sh
 ```
 
-### Setup Issues
+This will:
 
-**DDEV won't start:**
+- Create drupal-backend/ in DDEV
+- Create astro-frontend/
+- Configure .env
+- Map Drupal’s JSON:API into Astro
+- Generate a working SSG route: src/pages/[...slug].astro
+
+1. Launch local development
+
 ```bash
-# Check Docker is running
-docker ps
+# Start Drupal
+cd drupal-backend && ddev start && ddev launch
 
-# Restart DDEV
-cd drupal-backend && ddev restart
+# Start Astro (in a new terminal)
+cd astro-frontend && npm run dev
 ```
 
-**Permission errors during setup:**
-```bash
-# Make setup script executable
-chmod +x setup.sh
+You now have:
 
-# Check Node.js version (requires 20+)
-node --version
+- Drupal: <http://my-project.ddev.site>
+- Astro: <http://localhost:4321>
+
+---
+
+## 🧱 Local Development Flow
+
+You maintain content in Drupal locally.
+
+Astro reads Drupal using JSON:API only at build time:
+
+```text
+Drupal (local)
+    ↓ JSON:API
+Astro build
+    ↓
+Static HTML in dist/
+    ↓
+Cloudflare Pages Hosting
 ```
 
-### Development Issues
+There is no Drupal runtime dependency in production.
 
-**"Cannot find module" errors in Astro:**
+---
+
+## 📦 Build & Deployment
+
+### Prerequisites for Deployment
+
+1. **Cloudflare Account**: Sign up at [dash.cloudflare.com](https://dash.cloudflare.com)
+2. **API Token**: Create one with "Cloudflare Pages" permissions
+3. **Account ID**: Found in your Cloudflare dashboard URL
+
+Add these to your `.env` file:
+
 ```bash
-# Reinstall dependencies
-cd astro-frontend && rm -rf node_modules && npm install
-
-# Verify jsona and drupal-jsonapi-params are installed
-npm list jsona drupal-jsonapi-params
+CLOUDFLARE_API_TOKEN=your-api-token-here
+CLOUDFLARE_ACCOUNT_ID=your-account-id-here
 ```
 
-**KV binding not working in local dev:**
-```bash
-# Use --remote flag to access live KV
-npx wrangler dev --remote
+### Building the Static Site
 
-# Verify KV namespace exists
-npx wrangler kv namespace list
+Before building, make sure your local Drupal is running:
+
+```bash
+cd drupal-backend && ddev start
 ```
 
-### Deployment Issues
+Then build the Astro site:
 
-**"Invalid binding `SESSION`" error:**
 ```bash
-# Check wrangler.toml has correct KV namespace ID
-cat wrangler.toml | grep -A 2 kv_namespaces
-
-# Recreate namespace if needed
-npx wrangler kv namespace create "SESSION"
-```
-
-**Build fails with "Cannot find module":**
-```bash
-# Clear build cache and rebuild
 cd astro-frontend
-rm -rf dist .astro
 npm run build
 ```
 
-**API requests failing from Workers:**
+This will:
 
-- Verify `DRUPAL_JSONAPI_URL` in `.env` is accessible from internet
-- Check CORS settings in Drupal (see [docs/troubleshooting.md](docs/troubleshooting.md))
-- Use `npx wrangler tail` to view live Worker logs
+1. Connect to your local Drupal's JSON:API
+2. Fetch all published pages
+3. Generate static HTML in `dist/`
 
-For comprehensive troubleshooting, see [docs/troubleshooting.md](docs/troubleshooting.md).
+### Deploying to Cloudflare Pages
 
-## �📝 License
+**Option 1: Using the deploy script (recommended)**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```bash
+./scripts/deploy-frontend.sh
+```
+
+This builds and deploys in one command.
+
+**Option 2: Manual deployment with Wrangler**
+
+```bash
+cd astro-frontend
+npm run build
+npx wrangler pages deploy ./dist --project-name=my-project
+```
+
+**Option 3: Cloudflare Dashboard (drag-and-drop)**
+
+1. Go to Cloudflare Dashboard → Pages
+2. Click "Create a project" → "Direct Upload"
+3. Drag the `astro-frontend/dist` folder
+
+### First-Time Deployment
+
+On first deploy, you may need to create the Pages project:
+
+```bash
+npx wrangler pages project create my-project
+```
+
+Then run the deploy script again.
+
+### Updating Your Site
+
+To update content:
+
+1. Edit pages in Drupal at `http://my-project.ddev.site/admin/content`
+2. Run `./scripts/deploy-frontend.sh` to rebuild and deploy
+
+Your changes will be live in seconds!
+
+---
+
+## 🧬 Architecture
+
+Drupal responsibilities
+
+- WYSIWYG content
+- Fields, media, menus
+- JSON:API output
+- URL aliases (Pathauto)
+
+Astro responsibilities
+
+- Fetch pages from Drupal at build time
+- Build static HTML from templates
+- Handle routing using Drupal aliases
+- Add interactivity using islands if desired
+
+Cloudflare responsibilities
+
+- Serve static site globally
+- Optional: serve Workers SSR (for advanced mode)
+
+---
+
+## 🧪 Example Drupal → Astro Route
+
+The setup script generates something like:
+
+File: src/pages/[...slug].astro
+
+```astro
+---
+import { fetchAllPages, pagePathToSegments } from '../lib/drupalClient';
+
+export async function getStaticPaths() {
+  const pages = await fetchAllPages();
+
+  return pages.map(page => ({
+    params: { slug: pagePathToSegments(page) },
+    props: {
+      title: page.attributes.title,
+      bodyHtml: page.attributes.body?.processed ?? '',
+    }
+  }));
+}
+
+const { title, bodyHtml } = Astro.props;
+---
+
+<h1>{title}</h1>
+<article set:html={bodyHtml} />
+```
+
+This means:
+
+- Astro builds /about, /company/team, etc. based on Drupal aliases
+- No fetch at runtime
+
+---
+
+## 🧰 Advanced: Workers Mode (Optional)
+
+If you later decide to host Drupal publicly, you can:
+
+- Switch Astro to Cloudflare SSR adapter
+- Enable Workers KV
+- Add preview routes
+- Add dynamic pages that fetch Drupal live at request time
+
+This requires Drupal to be publicly reachable, which is not part of the default workflow.
+
+Use this mode only if you know you need SSR.
+
+---
+
+## 📁 Project Structure
+
+```plaintext
+my-project/
+├── astro-frontend/         # Astro SSG frontend
+│   ├── src/
+│   ├── dist/
+│   ├── astro.config.mjs
+│   └── package.json
+├── drupal-backend/         # Drupal 11 CMS under DDEV
+│   ├── .ddev/
+│   └── web/
+├── setup/                  # Interactive Ink-based installer
+│   ├── cli.js
+│   └── ui.js
+├── setup.sh                # Bootstrap script
+├── .env                    # Created during setup
+└── README.md               # You are here
+```
+
+---
+
+## 🩺 Troubleshooting
+
+Astro cannot reach Drupal during build
+
+Ensure DDEV is running:
+
+```bash
+cd drupal-backend
+ddev start
+```
+
+Visit <https://my-project.ddev.site/jsonapi> to confirm.
+
+Cloudflare build fails
+
+Cloudflare cannot reach your local Drupal. You must build locally, then deploy static output.
+
+Aliases not appearing in JSON:API
+
+Install JSON:API Extras or confirm path field is exposed.
+
+---
+
+## 📝 License
+
+MIT
+
+---
+
+If you’d like, I can also generate:
+
+- A v1 architecture diagram
+- The rewritten setup steps for your CLI
+- A migration checklist from your current SSR-heavy repo to this SSG-first version
+
+Just say the word.

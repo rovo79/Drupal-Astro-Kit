@@ -1,141 +1,251 @@
 ---
 /**
- * Dynamic catch-all route for Drupal pages
+ * Dynamic catch-all route for Drupal pages (Static Site Generation)
  * 
- * Matches URLs like /hello-world, /about-us, /nested/path
- * against Drupal's path aliases using the Decoupled Router module.
+ * At BUILD TIME:
+ * 1. Fetches all published pages from Drupal JSON:API
+ * 2. Generates static routes based on path aliases
+ * 3. Renders HTML for each page
  * 
- * This is the core pattern for headless CMS routing:
- * 1. Capture the URL path
- * 2. Use Decoupled Router to resolve path → entity
- * 3. Fetch the entity via JSON:API
- * 4. Render the content (or 404 if not found)
+ * After build, the site has no runtime dependency on Drupal.
  * 
- * Requires: drupal/decoupled_router module
+ * Route mapping:
+ * - Drupal alias "/" → Astro slug undefined → dist/index.html
+ * - Drupal alias "/about" → Astro slug "about" → dist/about/index.html
+ * - Drupal alias "/nested/path" → Astro slug "nested/path" → dist/nested/path/index.html
  */
-import { Jsona } from 'jsona';
 
-const { slug } = Astro.params;
-const path = '/' + (slug || '');
+import Base from '../layouts/Base.astro';
+import { getAllPages, aliasToSlug, checkApiConnection, type DrupalPage } from '../lib/drupal';
 
-let page: any = null;
-let error: string | null = null;
-
-try {
-  const apiUrl = import.meta.env.DRUPAL_API_URL;
-  
-  if (!apiUrl) {
-    throw new Error('DRUPAL_API_URL not configured');
+// Required for static generation
+export async function getStaticPaths() {
+  // Verify Drupal is accessible before fetching pages
+  try {
+    await checkApiConnection();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`\n❌ Build Error: Cannot connect to Drupal JSON:API\n   ${message}\n`);
+    console.error('   Make sure DDEV is running: cd drupal-backend && ddev start\n');
+    throw new Error(`Drupal JSON:API unreachable: ${message}`);
   }
 
-  // Extract base URL from JSON:API URL (remove /jsonapi suffix)
-  const baseUrl = apiUrl.replace(/\/jsonapi\/?$/, '');
-
-  // Step 1: Use Decoupled Router to resolve the path to an entity
-  const routerResponse = await fetch(`${baseUrl}/router/translate-path?path=${encodeURIComponent(path)}`);
-  
-  if (routerResponse.status === 404) {
-    // Path doesn't exist in Drupal
-    return new Response(null, { status: 404, statusText: 'Not Found' });
-  }
-  
-  if (!routerResponse.ok) {
-    throw new Error(`Router error: ${routerResponse.status}`);
+  // Fetch all published pages
+  let pages: DrupalPage[];
+  try {
+    pages = await getAllPages();
+    console.log(`\n✓ Fetched ${pages.length} pages from Drupal JSON:API\n`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`\n❌ Build Error: Failed to fetch pages\n   ${message}\n`);
+    throw error;
   }
 
-  const routerData = await routerResponse.json();
-  
-  // Step 2: Fetch the entity from JSON:API using the individual URL
-  if (!routerData.jsonapi?.individual) {
-    throw new Error('No JSON:API URL returned from router');
+  // Handle empty site
+  if (pages.length === 0) {
+    console.warn('\n⚠ Warning: No published pages found in Drupal.\n');
+    console.warn('  The site will build with no content pages.\n');
+    console.warn('  Create pages in Drupal: http://<project>.ddev.site/admin/content\n');
+    return [];
   }
 
-  const entityResponse = await fetch(routerData.jsonapi.individual);
-  
-  if (!entityResponse.ok) {
-    throw new Error(`Entity fetch error: ${entityResponse.status}`);
+  // Check for duplicate aliases (T025a: alias conflict detection)
+  const aliasMap = new Map<string, DrupalPage[]>();
+  for (const page of pages) {
+    const alias = page.path?.alias || '';
+    if (!aliasMap.has(alias)) {
+      aliasMap.set(alias, []);
+    }
+    aliasMap.get(alias)!.push(page);
   }
 
-  const json = await entityResponse.json();
-  const dataFormatter = new Jsona();
-  page = dataFormatter.deserialize(json);
+  const duplicates = Array.from(aliasMap.entries()).filter(([, pages]) => pages.length > 1);
+  if (duplicates.length > 0) {
+    console.error('\n❌ Build Error: Duplicate path aliases detected!\n');
+    for (const [alias, pages] of duplicates) {
+      console.error(`   Alias "${alias}" is used by:`);
+      for (const page of pages) {
+        console.error(`     - "${page.title}" (ID: ${page.id})`);
+      }
+    }
+    console.error('\n   Fix these duplicates in Drupal before building.\n');
+    throw new Error('Duplicate path aliases detected. Cannot generate static routes.');
+  }
 
-} catch (err) {
-  error = err instanceof Error ? err.message : 'Unknown error';
-  console.error(`Error fetching page for path "${path}":`, err);
+  // Generate static paths
+  const paths: Array<{
+    params: { slug: string | undefined };
+    props: { page: DrupalPage };
+  }> = [];
+  let skippedCount = 0;
+
+  for (const page of pages) {
+    const alias = page.path?.alias;
+    
+    // Skip pages without aliases (T030: warning log)
+    if (!alias) {
+      console.warn(`  ⚠ Skipping page "${page.title}" (ID: ${page.id}) - no path alias`);
+      skippedCount++;
+      continue;
+    }
+
+    const slug = aliasToSlug(alias);
+    
+    paths.push({
+      params: { slug },
+      props: { page },
+    });
+  }
+
+  if (skippedCount > 0) {
+    console.warn(`\n⚠ ${skippedCount} page(s) skipped (missing path aliases)\n`);
+  }
+
+  console.log(`  Routes generated: ${paths.length}`);
+  for (const p of paths) {
+    const displaySlug = p.params.slug === undefined ? '/' : `/${p.params.slug}`;
+    console.log(`    ${displaySlug} → ${p.props.page.title}`);
+  }
+  console.log('');
+
+  return paths;
 }
 
-// Return 404 if no page found
-if (!page && !error) {
-  return new Response(null, { status: 404, statusText: 'Not Found' });
+// Get page data from props (passed from getStaticPaths)
+interface Props {
+  page: DrupalPage;
 }
+
+const { page } = Astro.props;
+
+// Build canonical URL
+const slug = Astro.params.slug;
+const canonicalPath = slug ? `/${slug}` : '/';
+const canonicalUrl = new URL(canonicalPath, Astro.site).toString();
+
+// Extract description from body (first 160 chars of text content)
+const bodyText = page.body?.processed?.replace(/<[^>]*>/g, '') || '';
+const description = bodyText.slice(0, 160).trim() + (bodyText.length > 160 ? '...' : '');
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{page?.title || 'Page Not Found'}</title>
-  <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 2rem;
-      line-height: 1.6;
-      color: #333;
-    }
-    h1 {
-      color: #1a1a1a;
-      margin-bottom: 0.5rem;
-    }
-    .meta {
-      color: #666;
-      font-size: 0.9rem;
-      margin-bottom: 2rem;
-    }
-    .content {
-      font-size: 1.1rem;
-    }
-    .content p {
-      margin-bottom: 1rem;
-    }
-    .error {
-      background: #fee;
-      border: 1px solid #fcc;
-      padding: 1rem;
-      border-radius: 4px;
-      color: #c00;
-    }
-  </style>
-</head>
-<body>
-  {error ? (
-    <div class="error">
-      <h1>Error</h1>
-      <p>{error}</p>
-    </div>
-  ) : page ? (
-    <>
+<Base title={page.title} description={description} canonicalUrl={canonicalUrl}>
+  <article class="page">
+    <header class="page-header">
       <h1>{page.title}</h1>
-      <div class="meta">
-        Last updated: {new Date(page.changed).toLocaleDateString()}
-      </div>
-      <div class="content">
-        {page.body?.processed ? (
-          <div set:html={page.body.processed} />
-        ) : (
-          <p><em>No content</em></p>
-        )}
-      </div>
-    </>
-  ) : (
-    <div>
-      <h1>404 - Page Not Found</h1>
-      <p>The page "{path}" does not exist.</p>
-      <p><a href="/">Return home</a></p>
+      {page.changed && (
+        <time class="page-date" datetime={page.changed}>
+          Last updated: {new Date(page.changed).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}
+        </time>
+      )}
+    </header>
+    
+    <div class="page-content">
+      {page.body?.processed ? (
+        <Fragment set:html={page.body.processed} />
+      ) : (
+        <p class="no-content"><em>This page has no content yet.</em></p>
+      )}
     </div>
-  )}
-</body>
-</html>
+  </article>
+</Base>
+
+<style>
+  .page {
+    max-width: 65ch;
+    margin: 0 auto;
+  }
+  
+  .page-header {
+    margin-bottom: 2rem;
+  }
+  
+  .page-header h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+  }
+  
+  .page-date {
+    display: block;
+    color: #666;
+    font-size: 0.875rem;
+  }
+  
+  .page-content {
+    font-size: 1.125rem;
+  }
+  
+  .page-content :global(p) {
+    margin-bottom: 1.5rem;
+  }
+  
+  .page-content :global(h2) {
+    font-size: 1.75rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+  
+  .page-content :global(h3) {
+    font-size: 1.375rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .page-content :global(ul),
+  .page-content :global(ol) {
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+  }
+  
+  .page-content :global(li) {
+    margin-bottom: 0.5rem;
+  }
+  
+  .page-content :global(a) {
+    color: #0969da;
+  }
+  
+  .page-content :global(a:hover) {
+    text-decoration: underline;
+  }
+  
+  .page-content :global(code) {
+    background: #f4f4f5;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    font-size: 0.875em;
+  }
+  
+  .page-content :global(pre) {
+    background: #1e1e1e;
+    color: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+  }
+  
+  .page-content :global(pre code) {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+  }
+  
+  .page-content :global(blockquote) {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    color: #666;
+    font-style: italic;
+  }
+  
+  .no-content {
+    color: #666;
+    text-align: center;
+    padding: 3rem 0;
+  }
+</style>

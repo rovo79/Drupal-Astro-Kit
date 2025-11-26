@@ -329,11 +329,11 @@ module.exports = ({
                         // Ignore if already enabled or fails (will be caught by audit)
                     }
 
-                    // Install and enable Decoupled Router for path alias resolution
-                    // This module provides /router/translate-path endpoint for headless routing
+                    // Install and enable Pathauto for automatic URL alias generation
+                    // This is essential for static site generation with clean URLs
                     try {
-                        await runDdev(['composer', 'require', 'drupal/decoupled_router'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                        await runDdev(['exec', 'drush', 'en', 'decoupled_router', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                        await runDdev(['composer', 'require', 'drupal/pathauto'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                        await runDdev(['exec', 'drush', 'en', 'pathauto', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
                     } catch (e) {
                         // Proceed even if this fails
                     }
@@ -363,7 +363,7 @@ module.exports = ({
     enabled: true
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
     allowedMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
-    allowedOrigins: ['http://localhost:4321', 'https://${projectName}.workers.dev', '*']
+    allowedOrigins: ['http://localhost:4321', 'https://${projectName}.pages.dev', '*']
     allowedOriginsPatterns: []
     exposedHeaders: false
     maxAge: false
@@ -432,6 +432,58 @@ user_role_grant_permissions('anonymous', ['access content']);
                         // Proceed even if this fails (e.g. if already exists)
                     }
 
+                    // T017, T018: Create sample content pages (Homepage, About, Contact)
+                    const seedContentPhp = `
+// Create sample pages for the starter kit
+\$pages = [
+  [
+    'title' => 'Welcome to ${projectName.charAt(0).toUpperCase() + projectName.slice(1).replace(/-/g, ' ')}',
+    'alias' => '/',
+    'body' => '<p>This is your homepage. Edit this content in <a href="/admin/content">Drupal</a>.</p><p>Your static site will be rebuilt whenever you run <code>npm run build</code> in the astro-frontend directory.</p>',
+  ],
+  [
+    'title' => 'About Us',
+    'alias' => '/about',
+    'body' => '<p>This is the About page. Tell visitors about your organization, mission, and values.</p><p>Edit this content in Drupal to customize it for your needs.</p>',
+  ],
+  [
+    'title' => 'Contact',
+    'alias' => '/contact',
+    'body' => '<p>Get in touch with us!</p><p>You can add contact information, a form, or directions here.</p>',
+  ],
+];
+
+foreach (\$pages as \$page_data) {
+  // Check if page with this alias already exists
+  \$existing = \\Drupal::entityTypeManager()
+    ->getStorage('node')
+    ->loadByProperties(['type' => 'page', 'title' => \$page_data['title']]);
+  
+  if (empty(\$existing)) {
+    \$node = \\Drupal\\node\\Entity\\Node::create([
+      'type' => 'page',
+      'title' => \$page_data['title'],
+      'body' => [
+        'value' => \$page_data['body'],
+        'format' => 'basic_html',
+      ],
+      'path' => [
+        'alias' => \$page_data['alias'],
+        'pathauto' => 0, // Manual alias
+      ],
+      'status' => 1, // Published
+      'uid' => 1,
+    ]);
+    \$node->save();
+  }
+}
+`;
+                    try {
+                        await runDdev(['exec', 'drush', 'php:eval', seedContentPhp], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    } catch (e) {
+                        // Proceed even if seeding fails
+                    }
+
                     updateStep('configure-drupal', {inProgress: false, done: true});
 
                     updateStep('astro', {inProgress: true});
@@ -449,18 +501,10 @@ user_role_grant_permissions('anonymous', ['access content']);
                         // Proceed; we'll install specific deps below regardless
                     }
                     
-                    // Install additional dependencies (wrangler, Drupal libraries)
+                    // Install dependencies (no SSR adapter needed for static mode)
                     await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath, stdin: 'ignore'});
-                    // Pin tslib to 2.6.2 for stable runtime resolution on Node 20/Workers
+                    // Pin tslib to 2.6.2 for stable runtime resolution on Node 20
                     await execa('npm', ['install', '--save', 'jsona', 'drupal-jsonapi-params', 'tslib@2.6.2'], {cwd: astroFrontendPath, stdin: 'ignore'});
-                    
-                    // Add Cloudflare adapter (this modifies package.json and astro.config.mjs)
-                    await execa('npx', ['astro', 'add', 'cloudflare', '--yes'], {cwd: astroFrontendPath, stdin: 'ignore'});
-
-                    // Ensure any adapter-added dependencies are installed
-                    try {
-                        await execa('npm', ['install'], {cwd: astroFrontendPath, stdin: 'ignore'});
-                    } catch (_) {}
 
                     // Verify tslib is resolvable; install if still missing (belt and suspenders)
                     try {
@@ -503,15 +547,12 @@ user_role_grant_permissions('anonymous', ['access content']);
                     // Write an .nvmrc to pin local dev to Node 20
                     await fs.writeFile(path.join(astroFrontendPath, '.nvmrc'), '20\n');
 
+                    // Static mode Astro config (no SSR adapter needed)
                     const astroConfigContent = `import { defineConfig } from 'astro/config';
-import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
-  output: 'server',
-  adapter: cloudflare({
-    imageService: 'cloudflare'
-  }),
-  site: 'https://${projectName}.workers.dev',
+  output: 'static',
+  site: 'https://${projectName}.pages.dev',
   vite: {
     build: {
       sourcemap: true
@@ -522,26 +563,14 @@ export default defineConfig({
                     await fs.writeFile(path.join(astroFrontendPath, 'astro.config.mjs'), astroConfigContent);
                     await fs.copyFile(envPath, path.join(astroFrontendPath, '.env'));
 
-                    const wranglerTomlContent = `name = "${projectName}"
-main = "./astro-frontend/dist/_worker.js/index.js"
-compatibility_date = "${new Date().toISOString().split('T')[0]}"
-compatibility_flags = ["nodejs_compat"]
-
-[assets]
-binding = "ASSETS"
-directory = "./astro-frontend/dist"
-
-[build]
-command = "cd astro-frontend && npm run build"
-
-[observability]
-enabled = true
-
-[[kv_namespaces]]
-binding = "SESSION"
-id = "your-kv-namespace-id"
+                    // Write wrangler.jsonc for Cloudflare Pages deployment (static site)
+                    const wranglerJsoncContent = `{
+  "name": "${projectName}",
+  "compatibility_date": "${new Date().toISOString().split('T')[0]}",
+  "pages_build_output_dir": "./dist"
+}
 `;
-                    await fs.writeFile(path.join(projectRoot, 'wrangler.toml'), wranglerTomlContent);
+                    await fs.writeFile(path.join(astroFrontendPath, 'wrangler.jsonc'), wranglerJsoncContent);
 
                     updateStep('astro', {inProgress: false, done: true});
                     updateStep('complete', {done: true});

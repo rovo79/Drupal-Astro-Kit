@@ -2,14 +2,16 @@
 
 ## Architecture Overview
 
-This is a **decoupled starter kit** combining a **Drupal 11 backend** (via DDEV), an **Astro frontend** (with SSR), and **Cloudflare Workers** deployment. The project uses an **interactive Node.js-based setup tool** (`setup/`) that automatically configures DDEV, Drupal, Astro, and Wrangler in a single command.
+This is a **static-first decoupled starter kit** combining a **Drupal 11 backend** (via DDEV, local only), an **Astro frontend** (static site generation), and **Cloudflare Pages** deployment. The project uses an **interactive Node.js-based setup tool** (`setup/`) that automatically configures DDEV, Drupal, and Astro in a single command.
+
+> **V1 Static-First**: Drupal runs locally as a content source. Astro builds a fully static site at build time. Production has no runtime dependency on Drupal.
 
 **Key Integration:** Frontend consumes Drupal's JSON:API using `jsona` and `drupal-jsonapi-params` libraries for data normalization and query building.
 
 ```
-Drupal (DDEV) → JSON:API → Astro (SSR) → Cloudflare Workers
-                                ↓
-                          KV Storage (Sessions)
+Drupal (DDEV Local) → JSON:API → Astro Build → Cloudflare Pages
+                                    ↓
+                              Static HTML (no runtime deps)
 ```
 
 ## Critical Developer Workflows
@@ -22,9 +24,9 @@ chmod +x setup.sh && ./setup.sh
 
 The `setup.sh` script delegates to `setup/cli.js` which orchestrates:
 1. `.env` creation from `.env.example` with project-specific values
-2. DDEV configuration and Drupal installation
-3. Astro frontend scaffolding with Cloudflare adapter
-4. `wrangler.toml` generation with Workers config
+2. DDEV configuration and Drupal installation with sample content
+3. Astro frontend scaffolding (static mode, no SSR adapter)
+4. `wrangler.jsonc` generation for Cloudflare Pages
 
 **Important:** The `drupal-backend/` and `astro-frontend/` directories are created by setup, not committed to the repo.
 
@@ -35,17 +37,17 @@ cd drupal-backend && ddev launch                    # Start Drupal at http://{PR
 
 # Frontend
 cd astro-frontend && npm run dev                    # Dev server at http://localhost:4321
-cd astro-frontend && npx wrangler dev               # Workers dev at http://localhost:8787
 
-# Deployment
-zsh scripts/deploy-frontend.sh                      # Builds and deploys to Workers
+# Build & Deployment
+cd astro-frontend && npm run build                  # Build static site (fetches from Drupal)
+./scripts/deploy-frontend.sh                        # Builds and deploys to Cloudflare Pages
 ```
 
 ### Environment Configuration
 The project uses **project-name-based conventions**:
 - DDEV site: `http://{PROJECT_NAME}.ddev.site`
 - Drupal API: `http://{PROJECT_NAME}.ddev.site/jsonapi`
-- Workers URL: `https://{PROJECT_NAME}.workers.dev`
+- Production URL: `https://{PROJECT_NAME}.pages.dev`
 
 All environment values derive from `PROJECT_NAME` in `.env` (auto-set to parent directory name by setup).
 
@@ -57,15 +59,15 @@ All environment values derive from `PROJECT_NAME` in `.env` (auto-set to parent 
 - Check dependencies before execution: `if ! command -v ddev &> /dev/null; then`
 - Load `.env` with: `export $(grep -v '^#' .env | xargs)`
 
-### Astro Frontend Patterns
-- **SSR is enabled globally** via `output: 'server'` in `astro.config.mjs`
-- Use `export const prerender = true` in components for static generation override
-- Access Workers runtime: `Astro.locals.runtime.env.SESSION` for KV storage
+### Astro Frontend Patterns (Static Mode)
+- **Static output**: `output: 'static'` in `astro.config.mjs` (no SSR adapter)
+- **getStaticPaths()**: Used in `[...slug].astro` to generate routes from Drupal content at build time
+- **Build-time fetching**: Drupal content is fetched once during `npm run build`
 - Drupal API calls use the installed `jsona` and `drupal-jsonapi-params` packages
 
 ### Configuration Files
-- **`wrangler.toml`**: Lives in **project root** (not `astro-frontend/`), references `astro-frontend/dist/`
-- **`astro.config.mjs`**: Pre-configured with `@astrojs/cloudflare` adapter in "advanced" mode
+- **`wrangler.jsonc`**: Lives in `astro-frontend/`, configures Cloudflare Pages
+- **`astro.config.mjs`**: Static output mode, no adapter needed
 - **`.env`**: Single file shared between Drupal and Astro via setup script copying
 
 ### Interactive Setup Tool (`setup/`)
@@ -83,17 +85,16 @@ Built with **Ink** (React for CLIs) and **execa** for command execution:
   - `drupal-jsonapi-params`: Builds query strings (filters, includes, sorts)
 - **Pattern:** Fetch in Astro `.astro` frontmatter, render in template
 
-### Astro ↔ Cloudflare Workers
-- **Build output:** `dist/_worker.js/index.js` (Workers entry point)
-- **Assets:** Bound via `[assets]` in `wrangler.toml` as `ASSETS` binding
-- **KV Namespace:** `SESSION` binding for session management (ID set in `wrangler.toml`)
-- **Node.js compat:** Enabled via `compatibility_flags = ["nodejs_compat"]`
+### Astro ↔ Cloudflare Pages
+- **Build output:** `dist/` contains static HTML files
+- **Deployment:** `wrangler pages deploy ./dist` uploads to Cloudflare Pages
+- **No runtime deps:** Static site serves without any backend
 
 ### GitHub Actions CI/CD
 - **Triggers:** `main` and `staging` branches
-- **Dual deployment:** Frontend to Workers (`cloudflare/wrangler-action@v3`), backend to DDEV
-- **Secrets required:** `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PROD_DDEV_HOST`, `PROD_DDEV_SSH_KEY`
-- **Environment variables:** Branch-specific (e.g., `PROD_API_URL` for `main`, `STAGING_API_URL` for `staging`)
+- **Deployment:** Frontend to Pages (`wrangler pages deploy`)
+- **Secrets required:** `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+- **Note:** CI builds require accessible Drupal (staging server) or pre-built dist/
 
 ## Key Files and Their Roles
 
@@ -101,39 +102,35 @@ Built with **Ink** (React for CLIs) and **execa** for command execution:
 |------|---------|------------------|
 | `setup.sh` | Entry point for project initialization | Runs `setup/cli.js` after `npm install` |
 | `setup/ui.js` | Interactive setup orchestrator | Creates dirs, runs DDEV/npm commands, generates configs |
-| `wrangler.toml` | Cloudflare Workers config | Generated by setup, requires manual KV namespace ID update |
+| `astro-frontend/wrangler.jsonc` | Cloudflare Pages config | Generated by setup, defines project name and output dir |
 | `.env.example` | Environment template | Copied to `.env` with PROJECT_NAME replacement |
-| `scripts/deploy-frontend.sh` | Deployment automation | Builds Astro, deploys via `wrangler deploy` |
-| `docs/architecture.md` | System design overview | Shows data flow: local dev vs. production |
-| `docs/ssr-guide.md` | SSR implementation guide | Workers runtime access patterns |
+| `scripts/deploy-frontend.sh` | Deployment automation | Builds Astro, deploys via `wrangler pages deploy` |
+| `docs/architecture.md` | System design overview | Shows data flow: build time vs. production |
 
 ## Common Gotchas
 
-1. **KV Namespace Setup:** After running setup, manually create KV namespace with `npx wrangler kv namespace create "SESSION"` and update the `id` in `wrangler.toml`.
+1. **DDEV Must Run During Build:** Astro fetches content at build time. Start DDEV before `npm run build`.
 
-2. **Astro Build Path:** `wrangler.toml` expects `main = "./astro-frontend/dist/_worker.js/index.js"`. Changing Astro output paths requires updating this.
+2. **Path Aliases Required:** Pages without Drupal path aliases are skipped during build. Use Pathauto or set manually.
 
 3. **DDEV Project Naming:** Project name affects all URLs. Changing `PROJECT_NAME` post-setup requires re-running DDEV config.
 
-4. **Workers Local Dev:** Use `npx wrangler dev --remote` to access live KV storage during development.
+4. **JSON:API Dependencies:** Both `jsona` and `drupal-jsonapi-params` are **required** for Drupal integration. Installed by setup script.
 
-5. **JSON:API Dependencies:** Both `jsona` and `drupal-jsonapi-params` are **required** for Drupal integration. Installed by setup script.
+5. **First Deploy:** Create the Pages project first: `npx wrangler pages project create your-project`
 
 ## Documentation Structure
 
 - `README.md`: Quick start, setup instructions, Cloudflare API token requirements
-- `docs/architecture.md`: Component relationships, data flow diagrams
+- `docs/architecture.md`: Component relationships, static build flow
 - `docs/deployment.md`: Production deployment checklist
-- `docs/ssr-guide.md`: SSR configuration, Workers runtime features
-- `docs/cloudflare-setup.md`: Workers vs. Pages, KV setup, custom domains
-- `docs/github-actions.md`: CI/CD workflow, required secrets
-- `docs/troubleshooting.md`: Common issues (DDEV, Astro, Workers)
+- `docs/cloudflare-setup.md`: Pages setup, custom domains
+- `docs/troubleshooting.md`: Common issues (DDEV, Astro, Pages)
 
 ## When Making Changes
 
-- **Adding Cloudflare services** (D1, R2, etc.): Update `wrangler.toml` bindings + `docs/cloudflare-setup.md`
 - **Modifying setup flow**: Edit `setup/ui.js` step logic + update `README.md` expected output
-- **Changing deployment**: Update both `scripts/deploy-frontend.sh` and `.github/workflows/main.yml`
+- **Changing deployment**: Update `scripts/deploy-frontend.sh`
 - **New environment variables**: Add to `.env.example` with descriptive comments
 - **Shell script additions**: Follow color output conventions, use helper functions
 
@@ -143,15 +140,14 @@ The project uses a **manual testing workflow** (no automated tests yet):
 1. Run setup script in fresh directory
 2. Verify DDEV site loads at `http://{PROJECT_NAME}.ddev.site`
 3. Test Astro dev server fetches from Drupal JSON:API
-4. Deploy to Workers and verify `https://{PROJECT_NAME}.workers.dev`
+4. Build and verify `dist/` contains expected HTML files
+5. Deploy to Pages and verify `https://{PROJECT_NAME}.pages.dev`
 
-**Future:** Consider adding `ddev drush test:run` and Astro Playwright tests to CI/CD pipeline.
+**Future:** Consider adding Astro Playwright tests to CI/CD pipeline.
 
 ## Active Technologies
-- Bash (automation scripts), Node.js 20 (Astro + Workers dev), PHP 8.3 (Drupal via DDEV) + Astro (SSR, Cloudflare adapter), Drupal 11 (JSON:API), jsona, drupal-jsonapi-params, Wrangler CLI, DDEV, Ink + execa (setup CLI) (001-project-audit-optimization)
-- Drupal DB (MariaDB/PostgreSQL via DDEV internal), Cloudflare KV (SESSION) (001-project-audit-optimization)
-- PHP 8.3 (Drupal 11), Node.js 20 (Astro/Workers dev), Bash 5+ + Drupal 11 core (`jsonapi`), DDEV, Drush; Astro with `@astrojs/cloudflare` (SSR), `jsona`, `drupal-jsonapi-params`, Wrangler CLI (002-drupal-api-config)
-- MariaDB/PostgreSQL via DDEV for Drupal; Cloudflare KV (SESSION) for frontend session management (not directly used by this feature) (002-drupal-api-config)
+- Bash (automation scripts), Node.js 20 (Astro dev), PHP 8.3 (Drupal via DDEV) + Astro (Static SSG), Drupal 11 (JSON:API), jsona, drupal-jsonapi-params, Wrangler CLI, DDEV, Ink + execa (setup CLI) (003-static-ssg-refactor)
+- Drupal DB (MariaDB via DDEV internal) (003-static-ssg-refactor)
 
 ## Recent Changes
-- 001-project-audit-optimization: Added Bash (automation scripts), Node.js 20 (Astro + Workers dev), PHP 8.3 (Drupal via DDEV) + Astro (SSR, Cloudflare adapter), Drupal 11 (JSON:API), jsona, drupal-jsonapi-params, Wrangler CLI, DDEV, Ink + execa (setup CLI)
+- 003-static-ssg-refactor: Converted from SSR/Workers to static-first Pages deployment. Removed @astrojs/cloudflare adapter, KV storage, Workers config. Added getStaticPaths() for build-time route generation.

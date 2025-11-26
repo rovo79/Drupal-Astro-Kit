@@ -1,259 +1,234 @@
 # Troubleshooting Guide
 
-This guide covers common issues and their solutions for the Drupal + Astro starter kit.
+This guide covers common issues and their solutions for the Drupal + Astro static-first starter kit.
+
+> **V1 Static-First**: This kit builds a static site from local Drupal content. Most runtime issues from SSR don't apply.
+
+## Build-Time Issues
+
+### Cannot Connect to Drupal
+
+**Symptom**: Build fails with "Cannot connect to Drupal JSON:API"
+
+**Solution**: Ensure DDEV is running:
+
+```bash
+cd drupal-backend
+ddev start
+ddev describe  # Verify status
+```
+
+### No Content in Build
+
+**Symptom**: Build succeeds but generates no pages
+
+**Possible Causes**:
+
+1. No published pages in Drupal
+2. DRUPAL_API_URL not set correctly
+
+**Solution**:
+
+```bash
+# Check for published content
+cd drupal-backend
+ddev drush sql:query "SELECT COUNT(*) FROM node_field_data WHERE status = 1"
+
+# Verify API URL
+echo $DRUPAL_API_URL
+curl -s "$DRUPAL_API_URL/node/page" | head -20
+```
+
+### Pages Missing Path Aliases
+
+**Symptom**: Pages skipped during build with "no path alias" warning
+
+**Solution**: Add path aliases in Drupal:
+
+1. Go to `http://your-project.ddev.site/admin/content`
+2. Edit each page
+3. Expand "URL ALIAS" section
+4. Add an alias like `/about`
+5. Save
+
+Or install Pathauto for automatic aliases (installed by setup script).
 
 ## DDEV Issues
 
-### Connection Problems
+### DDEV Not Starting
 
-1. **DDEV Not Starting**
+```bash
+# Check Docker status
+docker ps
 
-   ```bash
-   # Check Docker status
-   docker ps
+# Restart DDEV
+ddev restart
 
-   # Restart DDEV
-   ddev restart
+# Check service status
+ddev describe
+```
 
-   # Check service status
-   ddev describe
-   ```
+### Port Conflicts
 
-2. **Port Conflicts**
+```bash
+# Check what's using the ports
+lsof -i :80
+lsof -i :443
 
-   ```bash
-   # Check what's using the ports
-   lsof -i :80
-   lsof -i :443
+# Modify DDEV ports in .ddev/config.yaml
+router_http_port: "8080"
+router_https_port: "8443"
+```
 
-   # Modify DDEV ports in .ddev/config.yaml
-   router_http_port: "8080"
-   router_https_port: "8443"
-   ```
+### Database Issues
 
-3. **Database Issues**
+```bash
+# Reset database
+ddev delete -O
+ddev start
 
-   ```bash
-   # Reset database
-   ddev delete -O
-   ddev start
+# Check database logs
+ddev logs -s db
+```
 
-   # Check database logs
-   ddev logs -s db
-   ```
+## Astro Build Issues
 
-## Astro Frontend Issues
+### Node.js Version
 
-### Build Problems
+```bash
+# Check Node version (should be 20+)
+node --version
 
-1. **Node.js Version**
+# Install correct version
+nvm install 20
+nvm use 20
+```
 
-   ```bash
-   # Check Node version
-   node --version  # Should be 18+
+### Dependency Issues
 
-   # Install correct version
-   nvm install 20
-   nvm use 20
-   ```
+```bash
+# Clean install
+cd astro-frontend
+rm -rf node_modules package-lock.json
+npm install
+```
 
-2. **Dependency Issues**
+### Missing tslib
 
-   ```bash
-   # Clean install
-   cd astro-frontend
-   rm -rf node_modules
-   rm package-lock.json
-   npm install
-   ```
+**Symptom**: `Cannot find package 'tslib' imported from @swc/helpers`
 
-3. **Build Errors**
+```bash
+cd astro-frontend
+npm install tslib
+```
 
-   ```bash
-   # Check build logs
-   npm run build --verbose
+## Cloudflare Pages Issues
 
-   # Clear build cache
-   rm -rf dist
-   ```
+### First Deploy Fails
 
-### Runtime Errors (dev server)
+**Symptom**: "Project not found" error
 
-1. **Cannot find package 'tslib' imported from @swc/helpers/esm/_ts_decorate.js**
+```bash
+# Create the Pages project first
+npx wrangler pages project create your-project
 
-   This means the TypeScript runtime helpers package `tslib` is missing. Some SWC helpers (e.g., for decorators) import from `tslib` at runtime.
+# Then deploy
+npx wrangler pages deploy ./dist --project-name=your-project
+```
 
-   Fix:
+### Unauthorized Error
 
-   ```bash
-   cd astro-frontend
-   # install as a regular dependency (not dev)
-   npm install tslib
+Check your API token permissions in Cloudflare Dashboard:
 
-   # optional but helpful checks
-   node -p "require.resolve('tslib')"   # should print a path
+1. Go to My Profile → API Tokens
+2. Verify token has "Cloudflare Pages:Edit" permission
+3. If expired, create a new token
 
-   # restart dev server
-   npm run dev
-   ```
+### Build Works Locally, Fails in CI
 
-   If the error persists, do a clean install:
+Cloudflare's CI cannot reach your local DDEV. Options:
 
-   ```bash
-   rm -rf node_modules package-lock.json
-   npm install
-   npm run dev
-   ```
-
-## Cloudflare Workers Issues
-
-### Deployment Problems
-
-1. **Failed Workers Deployments**
-   - Check `wrangler.toml` configuration
-   - Verify Cloudflare API token permissions
-   - Review build output for errors
-   - Check compatibility flags and Node.js version
-
-2. **KV Storage Issues**
-   - Verify KV namespace ID in `wrangler.toml`
-   - Check KV namespace permissions
-   - Test KV access with `npx wrangler kv key list`
-   - Use `--remote` flag for local development
-
-3. **SSR Errors**
-   - Check Worker logs in Cloudflare Dashboard
-   - Verify Astro configuration for Workers
-   - Review asset handling in `.assetsignore`
-   - Test locally with `npx wrangler dev`
-
-4. **Custom Domain Issues**
-   - Verify DNS records in Cloudflare Dashboard
-   - Check SSL certificate status
-   - Review Workers route configuration
-   - Ensure domain is proxied through Cloudflare
-
-### Performance Issues
-
-1. **Slow Worker Execution**
-   - Monitor CPU usage in Workers Analytics
-   - Check for blocking operations
-   - Optimize database queries
-   - Review memory usage patterns
-
-2. **Cold Start Issues**
-   - Minimize Worker bundle size
-   - Avoid heavy imports in global scope
-   - Use lightweight dependencies
-   - Consider implementing keep-alive strategies
+1. **Build locally, commit dist/**: Not recommended for large sites
+2. **Host Drupal somewhere**: Use a staging server that CI can access
+3. **Manual deploys**: Build locally, then deploy with wrangler
 
 ## Environment Issues
 
-### Configuration Problems
+### Missing Environment Variables
 
-1. **Missing Environment Variables**
+```bash
+# Check .env exists
+ls -la .env
 
-   ```bash
-   # Regenerate env files
-   scripts/env-sync.sh
+# Verify critical variables
+grep DRUPAL_API_URL .env
+grep PROJECT_NAME .env
+```
 
-   # Check .env files
-   cat .env
-   cat astro-frontend/.env
-   ```
+### CORS Errors
 
-2. **API Connection Issues**
-   - Verify API URL in .env
-   - Check CORS settings
-   - Test API endpoint
+**Symptom**: Browser blocks API requests during development
 
-3. **Secret Management**
-   - Verify GitHub secrets
-   - Check Cloudflare secrets
-   - Review environment variables
+The setup script configures CORS in Drupal's `services.yml`. If you still see errors:
 
-## General Performance Issues
+```bash
+cd drupal-backend
+cat web/sites/default/services.yml | grep -A 10 "cors.config"
+```
 
-### Slow Loading
+Verify `enabled: true` and `allowedOrigins` includes `http://localhost:4321`.
 
-1. **Frontend Performance**
-   - Check build optimization
-   - Verify image optimization
-   - Review caching settings
+## JSON:API Issues
 
-2. **Backend Performance**
-   - Check database queries
-   - Review caching configuration
-   - Monitor resource usage
+### API Returns 401/403
 
-3. **CDN Issues**
-   - Check cache hit ratio
-   - Verify CDN configuration
-   - Review cache rules
+Anonymous access not configured properly:
 
-## Security Issues
+```bash
+cd drupal-backend
+ddev drush role:perm:add anonymous 'access content'
+```
 
-### Common Problems
+### Path Aliases Not in API Response
 
-1. **SSL/TLS Issues**
-   - Check certificate validity
-   - Verify SSL configuration
-   - Review security settings
+Verify path field is included:
 
-2. **Authentication Problems**
-   - Check session configuration
-   - Verify token handling
-   - Review security headers
+```bash
+curl -s "http://your-project.ddev.site/jsonapi/node/page" | jq '.data[0].attributes.path'
+```
 
-3. **API Security**
-   - Check API authentication
-   - Verify request validation
-   - Review security policies
+Should return `{ "alias": "/about", ... }`.
+
+## Performance Issues
+
+### Slow Builds
+
+For sites with many pages:
+
+```bash
+# Check page count
+curl -s "$DRUPAL_API_URL/node/page" | jq '.meta.count'
+```
+
+If >100 pages, consider:
+- Increasing JSON:API page limit
+- Using build caching
+- Upgrading to SSR for very large sites
 
 ## Getting Help
 
 1. **Documentation**
-   - Check [Deployment Guide](deployment.md)
-   - Review [SSR Guide](ssr-guide.md)
-   - See [GitHub Actions Guide](github-actions.md)
+   - [Architecture Guide](architecture.md)
+   - [Deployment Guide](deployment.md)
+   - [Cloudflare Setup](cloudflare-setup.md)
 
-2. **Community Support**
-   - Drupal Forums
-   - Astro Discord
-   - Cloudflare Community
+2. **Community**
+   - Astro Discord: https://astro.build/chat
+   - Drupal Forums: https://drupal.org/forum
+   - Cloudflare Community: https://community.cloudflare.com
 
-3. **Professional Support**
-   - Cloudflare Support
-   - Drupal Association
-   - Astro Team
-
-## Best Practices
-
-1. **Prevention**
-   - Regular updates
-   - Security audits
-   - Performance monitoring
-
-2. **Monitoring**
-   - Set up alerts
-   - Track errors
-   - Monitor performance
-
-3. **Maintenance**
-   - Regular backups
-   - Security patches
-   - Performance optimization
-
-## CORS Issues
-
-1. **Allowed Origins**
-   The allowed origins are derived from your `PROJECT_NAME` in `.env`.
-   - Local: `http://localhost:4321`
-   - Production: `https://<project-name>.workers.dev`
-   If you change your project name or domain, you must update `services.yml` or re-run the setup configuration.
-
-## Security Restrictions
-
-1. **User Endpoint Access**
-   By default, the `/jsonapi/user/user` endpoint is restricted for anonymous users to prevent user enumeration. Ensure you are authenticated if you need to access user data.
+3. **Debug Tips**
+   - Use `npm run build --verbose` for detailed build logs
+   - Check `ddev logs` for Drupal errors
+   - Review `wrangler pages deployment list` for deploy history
 

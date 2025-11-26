@@ -290,7 +290,6 @@ module.exports = ({
                     const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
                     await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', 'basics', '--yes', '--no-git'], { cwd: projectRoot, stdin: 'ignore' });
                     await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath, stdin: 'ignore'});
-                    await execa('npx', ['astro', 'add', 'cloudflare', '--yes'], {cwd: astroFrontendPath, stdin: 'ignore'});
 
                     const packageJsonPath = path.join(astroFrontendPath, 'package.json');
                     let packageContent = await fs.readFile(packageJsonPath, 'utf8');
@@ -298,16 +297,13 @@ module.exports = ({
                     packageJson.name = `${projectName}-frontend`;
                     await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
+                    // Static mode Astro config (no SSR adapter needed)
                     const astroConfigContent = `
 import { defineConfig } from 'astro/config';
-import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
-  output: 'server',
-  adapter: cloudflare({
-    imageService: 'cloudflare'
-  }),
-  site: 'https://${projectName}.workers.dev',
+  output: 'static',
+  site: 'https://${projectName}.pages.dev',
   vite: {
     build: {
       sourcemap: true
@@ -318,27 +314,14 @@ export default defineConfig({
                     await fs.writeFile(path.join(astroFrontendPath, 'astro.config.mjs'), astroConfigContent);
                     await fs.copyFile(envPath, path.join(astroFrontendPath, '.env'));
 
-                    const wranglerTomlContent = `
-name = "${projectName}"
-main = "./astro-frontend/dist/_worker.js/index.js"
-compatibility_date = "${new Date().toISOString().split('T')[0]}"
-compatibility_flags = ["nodejs_compat"]
-
-[assets]
-binding = "ASSETS"
-directory = "./astro-frontend/dist"
-
-[build]
-command = "cd astro-frontend && npm run build"
-
-[observability]
-enabled = true
-
-[[kv_namespaces]]
-binding = "SESSION"
-id = "your-kv-namespace-id"
+                    // Write wrangler.jsonc for Cloudflare Pages deployment (static site)
+                    const wranglerJsoncContent = `{
+  "name": "${projectName}",
+  "compatibility_date": "${new Date().toISOString().split('T')[0]}",
+  "pages_build_output_dir": "./dist"
+}
 `;
-                    await fs.writeFile(path.join(projectRoot, 'wrangler.toml'), wranglerTomlContent);
+                    await fs.writeFile(path.join(astroFrontendPath, 'wrangler.jsonc'), wranglerJsoncContent);
                     await execa('npm', ['install', 'jsona', 'drupal-jsonapi-params'], {cwd: astroFrontendPath, stdin: 'ignore'});
 
                     updateStep('astro', {inProgress: false, done: true});

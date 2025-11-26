@@ -2,73 +2,77 @@
 
 This document provides a high-level overview of how the Drupal + Astro starter kit components work together.
 
+> **V1 Static-First Architecture**: This kit defaults to static site generation (SSG). Drupal runs locally as a content source, and Astro builds a fully static site deployed to Cloudflare Pages. There is no runtime dependency on Drupal in production.
+
 ## System Components
 
 ```plaintext
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │                 │     │                 │     │                 │
-│  Drupal Backend │────►│  Astro Frontend │────►│ Cloudflare Edge │
-│  (DDEV)         │     │  (SSR/Static)   │     │   (Workers)     │
+│  Drupal Backend │────►│  Astro Build    │────►│ Cloudflare      │
+│  (DDEV Local)   │     │  (Static SSG)   │     │   Pages         │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
-        ▲                       ▲                        ▲
-        │                       │                        │
-        │                       │                        │
-        ▼                       ▼                        ▼
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│                 │     │                 │     │                 │
-│  GitHub Actions │     │  Cloudflare     │     │  Custom Domain  │
-│  (CI/CD)        │     │  KV Storage     │     │                 │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
+      JSON:API              getStaticPaths()        Static HTML
+      at build time         generates HTML          served globally
 ```
 
 The flow above shows:
 
-- Drupal Backend provides content and API endpoints
-- Astro Frontend consumes the API and generates pages with SSR capabilities
-- Cloudflare Workers serve the frontend globally with edge computing
-- Supporting services (GitHub Actions, KV Storage, Custom Domain) enhance the core functionality
+1. **Drupal Backend**: Runs locally via DDEV, provides content via JSON:API
+2. **Astro Build**: Fetches all content at build time, generates static HTML
+3. **Cloudflare Pages**: Serves static files globally via CDN
+
+## Static-First Benefits
+
+- **Zero runtime dependencies**: Production site doesn't need Drupal
+- **Maximum performance**: Pre-rendered HTML served from CDN edge
+- **Simple hosting**: Free tier on Cloudflare Pages
+- **Enhanced security**: No backend exposed to the internet
+- **Reliable**: No server-side failures possible
 
 ## Development Flow
 
 ```plaintext
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│             │     │             │     │             │
-│  Local Dev  │────►│  Staging    │────►│ Production  │
-│             │     │             │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│  Edit Content   │────►│  Build Static   │────►│  Deploy to      │
+│  in Drupal      │     │  Site           │     │  Cloudflare     │
+│                 │     │                 │     │                 │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+   Local DDEV            npm run build           wrangler pages deploy
 ```
 
 ## Component Relationships
 
 ### 1. Frontend (Astro)
 
-- Deploys to Cloudflare Workers with SSR capabilities
-- Supports both static generation and server-side rendering
-- Communicates with Drupal backend via JSON:API
-- Benefits from Cloudflare's global edge network
-- Integrates with KV storage for session management
-- Leverages edge computing for dynamic content
+- **Static output mode**: `output: 'static'` in astro.config.mjs
+- **No SSR adapter**: Plain static HTML generation
+- **Build-time fetching**: Content fetched from Drupal during `npm run build`
+- **Cloudflare Pages hosting**: Simple static file serving
 
 ### 2. Backend (Drupal)
 
-- Runs on DDEV in development
-- Deployed to production via DDEV
-- Provides API endpoints for frontend
-- Handles content management and business logic
+- **Local only**: Runs on DDEV in development
+- **JSON:API**: Provides content via `/jsonapi/node/page`
+- **Path aliases**: URL structure defined in Drupal, replicated in Astro routes
+- **Not exposed**: No public Drupal instance needed in production
 
-### 3. Infrastructure (Cloudflare)
+### 3. Infrastructure (Cloudflare Pages)
 
-- Pages: Hosts static frontend assets
-- Workers: Optional SSR and API routes
-- CDN: Global content delivery
-- Security: SSL, WAF, DDoS protection
+- **Static hosting**: Serves pre-built HTML files
+- **Global CDN**: Content delivered from nearest edge location
+- **Free tier**: Sufficient for most static sites
+- **Custom domains**: Easy to configure
 
-### 4. CI/CD (GitHub Actions)
+### 4. CI/CD (Optional)
 
-- Automated testing
-- Frontend deployment to Cloudflare
-- Backend deployment via DDEV
-- Environment-specific configurations
+For automated deployments:
+
+1. Commit content changes (or trigger manually)
+2. CI runner connects to staging Drupal
+3. Runs `npm run build` 
+4. Deploys to Cloudflare Pages
 
 ## Data Flow
 
@@ -77,117 +81,65 @@ The flow above shows:
 ```plaintext
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │             │     │             │     │             │
-│  User       │────►│  Frontend   │     │  Backend    │
-│  Request    │     │  (Astro)    │     │  (Drupal)   │
-│             │     │  localhost  │     │  DDEV       │
+│  Browser    │────►│  Astro Dev  │────►│  Drupal     │
+│             │     │  Server     │     │  DDEV       │
+│             │     │  :4321      │     │  :80        │
 └─────────────┘     └─────────────┘     └─────────────┘
-        │                 │                    ▲
-        │                 │                    │
-        │                 └────────────────────┘
-        │                     Direct API
-        │                     Requests
-        │
-        ▼                 ▼                    ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│             │     │             │     │             │
-│  No CDN     │     │  No SSR     │     │  Database   │
-│  in Dev     │     │  in Dev     │     │  Local      │
-│             │     │             │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘
+                    
+In dev mode, Astro fetches fresh content on each page navigation.
+Hot reload works for Astro component changes.
 ```
 
-### Production Environment
+### Build & Production
 
 ```plaintext
-┌─────────────┐     ┌─────────────┐     ┌─────────────────────────┐
-│             │     │             │     │                         │
-│  User       │────►│  Frontend   │────►│      Backend Options    │
-│  Request    │     │  (Workers)  │     │                         │
-│             │     │  SSR/Static │     │                         │
-└─────────────┘     └─────────────┘     └─────────────────────────┘
-        │                 │                    ▲
-        │                 │                    │
-        │                 └────────────────────┘
-        │                     API Requests
-        │                     via Workers
-        │
-        ▼                 ▼                    ▼
-┌─────────────┐     ┌─────────────────────────────────────────┐
-│             │     │                                         │
-│  Edge       │     │  Cloudflare Services                    │
-│  Cache      │     │  ┌─────────┐ ┌─────────┐ ┌─────────┐    │
-│             │     │  │ Workers │ │  D1 DB  │ │   KV    │    │
-└─────────────┘     │  └─────────┘ └─────────┘ └─────────┘    │
-                    │  ┌─────────┐ ┌─────────┐ ┌─────────┐    │
-                    │  │   R2    │ │ Workers │ │ Vector  │    │
-                    │  │ Storage │ │   AI    │ │  Store  │    │
-                    │  └─────────┘ └─────────┘ └─────────┘    │
-                    │  ┌─────────────────────────┐            │
-                    │  │      Drupal Backend     │            │
-                    │  │    (External/Cloud)     │            │
-                    │  └─────────────────────────┘            │
-                    └─────────────────────────────────────────┘
-```
-
-The data flow above shows:
-
-1. **Local Development**:
-   - Direct communication between Astro and Drupal
-   - No CDN or Workers involved
-   - All services run locally via DDEV
-   - Database is local
-
-2. **Production Environment**:
-   - Frontend is served via Cloudflare Pages
-   - API requests are handled by Cloudflare Workers
-   - Workers can connect to various Cloudflare services:
-     - **D1**: SQL database
-     - **KV**: Key-value store
-     - **R2**: Object storage
-     - **Workers AI**: AI/ML capabilities
-     - **Vector Store**: Vector database
-     - **Durable Objects**: Stateful compute
-   - Optional Drupal backend for enterprise needs
-   - All services benefit from Cloudflare's global network
-
-3. **Key Differences**:
-   - Local: Direct API calls to Drupal
-   - Production: Flexible backend options via Workers
-   - Local: No CDN caching
-   - Production: Full CDN caching
-   - Local: No SSR
-   - Production: Optional SSR via Workers
-
-## Deployment Flow
-
-```plaintext
+Build Time:
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │             │     │             │     │             │
-│   GitHub    │────►│   Build     │────►│  Cloudflare │
-│   Push      │     │   Process   │     │   Workers   │
-│             │     │             │     │             │
+│  Drupal     │────►│  npm run    │────►│  dist/      │
+│  JSON:API   │     │  build      │     │  static     │
+│             │     │             │     │  HTML       │
 └─────────────┘     └─────────────┘     └─────────────┘
-        │                 │                     │
-        │                 │                     │
-        ▼                 ▼                     ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│             │     │             │     │             │
-│  CI/CD      │     │  Astro      │     │  Global     │
-│  Pipeline   │     │  Build      │     │  Edge       │
-│             │     │             │     │             │
-└─────────────┘     └─────────────┘     └─────────────┘
+
+Production:
+┌─────────────┐     ┌─────────────┐
+│             │     │             │
+│  Browser    │────►│  Cloudflare │
+│             │     │  Pages CDN  │
+│             │     │             │
+└─────────────┘     └─────────────┘
+
+No Drupal involved at runtime!
 ```
 
-This deployment flow shows how code moves from development to production through the Cloudflare Workers platform.
+## URL Routing
+
+Drupal path aliases map directly to Astro routes:
+
+| Drupal Alias | Astro Route | Output File |
+|--------------|-------------|-------------|
+| `/` | `[...slug].astro` (undefined) | `dist/index.html` |
+| `/about` | `[...slug].astro` ("about") | `dist/about/index.html` |
+| `/services/web` | `[...slug].astro` ("services/web") | `dist/services/web/index.html` |
 
 ## Content Modeling Conventions
 
-- **Machine Names**: Use `field_` prefix for all custom fields (e.g., `field_slug`, `field_summary`).
-- **Bundles**: Use singular names for content types (e.g., `page`, `article`).
-- **Vocabularies**: Use singular names (e.g., `tag`, `category`).
+- **Machine Names**: Use `field_` prefix for all custom fields
+- **Path Aliases**: Required for all pages (Pathauto generates automatically)
+- **Body Field**: Uses `text_with_summary` for processed HTML output
 
-## Configuration Management (Future)
+## Future: SSR Mode (V2+)
 
-- **Config Split**: In V2+, we plan to use Config Split to manage environment-specific configurations (local vs production).
-- **CMI**: Configuration is exported to `config/sync` and committed to git.
+If you need server-side rendering:
+
+1. Host Drupal publicly (or on internal network)
+2. Switch Astro to `output: 'server'` with Cloudflare adapter
+3. Deploy to Cloudflare Workers instead of Pages
+4. Enable live content fetching at request time
+
+This is an advanced configuration for use cases like:
+- Preview mode
+- Personalized content
+- Very large sites (>1000 pages)
+- Real-time content updates
 
