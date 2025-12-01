@@ -49,7 +49,7 @@ export async function getStaticPaths() {
     return [];
   }
 
-  // Check for duplicate aliases (T025a: alias conflict detection)
+  // Check for duplicate aliases (build fails if duplicates found)
   const aliasMap = new Map<string, DrupalPage[]>();
   for (const page of pages) {
     const alias = page.path?.alias || '';
@@ -82,8 +82,8 @@ export async function getStaticPaths() {
   for (const page of pages) {
     const alias = page.path?.alias;
     
-    // Skip pages without aliases (T030: warning log)
-    if (!alias) {
+    // Skip pages without aliases (they can't be routed)
+    if (alias === undefined || alias === null) {
       console.warn(`  ⚠ Skipping page "${page.title}" (ID: ${page.id}) - no path alias`);
       skippedCount++;
       continue;

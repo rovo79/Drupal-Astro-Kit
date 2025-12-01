@@ -503,6 +503,8 @@ foreach (\$pages as \$page_data) {
                     
                     // Install dependencies (no SSR adapter needed for static mode)
                     await execa('npm', ['install', '--save-dev', 'wrangler'], {cwd: astroFrontendPath, stdin: 'ignore'});
+                    // Ensure astro is installed (create-astro should have done this, but verify)
+                    await execa('npm', ['install', '--save', 'astro'], {cwd: astroFrontendPath, stdin: 'ignore'});
                     // Pin tslib to 2.6.2 for stable runtime resolution on Node 20
                     await execa('npm', ['install', '--save', 'jsona', 'drupal-jsonapi-params', 'tslib@2.6.2'], {cwd: astroFrontendPath, stdin: 'ignore'});
 
@@ -571,6 +573,46 @@ export default defineConfig({
 }
 `;
                     await fs.writeFile(path.join(astroFrontendPath, 'wrangler.jsonc'), wranglerJsoncContent);
+
+                    // Copy starter kit source files from templates/astro-src/
+                    const templateSrcPath = path.join(projectRoot, 'templates', 'astro-src');
+                    const targetSrcPath = path.join(astroFrontendPath, 'src');
+                    
+                    // Helper to recursively copy directory
+                    const copyDir = async (src, dest) => {
+                        await fs.mkdir(dest, { recursive: true });
+                        const entries = await fs.readdir(src, { withFileTypes: true });
+                        for (const entry of entries) {
+                            const srcPath = path.join(src, entry.name);
+                            const destPath = path.join(dest, entry.name);
+                            if (entry.isDirectory()) {
+                                await copyDir(srcPath, destPath);
+                            } else {
+                                await fs.copyFile(srcPath, destPath);
+                            }
+                        }
+                    };
+                    
+                    // Check if templates exist and copy them
+                    try {
+                        await fs.access(templateSrcPath);
+                        
+                        // Remove template pages created by create-astro (we have our own)
+                        const pagesDir = path.join(targetSrcPath, 'pages');
+                        try {
+                            const templatePages = await fs.readdir(pagesDir);
+                            for (const file of templatePages) {
+                                await fs.unlink(path.join(pagesDir, file)).catch(() => {});
+                            }
+                        } catch (e) {
+                            // Pages dir may not exist
+                        }
+                        
+                        // Copy our templates
+                        await copyDir(templateSrcPath, targetSrcPath);
+                    } catch (e) {
+                        // Templates not found - this is OK for projects that already have src files
+                    }
 
                     updateStep('astro', {inProgress: false, done: true});
                     updateStep('complete', {done: true});

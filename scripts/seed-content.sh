@@ -54,14 +54,15 @@ DISPLAY_NAME=$(echo "$PROJECT_NAME" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $
 
 print_status "Creating sample content for: $DISPLAY_NAME"
 
-# Create seed content via Drush php:eval
-ddev exec drush php:eval "
+# Create seed content via Drush php:eval using heredoc to avoid escaping issues
+# Note: Using single-quoted delimiter 'PHPCODE' prevents shell variable expansion
+ddev exec drush php:eval "$(cat <<'PHPCODE'
 // Create sample pages for the starter kit
-\$pages = [
+$pages = [
   [
-    'title' => 'Welcome to $DISPLAY_NAME',
+    'title' => 'Homepage',
     'alias' => '/',
-    'body' => '<p>This is your homepage. Edit this content in <a href=\"/admin/content\">Drupal</a>.</p><p>Your static site will be rebuilt whenever you run <code>npm run build</code> in the astro-frontend directory.</p>',
+    'body' => '<p>Welcome! This is your homepage.</p><p>Edit this content in Drupal, then run <code>npm run build</code> to rebuild your static site.</p>',
   ],
   [
     'title' => 'About Us',
@@ -75,39 +76,40 @@ ddev exec drush php:eval "
   ],
 ];
 
-\$created = 0;
-\$skipped = 0;
+$created = 0;
+$skipped = 0;
 
-foreach (\$pages as \$page_data) {
+foreach ($pages as $page_data) {
   // Check if page with this alias already exists
-  \$path_storage = \\Drupal::entityTypeManager()->getStorage('path_alias');
-  \$existing_alias = \$path_storage->loadByProperties(['alias' => \$page_data['alias']]);
+  $path_storage = \Drupal::entityTypeManager()->getStorage('path_alias');
+  $existing_alias = $path_storage->loadByProperties(['alias' => $page_data['alias']]);
   
-  if (!empty(\$existing_alias)) {
-    \$skipped++;
+  if (!empty($existing_alias)) {
+    $skipped++;
     continue;
   }
   
-  \$node = \\Drupal\\node\\Entity\\Node::create([
+  $node = \Drupal\node\Entity\Node::create([
     'type' => 'page',
-    'title' => \$page_data['title'],
+    'title' => $page_data['title'],
     'body' => [
-      'value' => \$page_data['body'],
+      'value' => $page_data['body'],
       'format' => 'basic_html',
     ],
     'path' => [
-      'alias' => \$page_data['alias'],
-      'pathauto' => 0, // Manual alias
+      'alias' => $page_data['alias'],
+      'pathauto' => 0,
     ],
-    'status' => 1, // Published
+    'status' => 1,
     'uid' => 1,
   ]);
-  \$node->save();
-  \$created++;
+  $node->save();
+  $created++;
 }
 
-echo \"Created: \$created pages, Skipped: \$skipped (already exist)\\n\";
-"
+echo "Created: $created pages, Skipped: $skipped (already exist)\n";
+PHPCODE
+)"
 
 print_status "Sample content created successfully!"
 echo ""
