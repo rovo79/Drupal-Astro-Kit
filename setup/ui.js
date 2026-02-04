@@ -367,7 +367,7 @@ module.exports = ({
                     updateStep('drupal-recipes', {inProgress: true});
 
                     const recipesSrcRoot = path.join(projectRoot, 'setup', 'drupal-recipes');
-                    const recipesDestRoot = path.join(drupalBackendPath, 'recipes', 'dak');
+                    const recipesDestRoot = path.join(drupalBackendPath, 'recipes');
                     await fs.mkdir(recipesDestRoot, {recursive: true});
 
                     const recipeDirs = [
@@ -400,23 +400,34 @@ module.exports = ({
                         // Continue: recipe application will surface missing module errors.
                     }
 
-                    const applyRecipe = async (recipePathFromWeb) => {
-                        try {
-                            await runDdev(['exec', '--dir=web', 'drush', 'recipe:apply', recipePathFromWeb, '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                            return;
-                        } catch (e) {}
-                        try {
-                            await runDdev(['exec', '--dir=web', 'drush', 'recipe', recipePathFromWeb, '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                            return;
-                        } catch (e) {}
+                    const applyRecipe = async ({recipeName, recipePathFromWeb}) => {
+                        const attempts = [
+                            {label: 'drush recipe:apply (path)', args: ['exec', '--dir=web', 'drush', 'recipe:apply', recipePathFromWeb, '-y']},
+                            {label: 'drush recipe:apply (name)', args: ['exec', '--dir=web', 'drush', 'recipe:apply', recipeName, '-y']},
+                            {label: 'drush recipe (path)', args: ['exec', '--dir=web', 'drush', 'recipe', recipePathFromWeb, '-y']},
+                            {label: 'drush recipe (name)', args: ['exec', '--dir=web', 'drush', 'recipe', recipeName, '-y']},
+                            {label: 'core script (path)', args: ['exec', '--dir=web', 'php', 'core/scripts/drupal', 'recipe', recipePathFromWeb]},
+                            {label: 'core script (name)', args: ['exec', '--dir=web', 'php', 'core/scripts/drupal', 'recipe', recipeName]},
+                        ];
 
-                        await runDdev(['exec', '--dir=web', 'php', 'core/scripts/drupal', 'recipe', recipePathFromWeb], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                        const errors = [];
+                        for (const attempt of attempts) {
+                            try {
+                                await runDdev(attempt.args, {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                                return;
+                            } catch (e) {
+                                const message = (e && e.message) ? e.message : String(e);
+                                errors.push(`${attempt.label}: ${message}`);
+                            }
+                        }
+
+                        throw new Error(`Failed to apply recipe "${recipeName}". Attempts:\n- ${errors.join('\n- ')}`);
                     };
 
-                    await applyRecipe('../recipes/dak/dak_decoupled_base');
-                    await applyRecipe('../recipes/dak/dak_starter_content');
+                    await applyRecipe({recipeName: 'dak_decoupled_base', recipePathFromWeb: '../recipes/dak_decoupled_base'});
+                    await applyRecipe({recipeName: 'dak_starter_content', recipePathFromWeb: '../recipes/dak_starter_content'});
                     if (enableStructuredContent) {
-                        await applyRecipe('../recipes/dak/dak_structured_content');
+                        await applyRecipe({recipeName: 'dak_structured_content', recipePathFromWeb: '../recipes/dak_structured_content'});
                     }
 
                     updateStep('drupal-recipes', {inProgress: false, done: true});
