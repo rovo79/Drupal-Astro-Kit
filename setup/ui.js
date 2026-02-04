@@ -677,6 +677,7 @@ export default defineConfig({
                 React.createElement(Text, {key: 'next-1-cmd', dimColor: true}, '     cd drupal-backend && ddev launch'),
                 React.createElement(Text, {key: 'next-2'}, '  2. Start the Astro frontend (in a new terminal from project root):'),
                 React.createElement(Text, {key: 'next-2-cmd', dimColor: true}, '     cd astro-frontend && npm run dev'),
+                React.createElement(Text, {key: 'next-2-alt', dimColor: true}, '     (If port 4321 is in use: npm run dev -- --port 4322)'),
                 React.createElement(Text, {key: 'next-3'}, '  3. Your sites will be available at:'),
                 React.createElement(Text, {key: 'next-3-drupal', dimColor: true}, `     Drupal: http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`),
                 React.createElement(Text, {key: 'next-3-astro', dimColor: true}, '     Astro:  http://localhost:4321'),
