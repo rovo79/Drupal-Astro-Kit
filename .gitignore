@@ -13,3 +13,7 @@ drupal-backend/
 astro-frontend/
 
 setup/node_modules/*
+
+# Local agent/tooling artifacts (do not commit)
+.agent/
+skills/
