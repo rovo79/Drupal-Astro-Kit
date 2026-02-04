@@ -1,0 +1,20 @@
+uuid: 3d82c4b2-0a1a-4f77-9f6a-f0d6b1e9d932
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_summary
+    - node.type.headless_page
+id: node.headless_page.field_summary
+field_name: field_summary
+entity_type: node
+bundle: headless_page
+label: Summary
+description: ''
+required: false
+translatable: true
+default_value: { }
+default_value_callback: ''
+settings: { }
+field_type: string
+

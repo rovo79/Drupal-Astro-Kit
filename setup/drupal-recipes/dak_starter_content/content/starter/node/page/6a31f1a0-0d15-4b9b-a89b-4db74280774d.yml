@@ -1,0 +1,28 @@
+_meta:
+  version: '1.0'
+  entity_type: node
+  uuid: 6a31f1a0-0d15-4b9b-a89b-4db74280774d
+  bundle: page
+  default_langcode: en
+default:
+  uid:
+    - target_id: 1
+  status:
+    - value: true
+  title:
+    - value: Homepage
+  promote:
+    - value: false
+  sticky:
+    - value: false
+  created:
+    - value: 1700000000
+  path:
+    - alias: /home
+      langcode: en
+      pathauto: 0
+  body:
+    - value: "<p>Welcome! This is your homepage.</p><p>Edit this content in Drupal, then run <code>npm run build</code> to rebuild your static site.</p>"
+      format: basic_html
+      summary: ''
+

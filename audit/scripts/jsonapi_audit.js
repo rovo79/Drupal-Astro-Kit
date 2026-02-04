@@ -85,7 +85,7 @@ export const run = async ({ target = AUDIT_TARGETS.API } = {}) => {
           category: 'api',
           severity: 'high',
           description: 'JSON:API audit skipped: .env file not found',
-          evidence: 'Cannot derive DRUPAL_API_URL without .env'
+          evidence: 'Cannot derive DRUPAL_JSONAPI_URL without .env'
         })
       );
 

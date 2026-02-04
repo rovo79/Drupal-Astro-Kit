@@ -61,7 +61,7 @@ ddev exec drush php:eval "$(cat <<'PHPCODE'
 $pages = [
   [
     'title' => 'Homepage',
-    'alias' => '/',
+    'alias' => '/home',
     'body' => '<p>Welcome! This is your homepage.</p><p>Edit this content in Drupal, then run <code>npm run build</code> to rebuild your static site.</p>',
   ],
   [
@@ -114,7 +114,7 @@ PHPCODE
 print_status "Sample content created successfully!"
 echo ""
 echo "Created pages:"
-echo "  - Homepage (/)"
+echo "  - Homepage (/home)"
 echo "  - About (/about)"
 echo "  - Contact (/contact)"
 echo ""

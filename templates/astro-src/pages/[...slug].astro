@@ -16,7 +16,7 @@
  */
 
 import Base from '../layouts/Base.astro';
-import { getAllPages, aliasToSlug, checkApiConnection, type DrupalPage } from '../lib/drupal';
+import { getAllPages, aliasToSlug, checkApiConnection, type DrupalPage, getHomepageAlias, normalizeAlias } from '../lib/drupal';
 
 // Required for static generation
 export async function getStaticPaths() {
@@ -29,6 +29,9 @@ export async function getStaticPaths() {
     console.error('   Make sure DDEV is running: cd drupal-backend && ddev start\n');
     throw new Error(`Drupal JSON:API unreachable: ${message}`);
   }
+
+  const homepageAlias = getHomepageAlias();
+  let homepageRouteCreated = false;
 
   // Fetch all published pages
   let pages: DrupalPage[];
@@ -89,16 +92,34 @@ export async function getStaticPaths() {
       continue;
     }
 
+    const normalizedAlias = normalizeAlias(alias);
     const slug = aliasToSlug(alias);
     
     paths.push({
       params: { slug },
       props: { page },
     });
+
+    if (normalizedAlias === homepageAlias) {
+      if (slug === undefined) {
+        homepageRouteCreated = true;
+      } else if (!homepageRouteCreated) {
+        paths.push({
+          params: { slug: undefined },
+          props: { page },
+        });
+        homepageRouteCreated = true;
+      }
+    }
   }
 
   if (skippedCount > 0) {
     console.warn(`\n⚠ ${skippedCount} page(s) skipped (missing path aliases)\n`);
+  }
+
+  if (!homepageRouteCreated) {
+    console.warn(`\n⚠ Warning: HOMEPAGE_ALIAS (${homepageAlias}) did not match any Drupal page.`);
+    console.warn('  Update the alias or set HOMEPAGE_ALIAS to match the page that should render at /.\n');
   }
 
   console.log(`  Routes generated: ${paths.length}`);

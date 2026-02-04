@@ -1,0 +1,26 @@
+name: 'DAK: Structured content (Paragraphs)'
+description: 'Optional structured content model: headless_page with Paragraphs sections.'
+type: 'Site'
+
+install:
+  - paragraphs
+  - entity_reference_revisions
+
+config:
+  import:
+    node:
+      - node.type.headless_page
+    paragraphs:
+      - paragraphs.paragraphs_type.section_rich_text
+      - paragraphs.paragraphs_type.section_callout
+    field:
+      - field.storage.node.field_summary
+      - field.field.node.headless_page.field_summary
+      - field.storage.node.field_sections
+      - field.field.node.headless_page.field_sections
+      - field.storage.paragraph.field_text
+      - field.field.paragraph.section_rich_text.field_text
+      - field.field.paragraph.section_callout.field_text
+      - field.storage.paragraph.field_heading
+      - field.field.paragraph.section_callout.field_heading
+

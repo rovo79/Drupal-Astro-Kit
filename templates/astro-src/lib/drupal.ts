@@ -9,10 +9,11 @@
  * - drupal-jsonapi-params: Builds query strings
  */
 
-import Jsona from 'jsona';
-import { DrupalJsonApiParams } from 'drupal-jsonapi-params';
+import {Jsona} from 'jsona';
+import {DrupalJsonApiParams} from 'drupal-jsonapi-params';
 
-const dataFormatter = new Jsona();
+const dataFormatter: Jsona = new Jsona();
+const DEFAULT_HOMEPAGE_ALIAS = '/home';
 
 // Type definitions for Drupal Page nodes
 export interface DrupalPage {
@@ -38,21 +39,30 @@ export interface DrupalPage {
 /**
  * Get the API base URL from environment
  */
-function getApiBase(): string {
-  // import.meta.env is Astro's way of accessing environment variables
-  const envUrl = import.meta.env.API_BASE_URL;
-  if (envUrl) return envUrl.replace(/\/$/, ''); // Remove trailing slash
-  
-  // Fallback to common DDEV URL pattern
+function getDrupalBaseUrl(): string {
+  const envDrupalBase = import.meta.env.DRUPAL_BASE_URL;
+  if (envDrupalBase) return envDrupalBase.replace(/\/$/, '');
+
+  // Back-compat: older templates used API_BASE_URL.
+  const envApiBase = import.meta.env.API_BASE_URL;
+  if (envApiBase) return envApiBase.replace(/\/$/, '');
+
   return 'http://localhost';
+}
+
+function getDrupalJsonApiBaseUrl(): string {
+  const envJsonApi = import.meta.env.DRUPAL_JSONAPI_URL || import.meta.env.DRUPAL_API_URL;
+  if (envJsonApi) return envJsonApi.replace(/\/$/, '');
+
+  return `${getDrupalBaseUrl()}/jsonapi`;
 }
 
 /**
  * Check if the Drupal JSON:API is accessible
  */
 export async function checkApiConnection(): Promise<void> {
-  const apiBase = getApiBase();
-  const response = await fetch(`${apiBase}/jsonapi`, {
+  const jsonApiBase = getDrupalJsonApiBaseUrl();
+  const response = await fetch(jsonApiBase, {
     method: 'HEAD',
   });
   
@@ -65,7 +75,7 @@ export async function checkApiConnection(): Promise<void> {
  * Fetch all published pages from Drupal JSON:API with pagination support
  */
 export async function getAllPages(): Promise<DrupalPage[]> {
-  const apiBase = getApiBase();
+  const jsonApiBase = getDrupalJsonApiBaseUrl();
   const allPages: DrupalPage[] = [];
   
   // Build query params
@@ -75,7 +85,7 @@ export async function getAllPages(): Promise<DrupalPage[]> {
     .addFields('node--page', ['title', 'body', 'path', 'status', 'created', 'changed'])
     .addPageLimit(50); // Fetch 50 per page
   
-  let nextUrl: string | null = `${apiBase}/jsonapi/node/page?${params.getQueryString()}`;
+  let nextUrl: string | null = `${jsonApiBase}/node/page?${params.getQueryString()}`;
   
   while (nextUrl) {
     const response = await fetch(nextUrl);
@@ -102,6 +112,44 @@ export async function getAllPages(): Promise<DrupalPage[]> {
   return allPages;
 }
 
+function normalizeAliasOrEmpty(alias?: string | null): string {
+  if (!alias) {
+    return '';
+  }
+
+  let normalized = alias.trim();
+  if (!normalized.startsWith('/')) {
+    normalized = `/${normalized}`;
+  }
+
+  if (normalized.length > 1 && normalized.endsWith('/')) {
+    normalized = normalized.replace(/\/+$/, '');
+  }
+
+  return normalized;
+}
+
+export function normalizeAlias(alias?: string | null): string {
+  const normalized = normalizeAliasOrEmpty(alias);
+  return normalized === '' ? '/' : normalized;
+}
+
+export function getHomepageAlias(): string {
+  const envAlias = import.meta.env.HOMEPAGE_ALIAS;
+  const normalized = normalizeAliasOrEmpty(envAlias);
+  if (normalized) {
+    return normalized;
+  }
+  return DEFAULT_HOMEPAGE_ALIAS;
+}
+
+export function isHomepageAlias(alias?: string | null): boolean {
+  if (!alias) {
+    return false;
+  }
+  return normalizeAlias(alias) === getHomepageAlias();
+}
+
 /**
  * Convert a Drupal path alias to an Astro route slug
  * 
@@ -113,11 +161,10 @@ export async function getAllPages(): Promise<DrupalPage[]> {
  * Returns undefined for the homepage so Astro generates index.html
  */
 export function aliasToSlug(alias: string): string | undefined {
-  // Homepage case
-  if (!alias || alias === '/') {
+  const normalized = normalizeAlias(alias);
+  if (normalized === '/') {
     return undefined;
   }
-  
-  // Remove leading slash for Astro routing
-  return alias.replace(/^\//, '');
+
+  return normalized.replace(/^\//, '');
 }

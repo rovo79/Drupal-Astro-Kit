@@ -1,0 +1,9 @@
+uuid: 74d9c05a-b1f5-4b3c-9c0c-7a25db8f2c9a
+langcode: en
+status: true
+dependencies: { }
+id: section_callout
+label: 'Callout section'
+description: 'A callout with heading and formatted text.'
+behavior_plugins: { }
+

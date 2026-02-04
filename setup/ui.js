@@ -41,6 +41,7 @@ module.exports = ({
         const [adminUsername, setAdminUsername] = useState('admin');
         const [adminPassword, setAdminPassword] = useState('admin');
         const [astroTemplate, setAstroTemplate] = useState('basics');
+        const [enableStructuredContent, setEnableStructuredContent] = useState(false);
         const [astroExists, setAstroExists] = useState(false);
 
         // Check for existing astro-frontend
@@ -70,7 +71,7 @@ module.exports = ({
             {id: 'ddev-composer-create', text: 'Creating Drupal project with Composer', inProgress: false, done: false, error: null},
             {id: 'ddev-drush', text: 'Installing Drush', inProgress: false, done: false, error: null},
             {id: 'ddev-site-install', text: 'Installing Drupal site', inProgress: false, done: false, error: null},
-            {id: 'configure-drupal', text: 'Configuring Drupal (Content Types, CORS)', inProgress: false, done: false, error: null},
+            {id: 'drupal-recipes', text: 'Applying Drupal recipes', inProgress: false, done: false, error: null},
             {id: 'astro', text: 'Setting up Astro frontend', inProgress: false, done: false, error: null},
             {id: 'complete', text: 'Setup Complete!', inProgress: false, done: false, error: null}
         ]);
@@ -112,14 +113,19 @@ module.exports = ({
         const handleAdminPasswordSubmit = (value) => {
             setAdminPassword(value || 'admin');
             if (astroExists) {
-                setPhase('setup');
-            } else {
-                setPromptStep(3);
+                setPromptStep(4);
+                return;
             }
+            setPromptStep(3);
         };
 
         const handleTemplateSelect = (item) => {
             setAstroTemplate(item.value);
+            setPromptStep(4);
+        };
+
+        const handleStructuredContentSelect = (item) => {
+            setEnableStructuredContent(item.value === 'yes');
             setPhase('setup');
         };
 
@@ -217,6 +223,20 @@ module.exports = ({
                 try { await fs.access(p); return true; } catch { return false; }
             };
 
+            const copyDir = async (src, dest) => {
+                await fs.mkdir(dest, {recursive: true});
+                const entries = await fs.readdir(src, {withFileTypes: true});
+                for (const entry of entries) {
+                    const srcPath = path.join(src, entry.name);
+                    const destPath = path.join(dest, entry.name);
+                    if (entry.isDirectory()) {
+                        await copyDir(srcPath, destPath);
+                    } else {
+                        await fs.copyFile(srcPath, destPath);
+                    }
+                }
+            };
+
             const runDdev = async (args, options) => {
                 try {
                     return await execa('ddev', args, {...options, stdin: 'ignore'});
@@ -238,12 +258,36 @@ module.exports = ({
 
                     if (!envExists) {
                         await fs.copyFile(exampleEnvPath, envPath);
-                        let content = await fs.readFile(envPath, 'utf8');
-                        content = content.replace(/your-project-name/g, projectName);
-                        const drupalApiUrl = `http://${projectName}.ddev.site/jsonapi`;
-                        content += `\nDRUPAL_API_URL=${drupalApiUrl}\n`;
-                        await fs.writeFile(envPath, content);
                     }
+
+                    const upsertEnvVar = (content, key, value) => {
+                        const line = `${key}=${value}`;
+                        const re = new RegExp(`^\\s*${key}\\s*=.*$`, 'm');
+                        if (re.test(content)) {
+                            return content.replace(re, line);
+                        }
+                        const needsNewline = content.length > 0 && !content.endsWith('\n');
+                        return `${content}${needsNewline ? '\n' : ''}${line}\n`;
+                    };
+
+                    let envContent = await fs.readFile(envPath, 'utf8');
+                    envContent = envContent.replace(/your-project-name/g, projectName);
+
+                    const drupalBaseUrl = `http://${projectName}.ddev.site`;
+                    const drupalJsonApiUrl = `${drupalBaseUrl}/jsonapi`;
+
+                    envContent = upsertEnvVar(envContent, 'PROJECT_NAME', projectName);
+                    envContent = upsertEnvVar(envContent, 'DRUPAL_BASE_URL', drupalBaseUrl);
+                    envContent = upsertEnvVar(envContent, 'DRUPAL_JSONAPI_URL', drupalJsonApiUrl);
+                    // Back-compat for older scripts and audits.
+                    envContent = upsertEnvVar(envContent, 'DRUPAL_API_URL', drupalJsonApiUrl);
+                    // Astro templates fetch from this at build time.
+                    envContent = upsertEnvVar(envContent, 'API_BASE_URL', drupalBaseUrl);
+                    envContent = upsertEnvVar(envContent, 'HOMEPAGE_ALIAS', '/home');
+                    envContent = upsertEnvVar(envContent, 'DRUPAL_ADMIN_USER', adminUsername || 'admin');
+                    envContent = upsertEnvVar(envContent, 'DRUPAL_ADMIN_PASS', adminPassword || 'admin');
+
+                    await fs.writeFile(envPath, envContent);
                     updateStep('env', {inProgress: false, done: true});
 
                     updateStep('docker-socket', {inProgress: true});
@@ -320,171 +364,62 @@ module.exports = ({
                     }
                     updateStep('ddev-site-install', {inProgress: false, done: true});
 
-                    updateStep('configure-drupal', {inProgress: true});
-                    
-                    // Enable JSON:API module (core)
-                    try {
-                        await runDdev(['exec', 'drush', 'en', 'jsonapi', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                    } catch (e) {
-                        // Ignore if already enabled or fails (will be caught by audit)
-                    }
+                    updateStep('drupal-recipes', {inProgress: true});
 
-                    // Install and enable Pathauto for automatic URL alias generation
-                    // This is essential for static site generation with clean URLs
-                    try {
-                        await runDdev(['composer', 'require', 'drupal/pathauto'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                        await runDdev(['exec', 'drush', 'en', 'pathauto', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                    } catch (e) {
-                        // Proceed even if this fails
-                    }
+                    const recipesSrcRoot = path.join(projectRoot, 'setup', 'drupal-recipes');
+                    const recipesDestRoot = path.join(drupalBackendPath, 'recipes', 'dak');
+                    await fs.mkdir(recipesDestRoot, {recursive: true});
 
-                    // T012: Inject CORS configuration
-                    // T024: Add services.yml CORS section cross-reference
-                    const servicesYmlPath = path.join(drupalBackendPath, 'web', 'sites', 'default', 'services.yml');
-                    const defaultServicesYmlPath = path.join(drupalBackendPath, 'web', 'sites', 'default', 'default.services.yml');
-                    
-                    if (await pathExists(defaultServicesYmlPath) && !await pathExists(servicesYmlPath)) {
-                        await fs.copyFile(defaultServicesYmlPath, servicesYmlPath);
-                        await fs.chmod(servicesYmlPath, 0o644);
-                    }
+                    const recipeDirs = [
+                        {name: 'dak_decoupled_base', required: true},
+                        {name: 'dak_starter_content', required: true},
+                        {name: 'dak_structured_content', required: false}
+                    ];
 
-                    if (await pathExists(servicesYmlPath)) {
-                        let servicesContent = await fs.readFile(servicesYmlPath, 'utf8');
-                        // Check if CORS is already enabled (not just present but disabled)
-                        const corsAlreadyEnabled = servicesContent.includes('cors.config:') && 
-                            servicesContent.match(/cors\.config:[\s\S]*?enabled:\s*true/);
-                        
-                        if (!corsAlreadyEnabled) {
-                            // Replace the existing disabled cors.config or add new one
-                            // Match the default Drupal cors.config block (enabled: false with all comments)
-                            const corsBlockRegex = /(\s*cors\.config:[\s\S]*?supportsCredentials:\s*false)/;
-                            
-                            const newCorsConfig = `  cors.config:
-    enabled: true
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
-    allowedMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']
-    allowedOrigins: ['http://localhost:4321', 'https://${projectName}.pages.dev', '*']
-    allowedOriginsPatterns: []
-    exposedHeaders: false
-    maxAge: false
-    supportsCredentials: false`;
-
-                            if (servicesContent.match(corsBlockRegex)) {
-                                // Replace existing cors.config block
-                                servicesContent = servicesContent.replace(corsBlockRegex, newCorsConfig);
-                            } else {
-                                // Append new cors.config if somehow not present
-                                servicesContent += `\n\nparameters:\n${newCorsConfig}\n`;
+                    for (const recipe of recipeDirs) {
+                        const src = path.join(recipesSrcRoot, recipe.name);
+                        const dest = path.join(recipesDestRoot, recipe.name);
+                        const exists = await pathExists(src);
+                        if (!exists) {
+                            if (recipe.required) {
+                                throw new Error(`Missing recipe source folder: ${src}`);
                             }
-                            await fs.writeFile(servicesYmlPath, servicesContent);
+                            continue;
                         }
+                        await copyDir(src, dest);
                     }
 
-                    // T009: Create page content type (using built-in Drupal fields)
-                    // T013: Verify anonymous 'access content' permission
-                    // T015: Constitution compliance checklist:
-                    // - Service boundaries respected (using Drupal core fields)
-                    // - Config-driven
-                    // - Automation
-                    // 
-                    // Built-in fields used:
-                    // - title: Node title
-                    // - body: Rich text content (standard profile)
-                    // - path.alias: URL-friendly slug (e.g., /about-us)
-                    // - created, changed: Timestamps
-                    // - status: Published/unpublished
+                    const composerRequires = ['drupal/pathauto', 'drupal/default_content'];
+                    if (enableStructuredContent) {
+                        composerRequires.push('drupal/paragraphs', 'drupal/entity_reference_revisions');
+                    }
 
-                    const phpCode = `
-// Create Basic Page content type if it doesn't exist
-if (!\\Drupal::entityTypeManager()->getStorage('node_type')->load('page')) {
-  \\Drupal\\node\\Entity\\NodeType::create([
-    'type' => 'page',
-    'name' => 'Basic Page',
-    'description' => 'Use basic pages for static content like About or Contact.',
-  ])->save();
-  
-  // Add body field to the new content type
-  if (\\Drupal::moduleHandler()->moduleExists('text')) {
-    if (!\\Drupal\\field\\Entity\\FieldStorageConfig::loadByName('node', 'body')) {
-      \\Drupal\\field\\Entity\\FieldStorageConfig::create([
-        'field_name' => 'body',
-        'entity_type' => 'node',
-        'type' => 'text_with_summary',
-      ])->save();
-    }
-    if (!\\Drupal\\field\\Entity\\FieldConfig::loadByName('node', 'page', 'body')) {
-      \\Drupal\\field\\Entity\\FieldConfig::create([
-        'field_name' => 'body',
-        'entity_type' => 'node',
-        'bundle' => 'page',
-        'label' => 'Body',
-      ])->save();
-    }
-  }
-}
-
-// Grant anonymous users permission to view content
-user_role_grant_permissions('anonymous', ['access content']);
-`;
                     try {
-                        await runDdev(['exec', 'drush', 'php:eval', phpCode], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                        await runDdev(['composer', 'require', ...composerRequires], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
                     } catch (e) {
-                        // Proceed even if this fails (e.g. if already exists)
+                        // Continue: recipe application will surface missing module errors.
                     }
 
-                    // T017, T018: Create sample content pages (Homepage, About, Contact)
-                    const seedContentPhp = `
-// Create sample pages for the starter kit
-\$pages = [
-  [
-    'title' => 'Welcome to ${projectName.charAt(0).toUpperCase() + projectName.slice(1).replace(/-/g, ' ')}',
-    'alias' => '/',
-    'body' => '<p>This is your homepage. Edit this content in <a href="/admin/content">Drupal</a>.</p><p>Your static site will be rebuilt whenever you run <code>npm run build</code> in the astro-frontend directory.</p>',
-  ],
-  [
-    'title' => 'About Us',
-    'alias' => '/about',
-    'body' => '<p>This is the About page. Tell visitors about your organization, mission, and values.</p><p>Edit this content in Drupal to customize it for your needs.</p>',
-  ],
-  [
-    'title' => 'Contact',
-    'alias' => '/contact',
-    'body' => '<p>Get in touch with us!</p><p>You can add contact information, a form, or directions here.</p>',
-  ],
-];
+                    const applyRecipe = async (recipePathFromWeb) => {
+                        try {
+                            await runDdev(['exec', '--dir=web', 'drush', 'recipe:apply', recipePathFromWeb, '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                            return;
+                        } catch (e) {}
+                        try {
+                            await runDdev(['exec', '--dir=web', 'drush', 'recipe', recipePathFromWeb, '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                            return;
+                        } catch (e) {}
 
-foreach (\$pages as \$page_data) {
-  // Check if page with this alias already exists
-  \$existing = \\Drupal::entityTypeManager()
-    ->getStorage('node')
-    ->loadByProperties(['type' => 'page', 'title' => \$page_data['title']]);
-  
-  if (empty(\$existing)) {
-    \$node = \\Drupal\\node\\Entity\\Node::create([
-      'type' => 'page',
-      'title' => \$page_data['title'],
-      'body' => [
-        'value' => \$page_data['body'],
-        'format' => 'basic_html',
-      ],
-      'path' => [
-        'alias' => \$page_data['alias'],
-        'pathauto' => 0, // Manual alias
-      ],
-      'status' => 1, // Published
-      'uid' => 1,
-    ]);
-    \$node->save();
-  }
-}
-`;
-                    try {
-                        await runDdev(['exec', 'drush', 'php:eval', seedContentPhp], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                    } catch (e) {
-                        // Proceed even if seeding fails
+                        await runDdev(['exec', '--dir=web', 'php', 'core/scripts/drupal', 'recipe', recipePathFromWeb], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    };
+
+                    await applyRecipe('../recipes/dak/dak_decoupled_base');
+                    await applyRecipe('../recipes/dak/dak_starter_content');
+                    if (enableStructuredContent) {
+                        await applyRecipe('../recipes/dak/dak_structured_content');
                     }
 
-                    updateStep('configure-drupal', {inProgress: false, done: true});
+                    updateStep('drupal-recipes', {inProgress: false, done: true});
 
                     updateStep('astro', {inProgress: true});
                     const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
@@ -578,21 +513,6 @@ export default defineConfig({
                     const templateSrcPath = path.join(projectRoot, 'templates', 'astro-src');
                     const targetSrcPath = path.join(astroFrontendPath, 'src');
                     
-                    // Helper to recursively copy directory
-                    const copyDir = async (src, dest) => {
-                        await fs.mkdir(dest, { recursive: true });
-                        const entries = await fs.readdir(src, { withFileTypes: true });
-                        for (const entry of entries) {
-                            const srcPath = path.join(src, entry.name);
-                            const destPath = path.join(dest, entry.name);
-                            if (entry.isDirectory()) {
-                                await copyDir(srcPath, destPath);
-                            } else {
-                                await fs.copyFile(srcPath, destPath);
-                            }
-                        }
-                    };
-                    
                     // Check if templates exist and copy them
                     try {
                         await fs.access(templateSrcPath);
@@ -623,7 +543,7 @@ export default defineConfig({
             };
 
             runSetup();
-        }, [phase, projectName, adminUsername, adminPassword, astroTemplate]);
+        }, [phase, projectName, adminUsername, adminPassword, astroTemplate, enableStructuredContent]);
 
         // Render different phases
         if (phase === 'welcome') {
@@ -717,6 +637,30 @@ export default defineConfig({
                     React.createElement(SelectInput, {
                         items: templates,
                         onSelect: handleTemplateSelect
+                    })
+                );
+            }
+
+            if (promptStep === 4) {
+                const items = [
+                    {label: 'No (recommended)', value: 'no'},
+                    {label: 'Yes (add Paragraphs structured content)', value: 'yes'}
+                ];
+
+                return React.createElement(
+                    Box,
+                    {flexDirection: 'column', paddingY: 1},
+                    React.createElement(Text, {bold: true}, '🚀 Drupal + Astro + Cloudflare Setup'),
+                    React.createElement(Text, null, ''),
+                    React.createElement(Text, {dimColor: true}, `✓ Project name: ${projectName}`),
+                    React.createElement(Text, {dimColor: true}, `✓ Admin username: ${adminUsername}`),
+                    React.createElement(Text, {dimColor: true}, `✓ Admin password: ${'•'.repeat(adminPassword.length)}`),
+                    React.createElement(Text, {dimColor: true}, `✓ Astro template: ${astroTemplate}`),
+                    React.createElement(Text, null, ''),
+                    React.createElement(Text, null, 'Enable structured content model (Paragraphs)?'),
+                    React.createElement(SelectInput, {
+                        items,
+                        onSelect: handleStructuredContentSelect
                     })
                 );
             }

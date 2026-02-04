@@ -1,0 +1,15 @@
+uuid: 0c8b5b29-6d77-4b41-9fb3-7f6a37b7a6e2
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+name: 'Headless Page'
+type: headless_page
+description: 'Structured pages composed of reusable sections.'
+help: ''
+new_revision: true
+preview_mode: 1
+display_submitted: false
+third_party_settings: { }
+

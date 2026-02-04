@@ -170,6 +170,12 @@ Cloudflare Pages Hosting
 
 There is no Drupal runtime dependency in production.
 
+### Homepage routing
+
+Drupal decides which page is the “front page” via path aliases. Many sites keep the homepage at `/home`, while the public URL you care about is `/`.
+
+Set `HOMEPAGE_ALIAS` in your `.env` file (default: `/home`). During the Astro build we duplicate that alias so both `/home` and `/` point at the same generated HTML. Change the value if your editors pick a different alias for the homepage.
+
 ---
 
 ## 📦 Build & Deployment

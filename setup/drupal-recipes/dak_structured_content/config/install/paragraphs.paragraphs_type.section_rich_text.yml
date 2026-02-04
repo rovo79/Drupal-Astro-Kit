@@ -1,0 +1,9 @@
+uuid: 5d45f6ff-3cb1-4b5a-8c1d-7a0d2f1c4e56
+langcode: en
+status: true
+dependencies: { }
+id: section_rich_text
+label: 'Rich text section'
+description: 'A formatted text section.'
+behavior_plugins: { }
+

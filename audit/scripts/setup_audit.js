@@ -134,7 +134,7 @@ const run = async ({ target = AUDIT_TARGETS.SETUP } = {}) => {
 
   const envProjectName = env.variables[ENV_KEYS.PROJECT_NAME];
   const projectDirName = path.basename(PROJECT_ROOT);
-  const drupalApiUrl = env.variables[ENV_KEYS.DRUPAL_API_URL];
+  const drupalJsonApiUrl = env.variables[ENV_KEYS.DRUPAL_JSONAPI_URL] || env.variables.DRUPAL_API_URL;
   const drupalBaseUrl = env.variables[ENV_KEYS.DRUPAL_BASE_URL];
 
   if (env.error) {
@@ -198,32 +198,32 @@ const run = async ({ target = AUDIT_TARGETS.SETUP } = {}) => {
 
     const expected = deriveExpectedHosts(env.variables);
 
-    if (!drupalApiUrl) {
+    if (!drupalJsonApiUrl) {
       const recommendation = createRecommendation({
-        action: 'Ensure setup automation appends DRUPAL_API_URL to .env after sync',
+        action: 'Ensure setup automation stamps DRUPAL_JSONAPI_URL to .env after sync',
         impact: 'correctness',
         effort: 'trivial'
       });
       const finding = createFinding({
         category: 'setup',
         severity: 'high',
-        description: 'DRUPAL_API_URL is missing from .env. JSON:API clients rely on this value.',
+        description: 'DRUPAL_JSONAPI_URL is missing from .env. JSON:API clients rely on this value.',
         evidence: env.path,
         recommendationId: recommendation.id
       });
       recommendation.relatedFindingIds.push(finding.id);
       findings.push(finding);
       recommendations.push(recommendation);
-    } else if (expected.expectedDrupalApiUrl && drupalApiUrl !== expected.expectedDrupalApiUrl) {
+    } else if (expected.expectedDrupalApiUrl && drupalJsonApiUrl !== expected.expectedDrupalApiUrl) {
       const recommendation = createRecommendation({
-        action: `Update DRUPAL_API_URL to ${expected.expectedDrupalApiUrl} or rerun ./setup.sh`,
+        action: `Update DRUPAL_JSONAPI_URL to ${expected.expectedDrupalApiUrl} or rerun ./setup.sh`,
         impact: 'correctness',
         effort: 'trivial'
       });
       const finding = createFinding({
         category: 'setup',
         severity: 'medium',
-        description: `DRUPAL_API_URL (${drupalApiUrl}) does not match the derived DDEV endpoint (${expected.expectedDrupalApiUrl}).`,
+        description: `DRUPAL_JSONAPI_URL (${drupalJsonApiUrl}) does not match the derived DDEV endpoint (${expected.expectedDrupalApiUrl}).`,
         evidence: env.path,
         recommendationId: recommendation.id
       });
