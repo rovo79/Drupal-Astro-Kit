@@ -365,6 +365,42 @@ module.exports = ({
                     }
                     updateStep('ddev-site-install', {inProgress: false, done: true});
 
+                    updateStep('configure-drupal', {inProgress: true});
+
+                    const recipesSrcRoot = path.join(projectRoot, 'setup', 'drupal-recipes');
+                    const recipesDestRoot = path.join(drupalBackendPath, 'recipes');
+                    await fs.mkdir(recipesDestRoot, {recursive: true});
+
+                    const recipeDirs = [
+                        {name: 'dak_decoupled_base', required: true},
+                        {name: 'dak_starter_content', required: true},
+                        {name: 'dak_structured_content', required: false}
+                    ];
+
+                    for (const recipe of recipeDirs) {
+                        const src = path.join(recipesSrcRoot, recipe.name);
+                        const dest = path.join(recipesDestRoot, recipe.name);
+                        const exists = await pathExists(src);
+                        if (!exists) {
+                            if (recipe.required) {
+                                throw new Error(`Missing recipe source folder: ${src}`);
+                            }
+                            continue;
+                        }
+                        await copyDir(src, dest);
+                    }
+
+                    const composerRequires = ['drupal/pathauto', 'drupal/default_content'];
+                    if (enableStructuredContent) {
+                        composerRequires.push('drupal/paragraphs', 'drupal/entity_reference_revisions');
+                    }
+
+                    try {
+                        await runDdev(['composer', 'require', ...composerRequires], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                    } catch (e) {
+                        // Proceed even if this fails (e.g. if already exists)
+                    }
+
                     updateStep('apply-recipes', {inProgress: true});
                     const recipeName = 'dak_decoupled_base';
                     const recipeCandidates = [
@@ -434,6 +470,16 @@ module.exports = ({
                         }
 
                         if (!applied) {
+                            // Fallback for environments without working recipe commands: enable equivalent base modules directly.
+                            try {
+                                await runDdev(['exec', 'drush', 'en', 'jsonapi', 'path', 'pathauto', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                                applied = true;
+                            } catch (e) {
+                                errors.push(`- drush en fallback: Failed to execute command \`drush en jsonapi path pathauto -y\`: ${e.message}`);
+                            }
+                        }
+
+                        if (!applied) {
                             const failureMessage = `Failed to apply recipe "${recipeName}". Attempts:\n${errors.join('\n')}`;
                             updateStep('apply-recipes', {inProgress: false, error: failureMessage});
                             markError(failureMessage);
@@ -441,42 +487,6 @@ module.exports = ({
                         }
 
                         updateStep('apply-recipes', {inProgress: false, done: true});
-                    }
-
-                    updateStep('drupal-recipes', {inProgress: true});
-
-                    const recipesSrcRoot = path.join(projectRoot, 'setup', 'drupal-recipes');
-                    const recipesDestRoot = path.join(drupalBackendPath, 'recipes');
-                    await fs.mkdir(recipesDestRoot, {recursive: true});
-
-                    const recipeDirs = [
-                        {name: 'dak_decoupled_base', required: true},
-                        {name: 'dak_starter_content', required: true},
-                        {name: 'dak_structured_content', required: false}
-                    ];
-
-                    for (const recipe of recipeDirs) {
-                        const src = path.join(recipesSrcRoot, recipe.name);
-                        const dest = path.join(recipesDestRoot, recipe.name);
-                        const exists = await pathExists(src);
-                        if (!exists) {
-                            if (recipe.required) {
-                                throw new Error(`Missing recipe source folder: ${src}`);
-                            }
-                            continue;
-                        }
-                        await copyDir(src, dest);
-                    }
-
-                    const composerRequires = ['drupal/pathauto', 'drupal/default_content'];
-                    if (enableStructuredContent) {
-                        composerRequires.push('drupal/paragraphs', 'drupal/entity_reference_revisions');
-                    }
-
-                    try {
-                        await runDdev(['composer', 'require', ...composerRequires], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                    } catch (e) {
-                        // Proceed even if this fails (e.g. if already exists)
                     }
 
                     updateStep('configure-drupal', {inProgress: false, done: true});
