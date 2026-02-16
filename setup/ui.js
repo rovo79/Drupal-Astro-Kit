@@ -71,7 +71,8 @@ module.exports = ({
             {id: 'ddev-composer-create', text: 'Creating Drupal project with Composer', inProgress: false, done: false, error: null},
             {id: 'ddev-drush', text: 'Installing Drush', inProgress: false, done: false, error: null},
             {id: 'ddev-site-install', text: 'Installing Drupal site', inProgress: false, done: false, error: null},
-            {id: 'drupal-recipes', text: 'Applying Drupal recipes', inProgress: false, done: false, error: null},
+            {id: 'apply-recipes', text: 'Applying Drupal recipes', inProgress: false, done: false, error: null},
+            {id: 'configure-drupal', text: 'Configuring Drupal (Content Types, CORS)', inProgress: false, done: false, error: null},
             {id: 'astro', text: 'Setting up Astro frontend', inProgress: false, done: false, error: null},
             {id: 'complete', text: 'Setup Complete!', inProgress: false, done: false, error: null}
         ]);
@@ -364,6 +365,84 @@ module.exports = ({
                     }
                     updateStep('ddev-site-install', {inProgress: false, done: true});
 
+                    updateStep('apply-recipes', {inProgress: true});
+                    const recipeName = 'dak_decoupled_base';
+                    const recipeCandidates = [
+                        `recipes/${recipeName}`,
+                        `web/recipes/${recipeName}`
+                    ];
+
+                    const resolveRecipePath = async () => {
+                        for (const candidate of recipeCandidates) {
+                            const recipeYml = path.join(drupalBackendPath, candidate, 'recipe.yml');
+                            if (await pathExists(recipeYml)) {
+                                return candidate;
+                            }
+                        }
+                        return null;
+                    };
+
+                    const recipePath = await resolveRecipePath();
+
+                    if (!recipePath) {
+                        updateStep('apply-recipes', {inProgress: false, done: true});
+                    } else {
+                        const attempts = [
+                            {
+                                label: 'drush recipe:apply (path)',
+                                ddevArgs: ['exec', 'drush', 'recipe:apply', recipePath, '-y'],
+                                command: `drush recipe:apply ${recipePath} -y`
+                            },
+                            {
+                                label: 'drush recipe:apply (name)',
+                                ddevArgs: ['exec', 'drush', 'recipe:apply', recipeName, '-y'],
+                                command: `drush recipe:apply ${recipeName} -y`
+                            },
+                            {
+                                label: 'drush recipe (path)',
+                                ddevArgs: ['exec', 'drush', 'recipe', recipePath, '-y'],
+                                command: `drush recipe ${recipePath} -y`
+                            },
+                            {
+                                label: 'drush recipe (name)',
+                                ddevArgs: ['exec', 'drush', 'recipe', recipeName, '-y'],
+                                command: `drush recipe ${recipeName} -y`
+                            },
+                            {
+                                label: 'core script (path)',
+                                ddevArgs: ['exec', 'php', 'web/core/scripts/drupal', 'recipe', recipePath],
+                                command: `php web/core/scripts/drupal recipe ${recipePath}`
+                            },
+                            {
+                                label: 'core script (name)',
+                                ddevArgs: ['exec', 'php', 'web/core/scripts/drupal', 'recipe', recipeName],
+                                command: `php web/core/scripts/drupal recipe ${recipeName}`
+                            }
+                        ];
+
+                        const errors = [];
+                        let applied = false;
+
+                        for (const attempt of attempts) {
+                            try {
+                                await runDdev(attempt.ddevArgs, {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                                applied = true;
+                                break;
+                            } catch (e) {
+                                errors.push(`- ${attempt.label}: Failed to execute command \`${attempt.command}\`: ${e.message}`);
+                            }
+                        }
+
+                        if (!applied) {
+                            const failureMessage = `Failed to apply recipe "${recipeName}". Attempts:\n${errors.join('\n')}`;
+                            updateStep('apply-recipes', {inProgress: false, error: failureMessage});
+                            markError(failureMessage);
+                            return;
+                        }
+
+                        updateStep('apply-recipes', {inProgress: false, done: true});
+                    }
+
                     updateStep('drupal-recipes', {inProgress: true});
 
                     const recipesSrcRoot = path.join(projectRoot, 'setup', 'drupal-recipes');
@@ -397,40 +476,10 @@ module.exports = ({
                     try {
                         await runDdev(['composer', 'require', ...composerRequires], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
                     } catch (e) {
-                        // Continue: recipe application will surface missing module errors.
+                        // Proceed even if this fails (e.g. if already exists)
                     }
 
-                    const applyRecipe = async ({recipeName, recipePathFromWeb}) => {
-                        const attempts = [
-                            {label: 'drush recipe:apply (path)', args: ['exec', '--dir=web', 'drush', 'recipe:apply', recipePathFromWeb, '-y']},
-                            {label: 'drush recipe:apply (name)', args: ['exec', '--dir=web', 'drush', 'recipe:apply', recipeName, '-y']},
-                            {label: 'drush recipe (path)', args: ['exec', '--dir=web', 'drush', 'recipe', recipePathFromWeb, '-y']},
-                            {label: 'drush recipe (name)', args: ['exec', '--dir=web', 'drush', 'recipe', recipeName, '-y']},
-                            {label: 'core script (path)', args: ['exec', '--dir=web', 'php', 'core/scripts/drupal', 'recipe', recipePathFromWeb]},
-                            {label: 'core script (name)', args: ['exec', '--dir=web', 'php', 'core/scripts/drupal', 'recipe', recipeName]},
-                        ];
-
-                        const errors = [];
-                        for (const attempt of attempts) {
-                            try {
-                                await runDdev(attempt.args, {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
-                                return;
-                            } catch (e) {
-                                const message = (e && e.message) ? e.message : String(e);
-                                errors.push(`${attempt.label}: ${message}`);
-                            }
-                        }
-
-                        throw new Error(`Failed to apply recipe "${recipeName}". Attempts:\n- ${errors.join('\n- ')}`);
-                    };
-
-                    await applyRecipe({recipeName: 'dak_decoupled_base', recipePathFromWeb: '../recipes/dak_decoupled_base'});
-                    await applyRecipe({recipeName: 'dak_starter_content', recipePathFromWeb: '../recipes/dak_starter_content'});
-                    if (enableStructuredContent) {
-                        await applyRecipe({recipeName: 'dak_structured_content', recipePathFromWeb: '../recipes/dak_structured_content'});
-                    }
-
-                    updateStep('drupal-recipes', {inProgress: false, done: true});
+                    updateStep('configure-drupal', {inProgress: false, done: true});
 
                     updateStep('astro', {inProgress: true});
                     const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
