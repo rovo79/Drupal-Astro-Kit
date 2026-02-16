@@ -470,12 +470,22 @@ module.exports = ({
                         }
 
                         if (!applied) {
-                            // Fallback for environments without working recipe commands: enable equivalent base modules directly.
+                            // Fallback for environments without working recipe commands:
+                            // enable core equivalents first, then attempt optional contrib modules.
                             try {
-                                await runDdev(['exec', 'drush', 'en', 'jsonapi', 'path', 'pathauto', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                                await runDdev(['exec', 'drush', 'en', 'jsonapi', 'path', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
                                 applied = true;
                             } catch (e) {
-                                errors.push(`- drush en fallback: Failed to execute command \`drush en jsonapi path pathauto -y\`: ${e.message}`);
+                                errors.push(`- drush en fallback (core): Failed to execute command \`drush en jsonapi path -y\`: ${e.message}`);
+                            }
+
+                            if (applied) {
+                                // pathauto is optional in fallback mode; continue setup even if unavailable.
+                                try {
+                                    await runDdev(['exec', 'drush', 'en', 'pathauto', '-y'], {cwd: drupalBackendPath, env: {...process.env, ...dockerEnv}});
+                                } catch (e) {
+                                    errors.push(`- drush en fallback (optional pathauto): Failed to execute command \`drush en pathauto -y\`: ${e.message}`);
+                                }
                             }
                         }
 
