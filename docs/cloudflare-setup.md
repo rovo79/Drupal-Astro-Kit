@@ -1,29 +1,20 @@
 # Cloudflare Workers Setup Guide
 
-This guide explains how to configure Cloudflare Workers for your Drupal + Astro project.
+**Status:** Phase 2 / optional planning. The kit defaults to **static-first** (Astro SSG + Cloudflare Pages).
+
+This guide covers how to configure Cloudflare Workers for a future SSR deployment.
 
 ## Cloudflare Workers vs Pages
 
-### Cloudflare Workers (Recommended)
+### Cloudflare Pages (Default)
 
-- Serverless computing platform with SSR support
-- Handles Astro frontend deployment with server-side rendering
-- Features:
-  - Server-side rendering (SSR)
-  - Edge computing capabilities
-  - KV storage integration
-  - Built-in observability
-  - Global distribution
-  - Automatic scaling
+- Static site hosting for `astro-frontend/dist`
+- Fits the current setup flow (`./setup.sh` → `npm run build` → Pages deploy)
 
-### Cloudflare Pages (Legacy)
+### Cloudflare Workers (Optional / Phase 2)
 
-- Static site hosting platform
-- Limited to static site generation
-- Use cases:
-  - Static-only websites
-  - JAMstack applications
-  - No server-side rendering needed
+- Workers runtime for SSR (requires Drupal to be reachable from Workers)
+- Adds complexity: adapter config, runtime bindings, auth/preview strategy
 
 ## Initial Setup
 

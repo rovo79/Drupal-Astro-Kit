@@ -363,10 +363,8 @@ MIT
 
 ---
 
-If you’d like, I can also generate:
+## 🔮 Roadmap (Phase 2: Workers SSR)
 
-- A v1 architecture diagram
-- The rewritten setup steps for your CLI
-- A migration checklist from your current SSR-heavy repo to this SSG-first version
+This kit is intentionally **static-first** (Pages + SSG). If you need SSR (host Drupal somewhere reachable, add previews/auth, fetch at request time), see:
 
-Just say the word.
+- `/Users/rob/Dev/Drupal_Astro_Kit/docs/phase-2-workers-ssr.md`

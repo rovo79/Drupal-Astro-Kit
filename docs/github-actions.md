@@ -1,5 +1,7 @@
 # GitHub Actions Guide
 
+**Status:** draft/legacy (Workers-focused). The kit defaults to **static-first** (Astro SSG + Cloudflare Pages).
+
 This guide explains the CI/CD pipeline configuration using GitHub Actions for Cloudflare Workers deployment.
 
 ## Workflow Overview

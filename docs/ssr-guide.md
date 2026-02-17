@@ -1,5 +1,7 @@
 # Server-Side Rendering (SSR) Guide
 
+**Status:** Phase 2 / optional planning. The kit defaults to **static-first** (Astro SSG + Cloudflare Pages).
+
 This guide explains how to configure and use server-side rendering with Cloudflare Workers in your Astro frontend.
 
 ## When to Use SSR
