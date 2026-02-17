@@ -242,8 +242,14 @@ module.exports = ({
                 try {
                     return await execa('ddev', args, {...options, stdin: 'ignore'});
                 } catch (error) {
-                    const errMsg = (error && (error.stderr || error.stdout || error.message)) || 'Unknown error';
-                    throw new Error(errMsg);
+                    const parts = [];
+                    const message = error?.message ? String(error.message) : 'Unknown error';
+                    const stderr = error?.stderr ? String(error.stderr).trim() : '';
+                    const stdout = error?.stdout ? String(error.stdout).trim() : '';
+                    parts.push(message);
+                    if (stderr) parts.push(stderr);
+                    if (stdout) parts.push(stdout);
+                    throw new Error(parts.join('\n'));
                 }
             };
 
@@ -368,7 +374,9 @@ module.exports = ({
                     updateStep('configure-drupal', {inProgress: true});
 
                     const recipesSrcRoot = path.join(projectRoot, 'setup', 'drupal-recipes');
-                    const recipesDestRoot = path.join(drupalBackendPath, 'recipes');
+                    // Drupal's "site root" in this project is the docroot (`web/`), so recipes must live under `web/recipes/`.
+                    // (Drupal discovers recipes under `<drupal_root>/recipes`.)
+                    const recipesDestRoot = path.join(drupalBackendPath, 'web', 'recipes', 'dak');
                     await fs.mkdir(recipesDestRoot, {recursive: true});
 
                     const recipeDirs = [
@@ -388,6 +396,14 @@ module.exports = ({
                             continue;
                         }
                         await copyDir(src, dest);
+                    }
+
+                    // Preflight: ensure recipe.yml exists where Drupal will discover it.
+                    for (const recipe of recipeDirs.filter((r) => r.required || enableStructuredContent)) {
+                        const recipeYmlPath = path.join(recipesDestRoot, recipe.name, 'recipe.yml');
+                        if (!await pathExists(recipeYmlPath)) {
+                            throw new Error(`Recipe copy failed (missing recipe.yml): ${recipeYmlPath}`);
+                        }
                     }
 
                     const composerRequires = ['drupal/pathauto', 'drupal/default_content'];

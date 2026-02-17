@@ -133,7 +133,7 @@ This will:
 - Create astro-frontend/
 - Configure .env
 - Map Drupal’s JSON:API into Astro
-- Generate a working SSG route: src/pages/[...slug].astro
+- Generate working SSG routes: `src/pages/index.astro` + `src/pages/[...slug].astro`
 
 1. Launch local development
 
@@ -286,7 +286,9 @@ Cloudflare responsibilities
 
 The setup script generates something like:
 
-File: src/pages/[...slug].astro
+Files:
+- `src/pages/index.astro`
+- `src/pages/[...slug].astro`
 
 ```astro
 ---

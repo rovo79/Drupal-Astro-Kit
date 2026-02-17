@@ -10,13 +10,12 @@
  * After build, the site has no runtime dependency on Drupal.
  * 
  * Route mapping:
- * - Drupal alias "/" → Astro slug undefined → dist/index.html
  * - Drupal alias "/about" → Astro slug "about" → dist/about/index.html
  * - Drupal alias "/nested/path" → Astro slug "nested/path" → dist/nested/path/index.html
  */
 
 import Base from '../layouts/Base.astro';
-import { getAllPages, aliasToSlug, checkApiConnection, type DrupalPage, getHomepageAlias, normalizeAlias } from '../lib/drupal';
+import { getAllPages, aliasToSlug, checkApiConnection, type DrupalPage, normalizeAlias } from '../lib/drupal';
 
 // Required for static generation
 export async function getStaticPaths() {
@@ -29,9 +28,6 @@ export async function getStaticPaths() {
     console.error('   Make sure DDEV is running: cd drupal-backend && ddev start\n');
     throw new Error(`Drupal JSON:API unreachable: ${message}`);
   }
-
-  const homepageAlias = getHomepageAlias();
-  let homepageRouteCreated = false;
 
   // Fetch all published pages
   let pages: DrupalPage[];
@@ -75,12 +71,13 @@ export async function getStaticPaths() {
     throw new Error('Duplicate path aliases detected. Cannot generate static routes.');
   }
 
-  // Generate static paths
+  // Generate static paths (excluding "/" which is handled by index.astro)
   const paths: Array<{
-    params: { slug: string | undefined };
+    params: { slug: string };
     props: { page: DrupalPage };
   }> = [];
   let skippedCount = 0;
+  let homepageSkipped = 0;
 
   for (const page of pages) {
     const alias = page.path?.alias;
@@ -93,38 +90,35 @@ export async function getStaticPaths() {
     }
 
     const normalizedAlias = normalizeAlias(alias);
+    if (normalizedAlias === '/') {
+      homepageSkipped++;
+      continue;
+    }
+
     const slug = aliasToSlug(alias);
-    
+    if (!slug || slug.length === 0) {
+      console.warn(`  ⚠ Skipping page "${page.title}" (ID: ${page.id}) - invalid slug derived from alias "${alias}"`);
+      skippedCount++;
+      continue;
+    }
+
     paths.push({
       params: { slug },
       props: { page },
     });
-
-    if (normalizedAlias === homepageAlias) {
-      if (slug === undefined) {
-        homepageRouteCreated = true;
-      } else if (!homepageRouteCreated) {
-        paths.push({
-          params: { slug: undefined },
-          props: { page },
-        });
-        homepageRouteCreated = true;
-      }
-    }
   }
 
   if (skippedCount > 0) {
     console.warn(`\n⚠ ${skippedCount} page(s) skipped (missing path aliases)\n`);
   }
 
-  if (!homepageRouteCreated) {
-    console.warn(`\n⚠ Warning: HOMEPAGE_ALIAS (${homepageAlias}) did not match any Drupal page.`);
-    console.warn('  Update the alias or set HOMEPAGE_ALIAS to match the page that should render at /.\n');
+  if (homepageSkipped > 0) {
+    console.log(`  Homepage alias "/" handled by src/pages/index.astro (${homepageSkipped} page(s) with alias "/").`);
   }
 
   console.log(`  Routes generated: ${paths.length}`);
   for (const p of paths) {
-    const displaySlug = p.params.slug === undefined ? '/' : `/${p.params.slug}`;
+    const displaySlug = `/${p.params.slug}`;
     console.log(`    ${displaySlug} → ${p.props.page.title}`);
   }
   console.log('');
@@ -141,7 +135,7 @@ const { page } = Astro.props;
 
 // Build canonical URL
 const slug = Astro.params.slug;
-const canonicalPath = slug ? `/${slug}` : '/';
+const canonicalPath = `/${slug}`;
 const canonicalUrl = new URL(canonicalPath, Astro.site).toString();
 
 // Extract description from body (first 160 chars of text content)

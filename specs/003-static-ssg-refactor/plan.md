@@ -73,7 +73,8 @@ drupal-backend/           # Created by setup CLI
 astro-frontend/           # Created by setup CLI
 ├── src/
 │   ├── pages/
-│   │   └── [...slug].astro   # Dynamic route from Drupal aliases
+│   │   ├── index.astro         # Homepage route
+│   │   └── [...slug].astro     # Dynamic route from Drupal aliases
 │   ├── lib/
 │   │   └── drupal.ts         # JSON:API client (jsona + pagination)
 │   └── layouts/

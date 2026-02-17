@@ -27,7 +27,8 @@
 ## Astro Template Conventions (template source)
 
 - **Routing**: single catch-all page route with `getStaticPaths()`:
-  - `templates/astro-src/pages/[...slug].astro`
+  - `templates/astro-src/pages/index.astro` (homepage)
+  - `templates/astro-src/pages/[...slug].astro` (catch-all)
 - **Data access**:
   - JSON:API fetch helper in `templates/astro-src/lib/drupal.ts` uses `jsona` + `drupal-jsonapi-params`
 - **Layout**:
@@ -43,4 +44,3 @@
 
 - The template code in `templates/astro-src/` is intended to be the canonical starting point for the generated `astro-frontend/src/`; confirm by inspecting the copy logic in `setup/ui.js` and verifying `astro-frontend/src/` contents post-setup.
 - Script conventions (colors/helpers) apply to repo-provided scripts; generated projects may bring their own conventions depending on the chosen Astro template.
-

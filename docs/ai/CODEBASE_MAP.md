@@ -12,6 +12,7 @@
   - Entrypoints: `setup/cli.js` → `setup/ui.js` (main flow), `setup/ui-automated.js` (older/alternative non-prompt flow).
 - `templates/astro-src/`: source templates copied into the generated Astro app (`astro-frontend/src/...`).
   - Key runtime template entrypoints:
+    - `templates/astro-src/pages/index.astro` (homepage route).
     - `templates/astro-src/pages/[...slug].astro` (catch-all route + `getStaticPaths()`).
     - `templates/astro-src/lib/drupal.ts` (JSON:API client + routing helpers).
     - `templates/astro-src/layouts/Base.astro` (layout wrapper).
@@ -28,7 +29,7 @@
 
 - **Drupal backend (generated):** `drupal-backend/` (created by `setup/ui.js` via `ddev config`, `ddev start`, `ddev composer create-project`, `drush site:install`, etc).
 - **Astro frontend (generated):** `astro-frontend/`
-  - Route generation: `astro-frontend/src/pages/[...slug].astro` (from `templates/astro-src/pages/[...slug].astro`).
+  - Route generation: `astro-frontend/src/pages/index.astro` + `astro-frontend/src/pages/[...slug].astro` (from `templates/astro-src/pages/index.astro` + `templates/astro-src/pages/[...slug].astro`).
   - JSON:API fetch layer: `astro-frontend/src/lib/drupal.ts` (from `templates/astro-src/lib/drupal.ts`).
 - **Deployment (static):** `scripts/deploy-frontend.sh` → `npx wrangler pages deploy ./dist`.
 
@@ -39,6 +40,7 @@
   - CLI entry + Ink wiring: `setup/cli.js`
   - Wrapper script: `setup.sh`
 - **Routing**
+  - Homepage routing: `templates/astro-src/pages/index.astro`
   - Catch-all slug routing + route generation rules: `templates/astro-src/pages/[...slug].astro`
   - Alias normalization/homepage behavior: `templates/astro-src/lib/drupal.ts`
 - **Data models / API**
@@ -46,7 +48,7 @@
   - API contracts/specs: `specs/003-static-ssg-refactor/contracts/`, `specs/002-drupal-api-config/contracts/openapi.yaml`
 - **UI**
   - Base layout + global styling: `templates/astro-src/layouts/Base.astro`
-  - Page rendering: `templates/astro-src/pages/[...slug].astro`
+  - Page rendering: `templates/astro-src/pages/index.astro`, `templates/astro-src/pages/[...slug].astro`
 - **Infra / CI / automation**
   - GitHub Actions: `.github/workflows/main.yml`
   - Cloudflare deploy script: `scripts/deploy-frontend.sh`
@@ -62,4 +64,3 @@
 
 - Generated directories (`drupal-backend/`, `astro-frontend/`) are not committed and may not exist until `./setup.sh` completes; confirm by running `./setup.sh` and then inspecting `drupal-backend/` and `astro-frontend/`.
 - “Main runtime entrypoints” for the *generated* projects (e.g., `astro-frontend/package.json`, `drupal-backend/.ddev/config.yaml`) are not present in this repo until setup runs; confirm by inspecting those paths post-setup.
-

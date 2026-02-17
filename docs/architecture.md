@@ -118,7 +118,7 @@ Drupal path aliases map directly to Astro routes:
 
 | Drupal Alias | Astro Route | Output File |
 |--------------|-------------|-------------|
-| `/` | `[...slug].astro` (undefined) | `dist/index.html` |
+| `/` | `index.astro` | `dist/index.html` |
 | `/about` | `[...slug].astro` ("about") | `dist/about/index.html` |
 | `/services/web` | `[...slug].astro` ("services/web") | `dist/services/web/index.html` |
 
@@ -142,4 +142,3 @@ This is an advanced configuration for use cases like:
 - Personalized content
 - Very large sites (>1000 pages)
 - Real-time content updates
-

@@ -19,7 +19,7 @@
 - **Astro dev**
   - `cd astro-frontend && npm run dev` (renders pages; content fetch behavior depends on implementation in generated project)
 - **Astro build**
-  - `cd astro-frontend && npm run build` (uses `getStaticPaths()` from `src/pages/[...slug].astro` copied from `templates/astro-src/pages/[...slug].astro`)
+- `cd astro-frontend && npm run build` (uses `getStaticPaths()` from `src/pages/[...slug].astro` copied from `templates/astro-src/pages/[...slug].astro`; homepage is `src/pages/index.astro`)
   - Confirm output routes exist under `astro-frontend/dist/`
 - **Deploy (optional)**
   - `./scripts/deploy-frontend.sh` (requires Cloudflare credentials in `.env`)
@@ -36,4 +36,3 @@
 
 - The generated `astro-frontend/` will contain a working `npm test` script only if the chosen Astro template includes one; confirm by inspecting `astro-frontend/package.json` post-setup.
 - Drupal test execution in CI (`drush test:run --all`) depends on the generated Drupal site including test infrastructure and appropriate permissions; confirm by running that command inside DDEV after setup.
-

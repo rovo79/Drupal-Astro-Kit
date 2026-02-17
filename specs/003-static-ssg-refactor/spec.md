@@ -98,7 +98,7 @@ A developer wants to iterate on their frontend while seeing live content changes
 - What happens when JSON:API returns paginated results? The build must fetch all pages of results, not just the first page.
 - How does the build handle special characters in aliases (e.g., `/über-uns`)? URL encoding must be handled correctly for valid file paths.
 - What happens if two pages have conflicting aliases? Build should fail with clear error identifying the conflict.
-- How is the homepage handled? The homepage (`/`) is a Drupal page with alias `/` using the standard Page content type, rendered via the same `[...slug].astro` route.
+- How is the homepage handled? The homepage (`/`) is rendered by `index.astro` using either a Drupal page with alias `/` or the configured `HOMEPAGE_ALIAS` (default: `/home`).
 
 ## Requirements *(mandatory)*
 
@@ -139,7 +139,7 @@ A developer wants to iterate on their frontend while seeing live content changes
 
 - **FR-018**: Dev server MUST fetch fresh content from Drupal on page navigation/refresh
 - **FR-019**: Documentation MUST clearly state this is a static-only V1 (no SSR)
-- **FR-020**: Example `[...slug].astro` route MUST be included demonstrating the pattern
+- **FR-020**: Example `index.astro` + `[...slug].astro` routes MUST be included demonstrating the pattern
 
 ### Key Entities
 

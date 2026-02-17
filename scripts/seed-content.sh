@@ -29,12 +29,37 @@ print_warning() {
   echo -e "${YELLOW}!${NC} $1"
 }
 
-# Get project name from argument or parent directory
-PROJECT_NAME="${1:-$(basename "$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")")}"
+# Resolve repo root (parent of scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Prefer PROJECT_NAME from .env when available (directory name may differ)
+load_project_name_from_env() {
+  local env_path="$REPO_ROOT/.env"
+  if [ -f "$env_path" ]; then
+    # shellcheck disable=SC1090
+    set -a
+    . "$env_path"
+    set +a
+    if [ -n "${PROJECT_NAME:-}" ]; then
+      echo "$PROJECT_NAME"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# Get project name from argument, .env, or directory name fallback
+PROJECT_NAME="${1:-}"
+if [ -z "$PROJECT_NAME" ]; then
+  PROJECT_NAME="$(load_project_name_from_env || true)"
+fi
+if [ -z "$PROJECT_NAME" ]; then
+  PROJECT_NAME="$(basename "$REPO_ROOT")"
+fi
 
 # Ensure we're in the drupal-backend directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DRUPAL_DIR="$SCRIPT_DIR/../drupal-backend"
+DRUPAL_DIR="$REPO_ROOT/drupal-backend"
 
 if [ ! -d "$DRUPAL_DIR" ]; then
   print_error "drupal-backend directory not found. Run setup.sh first."
@@ -54,9 +79,12 @@ DISPLAY_NAME=$(echo "$PROJECT_NAME" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $
 
 print_status "Creating sample content for: $DISPLAY_NAME"
 
-# Create seed content via Drush php:eval using heredoc to avoid escaping issues
-# Note: Using single-quoted delimiter 'PHPCODE' prevents shell variable expansion
-ddev exec drush php:eval "$(cat <<'PHPCODE'
+# Create seed content inside the container using stdin (avoids ddev exec quoting + $var expansion issues).
+ddev exec bash -s <<'BASH'
+set -euo pipefail
+
+cat > /tmp/dak_seed_content.php <<'PHP'
+<?php
 // Create sample pages for the starter kit
 $pages = [
   [
@@ -83,12 +111,12 @@ foreach ($pages as $page_data) {
   // Check if page with this alias already exists
   $path_storage = \Drupal::entityTypeManager()->getStorage('path_alias');
   $existing_alias = $path_storage->loadByProperties(['alias' => $page_data['alias']]);
-  
+
   if (!empty($existing_alias)) {
     $skipped++;
     continue;
   }
-  
+
   $node = \Drupal\node\Entity\Node::create([
     'type' => 'page',
     'title' => $page_data['title'],
@@ -108,8 +136,10 @@ foreach ($pages as $page_data) {
 }
 
 echo "Created: $created pages, Skipped: $skipped (already exist)\n";
-PHPCODE
-)"
+PHP
+
+drush php:script /tmp/dak_seed_content.php
+BASH
 
 print_status "Sample content created successfully!"
 echo ""

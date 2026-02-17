@@ -56,4 +56,3 @@ Drupal runs locally (DDEV) and exposes JSON:API. Astro fetches JSON:API **at bui
 
 - Overview: `README.md`
 - AI-maintained maps/checklists: `docs/ai/**` (start with `docs/ai/CODEBASE_MAP.md` and `docs/ai/COMMANDS.md`)
-
