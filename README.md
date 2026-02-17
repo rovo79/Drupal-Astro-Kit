@@ -4,8 +4,6 @@ Local Drupal CMS → Astro Static Site → Cloudflare Pages
 
 This starter kit turns Drupal 11 into a local-only CMS and uses Astro to generate a fully static site that deploys to Cloudflare Pages. You get modern frontend development with the stability of Drupal—but your production site is static, fast, secure, and free to host.
 
-If you want optional server-side rendering (SSR) on Cloudflare Workers, you can enable that in advanced mode. But the default, recommended flow is static-first.
-
 This is built for Drupal developers who want to escape Twig templating hell and ship modern frontends with minimal friction.
 
 ---
@@ -22,12 +20,6 @@ Core (Static-first)
 - Clean Routing — Drupal aliases mapped to Astro routes
 - Zero Runtime Dependencies — Production site does not require Drupal at all
 
-Optional (Advanced)
-
-- Cloudflare Workers SSR mode — For hosted-Drupal scenarios
-- Workers KV support — For sessions or dynamic endpoints
-- CI/CD Ready — GitHub Actions support for both Pages and Workers mode
-
 ---
 
 ## 📋 Table of Contents
@@ -38,7 +30,6 @@ Optional (Advanced)
 - Local Development Flow
 - Build & Deployment
 - Architecture
-- Advanced: Workers Mode (Optional)
 - Project Structure
 - Troubleshooting
 
@@ -77,17 +68,6 @@ Use React/Svelte/Solid/Vue islands if you want interactivity.
 - Astro → presentation
 - Cloudflare Pages → hosting
 
-🟧 Optional SSR (Phase 2)
-
-If you later choose to host Drupal somewhere publicly accessible, you can:
-
-- Switch Astro to server mode
-- Deploy to Cloudflare Workers instead
-- Use live JSON:API reading at request time
-- Add previews, authenticated routes, etc.
-
-But the base kit no longer implies that.
-
 ---
 
 ## 🧰 Prerequisites
@@ -98,7 +78,7 @@ Node.js | 20+ | brew install node@20
 DDEV | Latest | brew install ddev/ddev/ddev
 Docker | Latest | brew install --cask docker
 Composer | Latest | brew install composer
-Cloudflare Account | Free | <https://dash.cloudflare.com>
+Cloudflare Account | Free | <https://dash.cloudflare.com> (deployment only)
 
 Important: In static mode, Drupal does not need to be hosted anywhere. It only needs to run locally when building the Astro site.
 
@@ -120,7 +100,7 @@ Add your own GitHub repo:
 git remote add origin https://github.com/your-user/my-project.git
 ```
 
-1. Run the setup
+2. Run the setup
 
 ```bash
 chmod +x setup.sh
@@ -135,7 +115,15 @@ This will:
 - Map Drupal’s JSON:API into Astro
 - Generate working SSG routes: `src/pages/index.astro` + `src/pages/[...slug].astro`
 
-1. Launch local development
+3. (Optional) Seed sample pages
+
+```bash
+./scripts/seed-content.sh
+```
+
+This creates published Basic pages with stable aliases: `/home`, `/about`, `/contact`.
+
+4. Launch local development
 
 ```bash
 # Start Drupal
@@ -156,7 +144,7 @@ You now have:
 
 You maintain content in Drupal locally.
 
-Astro reads Drupal using JSON:API only at build time:
+Astro reads Drupal using JSON:API during `npm run dev` and `npm run build` to determine routes and render HTML. The deployed static site does not fetch Drupal at runtime.
 
 ```text
 Drupal (local)
@@ -174,7 +162,12 @@ There is no Drupal runtime dependency in production.
 
 Drupal decides which page is the “front page” via path aliases. Many sites keep the homepage at `/home`, while the public URL you care about is `/`.
 
-Set `HOMEPAGE_ALIAS` in your `.env` file (default: `/home`). During the Astro build we duplicate that alias so both `/home` and `/` point at the same generated HTML. Change the value if your editors pick a different alias for the homepage.
+Set `HOMEPAGE_ALIAS` in your `.env` file (default: `/home`). The Astro homepage route (`src/pages/index.astro`) will render:
+
+- a Drupal page with alias `/` if one exists, otherwise
+- the Drupal page matching `HOMEPAGE_ALIAS`
+
+That means your homepage content is authored once in Drupal (usually at `/home`) and appears at both `/` and `/home` in Astro.
 
 ---
 
@@ -278,7 +271,7 @@ Astro responsibilities
 Cloudflare responsibilities
 
 - Serve static site globally
-- Optional: serve Workers SSR (for advanced mode)
+- Serve static output via Pages CDN
 
 ---
 
@@ -292,46 +285,30 @@ Files:
 
 ```astro
 ---
-import { fetchAllPages, pagePathToSegments } from '../lib/drupalClient';
+import { getAllPages, aliasToSlug } from '../lib/drupal';
 
 export async function getStaticPaths() {
-  const pages = await fetchAllPages();
+  const pages = await getAllPages();
 
-  return pages.map(page => ({
-    params: { slug: pagePathToSegments(page) },
-    props: {
-      title: page.attributes.title,
-      bodyHtml: page.attributes.body?.processed ?? '',
-    }
-  }));
+  return pages
+    .filter((page) => page.path?.alias && page.path.alias !== '/')
+    .map((page) => ({
+      params: { slug: aliasToSlug(page.path!.alias)! },
+      props: { page },
+    }));
 }
 
-const { title, bodyHtml } = Astro.props;
+const { page } = Astro.props;
 ---
 
-<h1>{title}</h1>
-<article set:html={bodyHtml} />
+<h1>{page.title}</h1>
+<article set:html={page.body?.processed ?? ''} />
 ```
 
 This means:
 
 - Astro builds /about, /company/team, etc. based on Drupal aliases
 - No fetch at runtime
-
----
-
-## 🧰 Advanced: Workers Mode (Optional)
-
-If you later decide to host Drupal publicly, you can:
-
-- Switch Astro to Cloudflare SSR adapter
-- Enable Workers KV
-- Add preview routes
-- Add dynamic pages that fetch Drupal live at request time
-
-This requires Drupal to be publicly reachable, which is not part of the default workflow.
-
-Use this mode only if you know you need SSR.
 
 ---
 
@@ -376,7 +353,7 @@ Cloudflare cannot reach your local Drupal. You must build locally, then deploy s
 
 Aliases not appearing in JSON:API
 
-Install JSON:API Extras or confirm path field is exposed.
+This kit expects published **Basic pages** to have a **URL alias** (e.g. `/about`). The Astro routes are generated from `path.alias` returned by JSON:API (not from `/node/123` internal URLs).
 
 ---
 
