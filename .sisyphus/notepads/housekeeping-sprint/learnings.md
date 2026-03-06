@@ -96,3 +96,13 @@
 - Schema validation errors in outputs are expected (new category enums not yet added to schema) but don't prevent execution
 - No changes made to CLI argument parsing, report generation, or collector loading logic — only COLLECTOR_MODULES mapping updated
 - Evidence saved to .sisyphus/evidence/task-9-targets-work.txt and task-9-dead-targets-rejected.txt
+
+### Task 10: Update AI docs for static-first accuracy
+- Reviewed all 9 docs/ai/*.md files; 6 needed updates, 3 were already accurate (CODEBASE_MAP.md, STACK.md, CONVENTIONS.md)
+- Main issues: stale CI pipeline descriptions (old 4-job pipeline vs new 37-line single-job), wrangler.toml references in drift warnings that no longer apply, audit:ssr targets, DRUPAL_API_URL emphasis, backend deploy mentions
+- DEPLOYMENT.md had the most stale content: old CI description, removed env vars (PROD_DDEV_HOST, STAGING_DDEV_HOST, SSH keys), aspirational backend deploy assumption
+- SECURITY_AND_RISKS.md contained Unicode curly quotes that caused Edit tool failures; used Python to replace the line instead
+- HOTSPOTS.md drift signals section was completely rewritten since all the identified drift has been fixed in prior tasks
+- ARCHITECTURE.md "Optional / Legacy SSR" section renamed to "Phase 2 (Future): Workers SSR" to match the project's framing
+- When grepping for forbidden patterns, watch for "clarification" uses (e.g., "not wrangler.toml") that still match; reword to avoid the literal string entirely
+- Files that are already accurate: don't touch. The task explicitly requires this restraint.

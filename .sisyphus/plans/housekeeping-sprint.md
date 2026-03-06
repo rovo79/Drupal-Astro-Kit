@@ -946,7 +946,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   **Commit**: YES (grouped with Tasks 6, 7)
   - Message: `feat(audit): add static-first audit scripts`
 
-- [ ] 9. Update Audit Aggregator (`index.js`, `package.json`, `README.md`)
+- [x] 9. Update Audit Aggregator (`index.js`, `package.json`, `README.md`)
 
   **What to do**:
   - **Edit `audit/index.js`**:
@@ -1057,7 +1057,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   - Files: `audit/index.js`, `audit/package.json`, `audit/README.md`
   - Pre-commit: `node audit/index.js --target static`
 
-- [ ] 10. Update AI Docs for Static-First Accuracy
+- [x] 10. Update AI Docs for Static-First Accuracy
 
   **What to do**:
   - Review and update all 8 files in `docs/ai/`:
@@ -1150,7 +1150,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   - Files: `docs/ai/*.md` (only files that needed changes)
   - Pre-commit: `grep -r "wrangler.toml" docs/ai/ ; echo "exit: $?"`
 
-- [ ] 11. Update `AGENTS.md`
+- [x] 11. Update `AGENTS.md`
 
   **What to do**:
   - Update `AGENTS.md` (currently 58 lines) with findings from this housekeeping sprint:
@@ -1226,7 +1226,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   - Files: `AGENTS.md`
   - Pre-commit: `grep "Static-first" AGENTS.md`
 
-- [ ] 12. Run Full Audit Suite and Verify
+- [x] 12. Run Full Audit Suite and Verify
 
   **What to do**:
   - Run the complete audit suite end-to-end as final integration verification:
