@@ -10,7 +10,7 @@
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "category": { "type": "string", "enum": ["setup", "ssr", "api", "kv", "ci", "docs", "performance"] },
+          "category": { "type": "string", "enum": ["setup", "api", "static", "pages", "build", "ci", "docs", "performance"] },
           "description": { "type": "string" },
           "severity": { "type": "string", "enum": ["info", "low", "medium", "high"] },
           "evidence": { "type": "string" },
