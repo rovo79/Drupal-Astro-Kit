@@ -52,7 +52,16 @@ Drupal runs locally (DDEV) and exposes JSON:API. Astro fetches JSON:API **at bui
   - `cd astro-frontend && npm run build` produces routes in `dist/`
 - Use the **audit toolkit** (`audit/`) for structured, non-mutating checks; keep it aligned with current setup behavior.
 
+### Audit targets
+
+Available targets: `setup`, `api`, `static`, `pages`, `build`, `ci`, `docs`
+
+Run individual: `cd audit && npm run audit:setup`
+Run all: `cd audit && npm run audit:all`
+
 ## Pointers (source of truth)
 
 - Overview: `README.md`
 - AI-maintained maps/checklists: `docs/ai/**` (start with `docs/ai/CODEBASE_MAP.md` and `docs/ai/COMMANDS.md`)
+
+- Legacy SSR-era docs: `docs/ssr-guide.md`, `docs/cloudflare-setup.md`, `docs/github-actions.md` — all have banners marking them as Phase 2 (not current V1 architecture)
