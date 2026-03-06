@@ -9,9 +9,11 @@
   },
   "scripts": {
     "audit:setup": "node ./index.js --target setup",
-    "audit:ssr": "node ./index.js --target ssr",
+    "audit:static": "node ./index.js --target static",
+    "audit:pages": "node ./index.js --target pages",
+    "audit:build": "node ./index.js --target build",
     "audit:api": "node ./index.js --target api",
-    "audit:kv": "node ./index.js --target kv",
+
     "audit:ci": "node ./index.js --target ci",
     "audit:docs": "node ./index.js --target docs",
     "audit:all": "node ./index.js --target all"

@@ -16,9 +16,10 @@ import { validateAgainstSchema } from './scripts/util/schemaValidate.js';
 
 const COLLECTOR_MODULES = {
   [AUDIT_TARGETS.SETUP]: './scripts/setup_audit.js',
-  [AUDIT_TARGETS.SSR]: './scripts/ssr_parity_audit.js',
   [AUDIT_TARGETS.API]: './scripts/jsonapi_audit.js',
-  [AUDIT_TARGETS.KV]: './scripts/kv_audit.js',
+  [AUDIT_TARGETS.STATIC]: './scripts/static_config_audit.js',
+  [AUDIT_TARGETS.PAGES]: './scripts/pages_config_audit.js',
+  [AUDIT_TARGETS.BUILD]: './scripts/build_contract_audit.js',
   [AUDIT_TARGETS.CI]: './scripts/ci_cd_audit.js',
   [AUDIT_TARGETS.DOCS]: './scripts/docs_drift_audit.js'
 };
