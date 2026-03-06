@@ -173,7 +173,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
 
 ## TODOs
 
-- [ ] 1. Consolidate Env Vars in `.env.example`
+- [x] 1. Consolidate Env Vars in `.env.example`
 
   **What to do**:
   - Rewrite `.env.example` (67 lines) with clear sections and canonical names
@@ -279,7 +279,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   - Files: `.env.example`
   - Pre-commit: `grep "API_BASE_URL=" .env.example`
 
-- [ ] 2. Delete Dead SSR/KV Audit Files
+- [x] 2. Delete Dead SSR/KV Audit Files
 
   **What to do**:
   - Delete these audit scripts (SSR/KV features no longer exist):
@@ -366,7 +366,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   - Files: 5 deleted files
   - Pre-commit: `ls audit/scripts/ssr_parity_audit.js 2>&1 | grep "No such file"`
 
-- [ ] 3. Update Audit Constants (`constants.js`)
+- [x] 3. Update Audit Constants (`constants.js`)
 
   **What to do**:
   - Edit `audit/scripts/util/constants.js`:
@@ -483,7 +483,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   - Files: `audit/scripts/util/constants.js`
   - Pre-commit: `node -e "import('./audit/scripts/util/constants.js').then(m => console.log('OK'))"`
 
-- [ ] 4. Add Legacy Banners to SSR-Era Docs
+- [x] 4. Add Legacy Banners to SSR-Era Docs
 
   **What to do**:
   - Add a prominent legacy banner to the TOP of each file (before the first `#` heading):
@@ -575,7 +575,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   - Files: `docs/ssr-guide.md`, `docs/cloudflare-setup.md`, `docs/github-actions.md`
   - Pre-commit: `grep "LEGACY" docs/ssr-guide.md`
 
-- [ ] 5. Rewrite CI/CD Pipeline for Static-Only
+- [x] 5. Rewrite CI/CD Pipeline for Static-Only
 
   **What to do**:
   - Rewrite `.github/workflows/main.yml` (currently 159 lines) to a simple static-only pipeline:
@@ -705,7 +705,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   - Files: `.github/workflows/main.yml`
   - Pre-commit: `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/main.yml'))"`
 
-- [ ] 6. Create `static_config_audit.js`
+- [x] 6. Create `static_config_audit.js`
 
   **What to do**:
   - Create `audit/scripts/static_config_audit.js` — verifies Astro is configured for static output
@@ -787,7 +787,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   - Files: `audit/scripts/static_config_audit.js`, `audit/scripts/pages_config_audit.js`, `audit/scripts/build_contract_audit.js`
   - Pre-commit: `node -e "import('./audit/scripts/static_config_audit.js').then(m => console.log('OK'))"`
 
-- [ ] 7. Create `pages_config_audit.js`
+- [x] 7. Create `pages_config_audit.js`
 
   **What to do**:
   - Create `audit/scripts/pages_config_audit.js` — verifies Cloudflare Pages configuration
@@ -864,7 +864,7 @@ Max Concurrent: 4 (Wave 1, Wave 2)
   **Commit**: YES (grouped with Tasks 6, 8)
   - Message: `feat(audit): add static-first audit scripts`
 
-- [ ] 8. Create `build_contract_audit.js`
+- [x] 8. Create `build_contract_audit.js`
 
   **What to do**:
   - Create `audit/scripts/build_contract_audit.js` — verifies the JSON:API-at-build-time contract
