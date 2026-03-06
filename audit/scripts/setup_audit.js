@@ -12,7 +12,41 @@ import {
   collectSetupPrerequisites,
   deriveExpectedHosts
 } from './check_env.js';
-import { timedFetch } from './util/ssrFetch.js';
+
+const timedFetch = async (url, { timeoutMs, readMode }) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const start = Date.now();
+    const response = await fetch(url, { signal: controller.signal });
+    const durationMs = Date.now() - start;
+    clearTimeout(timeoutId);
+
+    const body = readMode === 'text' ? await response.text() : null;
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      durationMs,
+      body,
+      error: null
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    return {
+      ok: false,
+      status: null,
+      statusText: null,
+      url,
+      durationMs: null,
+      body: null,
+      error: error.message
+    };
+  }
+};
 
 const HIGH_SEVERITY = new Set(['high']);
 
