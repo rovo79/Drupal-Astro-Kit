@@ -1329,19 +1329,19 @@ Max Concurrent: 4 (Wave 1, Wave 2)
 
 > 4 review agents run in PARALLEL. ALL must APPROVE. Rejection → fix → re-run.
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   Read the plan end-to-end. For each "Must Have": verify implementation exists (read file, run command). For each "Must NOT Have": search codebase for forbidden patterns — reject with file:line if found. Check evidence files exist in `.sisyphus/evidence/`. Compare deliverables against plan.
   Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
+- [x] F2. **Code Quality Review** — `unspecified-high`
   Run linter checks on modified JS files. Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log in prod, commented-out code, unused imports. Check AI slop: excessive comments, over-abstraction, generic names. Verify new audit scripts follow existing patterns (same exports, same error handling, same finding structure).
   Output: `Lint [PASS/FAIL] | Files [N clean/N issues] | Pattern Compliance [PASS/FAIL] | VERDICT`
 
-- [ ] F3. **Real Manual QA** — `unspecified-high`
+- [x] F3. **Real Manual QA** — `unspecified-high`
   Start from clean state. Run `node audit/index.js --target all` and verify all targets complete. Run each individual target (`--target static`, `--target pages`, `--target build`). Verify CI YAML parses correctly. Grep for forbidden patterns (`wrangler.toml` in active code, `VITE_` in CI, SSR/KV imports outside legacy docs). Check legacy banners are visible. Save evidence.
   Output: `Scenarios [N/N pass] | Integration [N/N] | Edge Cases [N tested] | VERDICT`
 
-- [ ] F4. **Scope Fidelity Check** — `deep`
+- [x] F4. **Scope Fidelity Check** — `deep`
   For each task: read "What to do", read actual diff. Verify 1:1 — everything in spec was built, nothing beyond spec was built. Check "Must NOT do" compliance: no template changes, no setup flow changes, no new features. Detect unaccounted changes. Flag scope creep.
   Output: `Tasks [N/N compliant] | Contamination [CLEAN/N issues] | Unaccounted [CLEAN/N files] | VERDICT`
 
@@ -1377,10 +1377,10 @@ grep -r "kv_audit" audit/             # Expected: no matches (dead code gone)
 ```
 
 ### Final Checklist
-- [ ] All "Must Have" present
-- [ ] All "Must NOT Have" absent
-- [ ] `audit:all` runs without errors
-- [ ] CI YAML is valid and references correct env vars
-- [ ] Legacy docs have banners
-- [ ] AI docs are accurate
-- [ ] AGENTS.md reflects current state
+- [x] All "Must Have" present
+- [x] All "Must NOT Have" absent
+- [x] `audit:all` runs without errors
+- [x] CI YAML is valid and references correct env vars
+- [x] Legacy docs have banners
+- [x] AI docs are accurate
+- [x] AGENTS.md reflects current state
