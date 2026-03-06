@@ -13,9 +13,10 @@ const REPORT_DIR = path.join(AUDIT_ROOT, 'report');
 
 const AUDIT_TARGETS = Object.freeze({
   SETUP: 'setup',
-  SSR: 'ssr',
   API: 'api',
-  KV: 'kv',
+  STATIC: 'static',
+  PAGES: 'pages',
+  BUILD: 'build',
   CI: 'ci',
   DOCS: 'docs',
   ALL: 'all'
@@ -23,9 +24,10 @@ const AUDIT_TARGETS = Object.freeze({
 
 const FINDING_CATEGORIES = Object.freeze([
   'setup',
-  'ssr',
   'api',
-  'kv',
+  'static',
+  'pages',
+  'build',
   'ci',
   'docs',
   'performance'
@@ -42,7 +44,6 @@ const ENV_KEYS = Object.freeze({
   DRUPAL_BASE_URL: 'DRUPAL_BASE_URL',
   DRUPAL_JSONAPI_URL: 'DRUPAL_JSONAPI_URL',
   ASTRO_DEV_URL: 'ASTRO_DEV_URL',
-  WORKERS_DEV_URL: 'WORKERS_DEV_URL',
   CLOUDFLARE_ACCOUNT_ID: 'CLOUDFLARE_ACCOUNT_ID',
   CLOUDFLARE_API_TOKEN: 'CLOUDFLARE_API_TOKEN'
 });

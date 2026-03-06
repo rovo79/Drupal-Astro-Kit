@@ -1,0 +1,4 @@
+API_BASE_URL=http://your-project-name.ddev.site
+DRUPAL_BASE_URL=http://your-project-name.ddev.site
+HOMEPAGE_ALIAS=/home
+DRUPAL_JSONAPI_URL=http://your-project-name.ddev.site/jsonapi

@@ -1,0 +1,3 @@
+Scenario 2: Grep audit/scripts/ for any remaining references
+
+audit/scripts/setup_audit.js:import { timedFetch } from './util/ssrFetch.js';

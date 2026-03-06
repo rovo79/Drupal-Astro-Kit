@@ -1,0 +1,23 @@
+Scenario 1: Verify all 5 files are gone with ls commands
+
+audit/scripts/:
+total 128
+drwxr-xr-x@ 9 rob  staff    288 Mar  6 18:25 .
+drwxr-xr-x@ 9 rob  staff    288 Nov 12 12:19 ..
+-rw-r--r--@ 1 rob  staff   5314 Nov 12 12:19 check_env.js
+-rw-r--r--@ 1 rob  staff  12019 Nov 12 12:19 ci_cd_audit.js
+-rw-r--r--@ 1 rob  staff   7517 Nov 12 12:19 docs_drift_audit.js
+-rw-r--r--@ 1 rob  staff   6137 Nov 12 12:19 generate-report.js
+-rw-r--r--@ 1 rob  staff  10011 Feb 17 14:55 jsonapi_audit.js
+-rw-r--r--@ 1 rob  staff  15570 Feb 17 14:55 setup_audit.js
+drwxr-xr-x@ 7 rob  staff    224 Mar  6 18:25 util
+
+--- util/ ---
+total 56
+drwxr-xr-x@ 7 rob  staff   224 Mar  6 18:25 .
+drwxr-xr-x@ 9 rob  staff   288 Mar  6 18:25 ..
+-rw-r--r--@ 1 rob  staff  2378 Mar  6 18:25 constants.js
+-rw-r--r--@ 1 rob  staff  5931 Nov 12 12:19 docsExtractor.js
+-rw-r--r--@ 1 rob  staff  3809 Nov 12 12:19 jsonapiClient.js
+-rw-r--r--@ 1 rob  staff  1260 Nov 12 12:19 schemaValidate.js
+-rw-r--r--@ 1 rob  staff  5261 Nov 12 12:19 workflowParser.js
