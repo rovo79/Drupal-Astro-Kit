@@ -3,8 +3,7 @@
 ## What Exists Today
 
 - **No dedicated unit/integration test suite in this repo** (no Jest/Vitest/PhpUnit config checked in at repo root).
-- **CI pipeline is defined** but references generated artifacts and commands that may not exist until setup runs:
-  - `.github/workflows/main.yml` runs `npm test` in `astro-frontend/` and `ddev drush test:run --all` in `drupal-backend/`.
+- **CI pipeline** (`.github/workflows/main.yml`) is a 37-line single-job static deploy: `npm ci`, `npm run build`, then `cloudflare/pages-action@v1`. It does not run a test command.
 - **Audit toolkit** provides structured validation checks:
   - Entrypoint: `audit/index.js` (run via `audit/package.json` scripts like `npm run audit:all`).
 
@@ -35,4 +34,4 @@
 ## Assumptions
 
 - The generated `astro-frontend/` will contain a working `npm test` script only if the chosen Astro template includes one; confirm by inspecting `astro-frontend/package.json` post-setup.
-- Drupal test execution in CI (`drush test:run --all`) depends on the generated Drupal site including test infrastructure and appropriate permissions; confirm by running that command inside DDEV after setup.
+- The CI pipeline does not run tests. It builds the static site and deploys to Cloudflare Pages.

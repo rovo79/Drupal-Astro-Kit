@@ -36,13 +36,13 @@
 - **Validation / auditing**
   - Audits (setup, API, CI, docs drift, etc): `audit/index.js` + `audit/scripts/*.js`
 
-## Optional / Legacy SSR (Docs & Tooling Drift)
+## Phase 2 (Future): Workers SSR
 
-- The repo contains SSR/Workers-oriented docs and audit checks (e.g., references to `wrangler.toml` and `output: 'server'`):
-  - Examples: `.github/workflows/main.yml`, `docs/ssr-guide.md`, `audit/scripts/setup_audit.js`
-- The setup script currently writes **Pages** config (`astro-frontend/wrangler.jsonc`) and sets Astro to **static** output (`setup/ui.js` writes `astro-frontend/astro.config.mjs` with `output: 'static'`).
+- SSR/Workers is a potential Phase 2 addition, not the current architecture.
+- Legacy SSR-era docs (`docs/ssr-guide.md`, `docs/cloudflare-setup.md`, `docs/github-actions.md`) carry banners marking them as Phase 2 reference material.
+- The setup script writes **Pages** config (`astro-frontend/wrangler.jsonc`) and sets Astro to **static** output (`setup/ui.js` writes `astro-frontend/astro.config.mjs` with `output: 'static'`).
 
 ## Assumptions
 
 - Static-first is the intended default because `setup/ui.js` writes `output: 'static'` into the generated `astro-frontend/astro.config.mjs`; confirm by running `./setup.sh` and inspecting `astro-frontend/astro.config.mjs`.
-- Any SSR/Workers mode is either optional or in transition; confirm intended deployment target by reconciling `setup/ui.js`, `.github/workflows/main.yml`, and `docs/cloudflare-setup.md`.
+- SSR/Workers is Phase 2 future roadmap; see `docs/phase-2-workers-ssr.md` and the legacy docs with banners.

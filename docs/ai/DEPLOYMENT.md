@@ -12,18 +12,17 @@
 ## CI/CD (GitHub Actions)
 
 - Workflow definition: `.github/workflows/main.yml`
-  - Frontend job installs deps, runs `npm test`, builds, then deploys with `cloudflare/pages-action@v1`.
-  - Backend job provisions DDEV, installs Drupal deps, runs `drush test:run --all`, then runs `drush deploy`.
-- Key risk: workflow validation currently expects `wrangler.toml` at repo root, but setup writes `astro-frontend/wrangler.jsonc` (Pages config). See `.github/workflows/main.yml` and `setup/ui.js`.
+  - Single-job pipeline: installs Node 20, runs `npm ci` + `npm run build` in `astro-frontend/`, then deploys static output via `cloudflare/pages-action@v1`.
+  - Deploy step only runs on `main` branch pushes; PRs build but don't deploy.
+  - No backend job (Drupal is local-only, not deployed via CI).
 
 ## Environment Variables / Secrets
 
 - Local `.env` template: `.env.example`
-  - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PROJECT_NAME` / `CLOUDFLARE_PROJECT_NAME`
+  - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `PROJECT_NAME`
 - GitHub Secrets referenced by CI: `.github/workflows/main.yml`
-  - Cloudflare: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
-  - Frontend build: `PROD_API_URL`, `STAGING_API_URL`, analytics IDs
-  - Backend deploy: `PROD_DDEV_HOST`, `STAGING_DDEV_HOST`, SSH key secrets
+  - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` (deploy)
+  - `API_BASE_URL` (build-time, points to a reachable Drupal JSON:API)
 
 ## “Drupal Reachability” Constraint
 
@@ -35,5 +34,5 @@
 ## Assumptions
 
 - The intended production deploy is Cloudflare Pages because `scripts/deploy-frontend.sh` uses `wrangler pages deploy` and setup writes `astro-frontend/wrangler.jsonc`; confirm by searching `setup/ui.js` for `wrangler.jsonc`.
-- Backend “deploy to DDEV” in `.github/workflows/main.yml` may be aspirational or environment-specific; confirm the intended backend deployment target by inspecting team infra docs or adjusting workflow requirements.
+- Drupal is local-only (DDEV). There is no backend deploy step in CI.
 

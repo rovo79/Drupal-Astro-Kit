@@ -28,9 +28,9 @@
 
 - **Setup orchestration**: `setup/ui.js` (touches DDEV, Composer, Drush, npm, template copying, env stamping).
 - **Environment variable contract**: `.env.example` + setup stamping in `setup/ui.js` + template reads in `templates/astro-src/lib/drupal.ts`.
-  - Example drift: templates use `import.meta.env.API_BASE_URL`, while setup/docs emphasize `DRUPAL_API_URL`.
-- **CI expectations vs generated artifacts**: `.github/workflows/main.yml` currently validates `wrangler.toml`, while setup writes `astro-frontend/wrangler.jsonc`.
-- **Audit toolkit assumptions**: `audit/scripts/setup_audit.js` checks for `wrangler.toml` and SSR-style Astro config; may not match static-first output.
+  - Canonical vars: `API_BASE_URL`, `DRUPAL_BASE_URL`, `HOMEPAGE_ALIAS`, `DRUPAL_JSONAPI_URL`. `DRUPAL_API_URL` is deprecated but still stamped for backwards compatibility.
+- **CI vs local build**: CI pipeline (`main.yml`) needs `API_BASE_URL` secret pointing to a reachable Drupal instance, while local builds hit DDEV.
+- **Audit toolkit coverage**: audit targets are `setup`, `static`, `pages`, `build`, `api`, `ci`, `docs`. New audits (`static_config_audit.js`, `pages_config_audit.js`, `build_contract_audit.js`) validate the static-first output.
 
 ## Recent Commit Themes (last ~20 commits)
 

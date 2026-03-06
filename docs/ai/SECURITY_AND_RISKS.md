@@ -27,14 +27,12 @@
 
 ## Configuration Drift (Correctness → Security Impact)
 
-- Multiple parts of the repo disagree on Cloudflare config format:
-  - CI/docs/audit frequently reference `wrangler.toml`: `.github/workflows/main.yml`, `docs/cloudflare-setup.md`, `audit/scripts/setup_audit.js`
-  - Setup currently writes `astro-frontend/wrangler.jsonc` (Pages): `setup/ui.js`
-  - Risk: broken CI validations/deploys, developers adding ad-hoc config files to “make CI pass”.
-- Env var contract drift for Drupal API base:
+- Cloudflare config format is now consistent: setup writes `astro-frontend/wrangler.jsonc`, CI deploys via `cloudflare/pages-action@v1`, and deploy script uses `wrangler pages deploy`.
+  - Legacy SSR-era docs (`docs/cloudflare-setup.md`) reference older config patterns but carry Phase 2 banners.
+- Env var contract for Drupal API base:
   - Templates read `import.meta.env.API_BASE_URL`: `templates/astro-src/lib/drupal.ts`
-  - Setup/docs emphasize `DRUPAL_API_URL` (and setup appends it): `setup/ui.js`, `docs/deployment.md`
-  - Risk: misconfigured builds that fetch from the wrong URL or fail unexpectedly.
+  - Setup stamps both `API_BASE_URL` and `DRUPAL_JSONAPI_URL` (plus deprecated `DRUPAL_API_URL` for backwards compatibility): `setup/ui.js`
+  - Risk: builds fail if `API_BASE_URL` isn't set or points to an unreachable Drupal instance.
 
 ## CORS / Exposure
 
@@ -44,11 +42,10 @@
 
 ## Operational Risks
 
-- CI attempts to “deploy backend via DDEV” with secrets and SSH keys: `.github/workflows/main.yml`
-  - Risk: unclear/unsupported pattern for real production, and secrets handling needs hardening.
 - Build-time coupling to Drupal availability:
-  - Static build requires Drupal JSON:API reachable; CI runners can’t reach local DDEV.
-  - Risk: failed deploys if CI is configured without a reachable Drupal source.
+  - Static build requires Drupal JSON:API reachable; CI runners can't reach local DDEV.
+  - Risk: failed deploys if `API_BASE_URL` secret isn't set or the Drupal source is unreachable from the CI runner.
+  - Local build + deploy (`scripts/deploy-frontend.sh`) sidesteps this by using DDEV directly.
 
 ## Assumptions
 

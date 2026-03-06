@@ -37,10 +37,10 @@
 - Run all audit targets:
   - `npm run audit:all`
 - Run a specific target:
-  - `npm run audit:setup` (or `audit:ssr`, `audit:api`, `audit:ci`, `audit:docs`, etc in `audit/package.json`)
+  - `npm run audit:setup`, `audit:static`, `audit:pages`, `audit:build`, `audit:api`, `audit:ci`, `audit:docs` (see `audit/package.json`)
 
 ## Assumptions
 
 - Cloudflare deployment requires `.env` to contain `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `PROJECT_NAME`; confirm by inspecting `.env.example` and `scripts/deploy-frontend.sh`.
-- Some commands referenced in CI/docs (e.g., `wrangler.toml` usage) may not match the current setup output; confirm by running setup and checking for `astro-frontend/wrangler.jsonc` vs `wrangler.toml`.
+- Setup writes `astro-frontend/wrangler.jsonc` (Pages config, JSONC format); confirm by running setup and inspecting the generated file.
 
