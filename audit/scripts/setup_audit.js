@@ -76,37 +76,6 @@ const createRecommendation = ({ action, impact = 'DX', effort = 'low', status = 
   status
 });
 
-const checkWranglerConfig = async () => {
-  const wranglerPath = resolveFromProjectRoot('wrangler.toml');
-
-  try {
-    const content = await fs.readFile(wranglerPath, 'utf8');
-    const hasMain = /main\s*=\s*"\.\/astro-frontend\/dist\/_worker\.js\/index\.js"/m.test(content);
-    const hasAssetsBinding = /\[assets\][\s\S]*?binding\s*=\s*"ASSETS"/m.test(content);
-    const hasSessionBinding = /\[\[kv_namespaces\]\][\s\S]*?binding\s*=\s*"SESSION"/m.test(content);
-
-    return {
-      exists: true,
-      hasMain,
-      hasAssetsBinding,
-      hasSessionBinding,
-      content
-    };
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return {
-        exists: false,
-        hasMain: false,
-        hasAssetsBinding: false,
-        hasSessionBinding: false,
-        content: null
-      };
-    }
-
-    throw error;
-  }
-};
-
 const checkAstroConfig = async () => {
   const astroConfigPath = resolveFromProjectRoot('astro-frontend/astro.config.mjs');
 
@@ -163,7 +132,6 @@ const run = async ({ target = AUDIT_TARGETS.SETUP } = {}) => {
     },
     {}
   );
-  const wranglerStatus = await checkWranglerConfig();
   const astroStatus = await checkAstroConfig();
 
   const envProjectName = env.variables[ENV_KEYS.PROJECT_NAME];
@@ -333,73 +301,17 @@ const run = async ({ target = AUDIT_TARGETS.SETUP } = {}) => {
     }
   });
 
-  if (wranglerStatus.exists) {
-    if (!wranglerStatus.hasMain) {
-      const recommendation = createRecommendation({
-        action: 'Update main entry in wrangler.toml to ./astro-frontend/dist/_worker.js/index.js',
-        impact: 'correctness',
-        effort: 'trivial'
-      });
-      const finding = createFinding({
-        category: 'setup',
-        severity: 'medium',
-        description: 'wrangler.toml main entry is missing or incorrect.',
-        evidence: resolveFromProjectRoot('wrangler.toml'),
-        recommendationId: recommendation.id
-      });
-      recommendation.relatedFindingIds.push(finding.id);
-      findings.push(finding);
-      recommendations.push(recommendation);
-    }
-
-    if (!wranglerStatus.hasAssetsBinding) {
-      const recommendation = createRecommendation({
-        action: 'Add [assets] binding = "ASSETS" to wrangler.toml to expose static assets',
-        impact: 'correctness',
-        effort: 'trivial'
-      });
-      const finding = createFinding({
-        category: 'setup',
-        severity: 'medium',
-        description: 'wrangler.toml is missing the ASSETS binding under [assets].',
-        evidence: resolveFromProjectRoot('wrangler.toml'),
-        recommendationId: recommendation.id
-      });
-      recommendation.relatedFindingIds.push(finding.id);
-      findings.push(finding);
-      recommendations.push(recommendation);
-    }
-
-    if (!wranglerStatus.hasSessionBinding) {
-      const recommendation = createRecommendation({
-        action: 'Define [[kv_namespaces]] binding "SESSION" in wrangler.toml with your namespace id',
-        impact: 'reliability',
-        effort: 'low'
-      });
-      const finding = createFinding({
-        category: 'setup',
-        severity: 'medium',
-        description: 'wrangler.toml is missing the SESSION KV namespace binding.',
-        evidence: resolveFromProjectRoot('wrangler.toml'),
-        recommendationId: recommendation.id
-      });
-      recommendation.relatedFindingIds.push(finding.id);
-      findings.push(finding);
-      recommendations.push(recommendation);
-    }
-  }
-
   if (astroStatus.exists) {
-    if (!astroStatus.hasServerOutput) {
+    if (astroStatus.hasServerOutput) {
       const recommendation = createRecommendation({
-        action: 'Set output: "server" in astro-frontend/astro.config.mjs to enable SSR by default',
+        action: 'Change output to "static" (or remove the output key entirely) in astro.config.mjs',
         impact: 'correctness',
         effort: 'trivial'
       });
       const finding = createFinding({
         category: 'setup',
-        severity: 'medium',
-        description: 'Astro config does not set output: "server".',
+        severity: 'high',
+        description: 'Astro config has output: \'server\' — this kit is static-first. SSR mode requires a runtime adapter and breaks the static deployment model.',
         evidence: resolveFromProjectRoot('astro-frontend/astro.config.mjs'),
         recommendationId: recommendation.id
       });
@@ -408,22 +320,29 @@ const run = async ({ target = AUDIT_TARGETS.SETUP } = {}) => {
       recommendations.push(recommendation);
     }
 
-    if (!astroStatus.usesCloudflare) {
+    if (astroStatus.usesCloudflare) {
       const recommendation = createRecommendation({
-        action: 'Configure @astrojs/cloudflare adapter in astro.config.mjs',
+        action: 'Remove @astrojs/cloudflare adapter from astro.config.mjs — static output does not need it',
         impact: 'correctness',
         effort: 'low'
       });
       const finding = createFinding({
         category: 'setup',
         severity: 'medium',
-        description: 'Astro config does not reference the Cloudflare adapter.',
+        description: 'Astro config references the Cloudflare adapter (@astrojs/cloudflare) — this kit is static-first and does not need an SSR adapter.',
         evidence: resolveFromProjectRoot('astro-frontend/astro.config.mjs'),
         recommendationId: recommendation.id
       });
       recommendation.relatedFindingIds.push(finding.id);
       findings.push(finding);
       recommendations.push(recommendation);
+    }
+
+    if (!astroStatus.hasServerOutput && !astroStatus.usesCloudflare) {
+      diagnostics.push({
+        level: 'info',
+        message: 'Astro config is static-first (no SSR output, no Cloudflare adapter) — correct'
+      });
     }
   }
 
@@ -458,7 +377,7 @@ const run = async ({ target = AUDIT_TARGETS.SETUP } = {}) => {
       gate: 'setup',
       passed: !highSeverityExists,
       details: highSeverityExists
-        ? 'High severity setup findings detected. Resolve before continuing to SSR/API audits.'
+        ? 'High severity setup findings detected. Resolve before continuing to API audits.'
         : 'Setup prerequisites satisfied.',
       timestamp: new Date().toISOString()
     }
