@@ -8,12 +8,11 @@ import {
 } from './util/constants.js';
 
 const DEFAULT_ENV_PATH = resolveFromProjectRoot('.env');
-const DEFAULT_REQUIRED_COMMANDS = Object.freeze(['ddev', 'docker', 'npm', 'npx', 'wrangler']);
+const DEFAULT_REQUIRED_COMMANDS = Object.freeze(['ddev', 'docker', 'npm', 'npx']);
 const DEFAULT_REQUIRED_PATHS = Object.freeze([
   { path: 'setup.sh', type: 'file' },
   { path: 'drupal-backend', type: 'directory' },
   { path: 'astro-frontend', type: 'directory' },
-  { path: 'wrangler.toml', type: 'file' },
   { path: 'astro-frontend/astro.config.mjs', type: 'file' }
 ]);
 
