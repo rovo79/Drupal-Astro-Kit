@@ -4,7 +4,6 @@ import chalk from 'chalk';
 import {
   AUDIT_TARGETS,
   FINDING_CATEGORIES,
-  PROJECT_ROOT,
   resolveFromProjectRoot
 } from './util/constants.js';
 import { parseWorkflowFile, analyzeWorkflow, findWorkflowFiles } from './util/workflowParser.js';
