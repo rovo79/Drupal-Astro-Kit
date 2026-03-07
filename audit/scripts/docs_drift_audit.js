@@ -229,7 +229,7 @@ export const run = async ({ target = AUDIT_TARGETS.DOCS } = {}) => {
 
   // Check for outdated configuration references
   const expectedConfigs = {
-    'wrangler.toml': true,
+    'wrangler.jsonc': true,
     'astro.config.mjs': true,
     'package.json': true
   };

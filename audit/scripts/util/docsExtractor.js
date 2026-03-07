@@ -57,6 +57,35 @@ export const extractPathsFromMarkdown = (content) => {
 };
 
 /**
+ * Filter paths that are examples, build output, URL routes, or generated-project
+ * references before filesystem verification. Keeps extraction data intact for
+ * other consumers of extractPathsFromMarkdown.
+ */
+export const filterExamplePaths = (paths) => {
+  return paths.filter((p) => {
+    if (p.startsWith('dist/')) return false;
+
+    // URL routes (no extension): /about, /jsonapi/node/page
+    if (p.startsWith('/') && !path.extname(p)) return false;
+
+    // Generated dirs only exist after setup.sh runs
+    if (p.startsWith('astro-frontend/') || p.startsWith('drupal-backend/')) return false;
+    if (p.startsWith('ddev/') || p.startsWith('.ddev/')) return false;
+
+    if (p === 'wrangler.toml') return false;
+    if (p.includes('deploy.yml')) return false;
+
+    // Bare filenames with doc/config extensions are heading references, not repo paths
+    if (!p.includes('/') && !p.includes(path.sep)) {
+      const ext = path.extname(p).toLowerCase();
+      if (['.md', '.yml', '.yaml', '.astro', '.mjs'].includes(ext)) return false;
+    }
+
+    return true;
+  });
+};
+
+/**
  * Verify that referenced paths exist in the repository
  */
 export const verifyPaths = async (paths, baseDir) => {
@@ -110,6 +139,7 @@ export const verifyPaths = async (paths, baseDir) => {
 export const extractConfigReferences = (content) => {
   const configs = {
     'wrangler.toml': [],
+    'wrangler.jsonc': [],
     '.env': [],
     'astro.config.mjs': [],
     'package.json': [],
@@ -202,8 +232,7 @@ export const scanDocumentation = async (docsDir, projectRoot) => {
     }
   }
 
-  // Convert Sets to Arrays for serialization
-  const uniquePaths = Array.from(docAnalysis.allPaths);
+  const uniquePaths = filterExamplePaths(Array.from(docAnalysis.allPaths));
   const verification = await verifyPaths(uniquePaths, projectRoot);
 
   return {
@@ -217,6 +246,7 @@ export const scanDocumentation = async (docsDir, projectRoot) => {
 
 export default {
   extractPathsFromMarkdown,
+  filterExamplePaths,
   verifyPaths,
   extractConfigReferences,
   findMarkdownFiles,
