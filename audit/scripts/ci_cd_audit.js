@@ -298,7 +298,7 @@ export const run = async ({ target = AUDIT_TARGETS.CI } = {}) => {
 
     recommendations.push(
       createRecommendation({
-        action: 'Add validation job to check .env, wrangler.toml, and required files exist',
+        action: 'Add validation job to check .env and required files exist',
         impact: 'reliability',
         effort: 'low',
         relatedFindingIds: findings.filter((f) => f.description.includes('validation')).map((f) => f.id)
@@ -346,27 +346,6 @@ export const run = async ({ target = AUDIT_TARGETS.CI } = {}) => {
     );
   }
 
-  // Check for backend pipeline
-  if (!analysis.hasBackendBuild) {
-    findings.push(
-      createFinding({
-        category: 'ci',
-        severity: 'high',
-        description: 'CI/CD audit: no backend build/install step found',
-        evidence: 'Workflow missing composer install or DDEV setup'
-      })
-    );
-
-    recommendations.push(
-      createRecommendation({
-        action: 'Add backend job with: DDEV setup, composer install, drush deploy',
-        impact: 'correctness',
-        effort: 'medium',
-        relatedFindingIds: findings.filter((f) => f.description.includes('backend')).map((f) => f.id)
-      })
-    );
-  }
-
   // Check for deployment
   if (!analysis.hasDeploy) {
     findings.push(
@@ -380,7 +359,7 @@ export const run = async ({ target = AUDIT_TARGETS.CI } = {}) => {
 
     recommendations.push(
       createRecommendation({
-        action: 'Add deployment steps: Cloudflare Workers (frontend) and DDEV/hosting provider (backend)',
+        action: 'Add deployment steps: Cloudflare Pages (static frontend)',
         impact: 'reliability',
         effort: 'high',
         relatedFindingIds: findings.filter((f) => f.description.includes('deployment')).map((f) => f.id)
@@ -410,14 +389,14 @@ export const run = async ({ target = AUDIT_TARGETS.CI } = {}) => {
   }
 
   // Success summary
-  const checksOk = [analysis.hasValidation, analysis.hasFrontendBuild, analysis.hasBackendBuild].filter(
+  const checksOk = [analysis.hasValidation, analysis.hasFrontendBuild].filter(
     Boolean
   ).length;
-  const totalChecks = 3;
+  const totalChecks = 2;
 
   diagnostics.push({
     level: 'info',
-    message: `CI/CD Summary: ${analysis.hasFrontendBuild ? '✓' : '✗'} frontend build, ${analysis.hasBackendBuild ? '✓' : '✗'} backend build, ${analysis.hasDeploy ? '✓' : '✗'} deploy`
+    message: `CI/CD Summary: ${analysis.hasFrontendBuild ? '✓' : '✗'} frontend build, ${analysis.hasDeploy ? '✓' : '✗'} deploy`
   });
 
   if (checksOk === totalChecks && analysis.hasDeploy) {
@@ -441,8 +420,6 @@ export const run = async ({ target = AUDIT_TARGETS.CI } = {}) => {
         hasValidation: analysis.hasValidation,
         hasFrontendBuild: analysis.hasFrontendBuild,
         hasFrontendTests: analysis.hasFrontendTests,
-        hasBackendBuild: analysis.hasBackendBuild,
-        hasBackendTests: analysis.hasBackendTests,
         hasDeploy: analysis.hasDeploy,
         jobCount: Object.keys(targetWorkflow.workflow.jobs).length,
         triggers: targetWorkflow.workflow.triggers
