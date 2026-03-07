@@ -102,12 +102,15 @@ export const analyzeWorkflow = (parsedWorkflow) => {
     }
 
     // Check for frontend tests
-    if (jobName.includes('frontend') || jobName.includes('astro')) {
-      const hasTest = job.steps.some((step) => step.name?.toLowerCase().includes('test'));
-      if (hasTest) {
-        findings.hasFrontendTests = true;
-        findings.testJobs.push(jobName);
-      }
+    const hasFrontendTest = job.steps.some(
+      (step) =>
+        step.name?.toLowerCase().includes('test') ||
+        step.run?.toLowerCase().includes('npm test') ||
+        step.run?.toLowerCase().includes('npm run test')
+    );
+    if (hasFrontendTest) {
+      findings.hasFrontendTests = true;
+      findings.testJobs.push(jobName);
     }
 
     // Check for backend tests
@@ -124,27 +127,15 @@ export const analyzeWorkflow = (parsedWorkflow) => {
     }
 
     // Check for frontend build
-    if (jobName.includes('frontend') || jobName.includes('astro')) {
-      const hasBuild = job.steps.some(
-        (step) =>
-          step.name?.toLowerCase().includes('build') || step.run?.toLowerCase().includes('npm run build')
-      );
-      if (hasBuild) {
-        findings.hasFrontendBuild = true;
-        findings.buildJobs.push(jobName);
-      }
-    }
-
-    // Check for backend build/install
-    if (jobName.includes('backend') || jobName.includes('drupal')) {
-      const hasBuild = job.steps.some(
-        (step) =>
-          step.name?.toLowerCase().includes('install') || step.run?.toLowerCase().includes('composer install')
-      );
-      if (hasBuild) {
-        findings.hasBackendBuild = true;
-        findings.buildJobs.push(jobName);
-      }
+    const hasFrontendBuild = job.steps.some(
+      (step) =>
+        step.name?.toLowerCase().includes('build') ||
+        step.run?.toLowerCase().includes('npm run build') ||
+        step.run?.toLowerCase().includes('npx astro build')
+    );
+    if (hasFrontendBuild) {
+      findings.hasFrontendBuild = true;
+      findings.buildJobs.push(jobName);
     }
 
     // Check for deployment
