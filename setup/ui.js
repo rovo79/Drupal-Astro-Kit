@@ -52,8 +52,13 @@ function firstErrorLine(error) {
   return line || 'Unknown error';
 }
 
+function fullErrorText(error) {
+  return error?.message ? String(error.message) : String(error ?? 'Unknown error');
+}
+
 function toActionableError(stepId, label, error) {
   const detail = firstErrorLine(error);
+  const fullDetail = fullErrorText(error);
   if (stepId === 'docker-socket') {
     return 'Docker is not running. Start Docker Desktop or Colima, then re-run ./setup.sh';
   }
@@ -61,7 +66,10 @@ function toActionableError(stepId, label, error) {
     return `DDEV failed to start. Try: ddev poweroff && ddev start\nDetails: ${detail}`;
   }
   if (stepId === 'ddev-composer-create') {
-    return `Drupal project creation failed. Check your internet connection and try again.\nDetails: ${detail}`;
+    if (/not empty|already exists/i.test(fullDetail)) {
+      return `Drupal project creation failed because the target directory is not empty.\nTry removing stale files in drupal-backend and rerun ./setup.sh.\nDetails: ${detail}`;
+    }
+    return `Drupal project creation failed. This is usually network/DDEV/composer related.\nIf running commands manually, run them inside drupal-backend.\nDetails: ${detail}`;
   }
   if (stepId === 'astro') {
     return `Astro dependency install failed. Try: cd astro-frontend && npm install\nDetails: ${detail}`;
@@ -204,6 +212,20 @@ async function copyDir(src, dest) {
     } else {
       await fs.copyFile(srcPath, destPath);
     }
+  }
+}
+
+async function moveDirContents(src, dest) {
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const fromPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (await pathExists(destPath)) {
+      throw new Error(`Cannot finalize Drupal scaffold because "${entry.name}" already exists in ${dest}`);
+    }
+
+    await fs.rename(fromPath, destPath);
   }
 }
 
@@ -370,10 +392,19 @@ async function runSetup({
     const hasDrupal = (await pathExists(webCorePath)) || (await pathExists(composerJsonPath));
 
     if (!hasDrupal) {
-      await runDdev(['composer', 'create-project', 'drupal/recommended-project:^11', '.', '--no-interaction'], {
-        cwd: drupalBackendPath,
-        env: { ...process.env, ...dockerEnv },
-      });
+      const bootstrapTmpDir = '.drupal-bootstrap-tmp';
+      const bootstrapTmpPath = path.join(drupalBackendPath, bootstrapTmpDir);
+      await fs.rm(bootstrapTmpPath, { recursive: true, force: true });
+
+      try {
+        await runDdev(['composer', 'create-project', 'drupal/recommended-project:^11', bootstrapTmpDir, '--no-interaction'], {
+          cwd: drupalBackendPath,
+          env: { ...process.env, ...dockerEnv },
+        });
+        await moveDirContents(bootstrapTmpPath, drupalBackendPath);
+      } finally {
+        await fs.rm(bootstrapTmpPath, { recursive: true, force: true });
+      }
     }
   });
 
