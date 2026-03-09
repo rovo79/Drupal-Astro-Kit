@@ -252,6 +252,13 @@ async function checkPrerequisites() {
   p.log.success('DDEV detected');
 
   try {
+    await execa('docker', ['buildx', 'version'], { stdin: 'ignore' });
+  } catch {
+    throw new Error('Docker Buildx is required by DDEV but was not found. Install: https://github.com/docker/buildx#installing');
+  }
+  p.log.success('Docker Buildx detected');
+
+  try {
     await execa('composer', ['--version'], { stdin: 'ignore' });
   } catch {
     throw new Error('Composer is not installed. Install: https://getcomposer.org/download/');
