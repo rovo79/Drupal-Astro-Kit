@@ -43,15 +43,11 @@ curl -s "$DRUPAL_API_URL/node/page" | head -20
 
 **Symptom**: Pages skipped during build with "no path alias" warning
 
-**Solution**: Add path aliases in Drupal:
+**Solution**:
 
-1. Go to `http://your-project.ddev.site/admin/content`
-2. Edit each page
-3. Expand "URL ALIAS" section
-4. Add an alias like `/about`
-5. Save
-
-Or install Pathauto for automatic aliases (installed by setup script).
+- The setup script configures the Pathauto page pattern (`pathauto.pattern.page`), so every seeded Basic page already has an alias and new Basic pages keep getting one automatically. That means you should rarely need to touch the manual alias fields for this content type.
+- If a warning still appears, double-check that the node actually has `path.alias` populated (look for the alias on the edit screen or `/admin/content` list). You can regenerate it with the "Generate alias" action in the URL alias section or via `ddev drush pathauto:generate --entity-type=node --bundle=page`.
+- Manual alias entry is only necessary when you add a custom content type that Pathauto does not cover yet, or when you intentionally want a different path. In those cases, edit the page, expand "URL ALIAS," type the desired path (for example `/about`), and save.
 
 ## DDEV Issues
 
@@ -231,4 +227,3 @@ If >100 pages, consider:
    - Use `npm run build --verbose` for detailed build logs
    - Check `ddev logs` for Drupal errors
    - Review `wrangler pages deployment list` for deploy history
-

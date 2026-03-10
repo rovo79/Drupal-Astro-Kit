@@ -125,8 +125,13 @@ Drupal path aliases map directly to Astro routes:
 ## Content Modeling Conventions
 
 - **Machine Names**: Use `field_` prefix for all custom fields
-- **Path Aliases**: Required for all pages (Pathauto generates automatically)
+- **Path Aliases**: `pathauto.pattern.page` ensures Basic pages (the seeded content type) get an alias during setup and on every save; manual alias entry is only needed for other content types or when you want a custom override.
 - **Body Field**: Uses `text_with_summary` for processed HTML output
+
+## Content Updates
+
+- **Existing content**: While running `npm run dev`, edit pages in Drupal and simply refresh the browser to see the refreshed HTML; the dev server fetches the latest JSON:API output on navigation.
+- **New routes**: When you add a new path alias (a new page or custom alias), rerun `npm run build` so Astro can regenerate the static HTML that picks up the new route.
 
 ## Future: SSR Mode (V2+)
 

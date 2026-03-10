@@ -122,6 +122,7 @@ This will:
 ```
 
 This creates published Basic pages with stable aliases: `/home`, `/about`, `/contact`.
+These seeded Basic pages (and any new Basic page you save) get aliases automatically through the `pathauto.pattern.page` configuration created during setup. Manual alias editing is only needed for other content types or special cases.
 
 4. Launch local development
 
@@ -129,8 +130,9 @@ This creates published Basic pages with stable aliases: `/home`, `/about`, `/con
 # Start Drupal
 cd drupal-backend && ddev start && ddev launch
 
-# Start Astro (in a new terminal)
-cd astro-frontend && npm run dev
+# Start Astro
+# When setup finishes, you are asked “Start Astro dev now in this terminal?”
+# Say yes to reuse this terminal, or decline and run `cd astro-frontend && npm run dev` later.
 ```
 
 You now have:
@@ -155,6 +157,11 @@ Static HTML in dist/
     ↓
 Cloudflare Pages Hosting
 ```
+
+### Content updates
+
+- Editing an existing Basic page only requires saving in Drupal and refreshing the browser while `npm run dev` is running; the dev server pulls the latest JSON:API data on navigation.
+- Creating a new route or alias (new page or a different path) needs a fresh build (`npm run build`) so Astro can regenerate the static HTML that includes the new route.
 
 There is no Drupal runtime dependency in production.
 
