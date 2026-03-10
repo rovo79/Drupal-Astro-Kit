@@ -60,6 +60,46 @@ function fullErrorText(error) {
   return error?.message ? String(error.message) : String(error ?? 'Unknown error');
 }
 
+function buildFinalNoteLines({ projectName, adminUsername, adminPassword, astroMode }) {
+  const lines = [
+    `Drupal is already available at http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`,
+  ];
+
+  if (astroMode === 'skip') {
+    lines.push('Astro setup was skipped, so your existing frontend still needs to be started manually.');
+  } else {
+    lines.push('Astro is set up, but its dev server is not running yet.');
+  }
+
+  lines.push('From project root: cd astro-frontend && npm run dev');
+  lines.push('If port 4321 is in use: npm run dev -- --port 4322');
+  lines.push('By default, Astro will be available at http://localhost:4321');
+
+  return lines;
+}
+
+async function handoffToAstroDev(astroFrontendPath) {
+  try {
+    const result = await execa('npm', ['run', 'dev'], {
+      cwd: astroFrontendPath,
+      stdio: 'inherit',
+      reject: false,
+    });
+
+    if (result.exitCode === 0 || result.exitCode === 130 || result.signal === 'SIGINT') {
+      return { ok: true };
+    }
+
+    const detail = result.signal
+      ? `Exited with signal ${result.signal}`
+      : `Exited with code ${result.exitCode ?? 'unknown'}`;
+
+    return { ok: false, detail };
+  } catch (error) {
+    return { ok: false, detail: firstErrorLine(error) };
+  }
+}
+
 function toActionableError(stepId, label, error) {
   const detail = firstErrorLine(error);
   const fullDetail = fullErrorText(error);
@@ -513,16 +553,28 @@ async function runSetup({
   await runStep('apply-recipes', STEP_TEXTS[8].text, async () => {
     const resolveRecipePath = async (recipeName) => {
       const recipeCandidates = [
-        `recipes/${recipeName}`,
-        `recipes/dak/${recipeName}`,
-        `web/recipes/${recipeName}`,
-        `web/recipes/dak/${recipeName}`,
+        {
+          hostPath: `recipes/${recipeName}`,
+          commandPath: `../recipes/${recipeName}`,
+        },
+        {
+          hostPath: `recipes/dak/${recipeName}`,
+          commandPath: `../recipes/dak/${recipeName}`,
+        },
+        {
+          hostPath: `web/recipes/${recipeName}`,
+          commandPath: `../web/recipes/${recipeName}`,
+        },
+        {
+          hostPath: `web/recipes/dak/${recipeName}`,
+          commandPath: `../web/recipes/dak/${recipeName}`,
+        },
       ];
 
       for (const candidate of recipeCandidates) {
-        const recipeYml = path.join(drupalBackendPath, candidate, 'recipe.yml');
+        const recipeYml = path.join(drupalBackendPath, candidate.hostPath, 'recipe.yml');
         if (await pathExists(recipeYml)) {
-          return candidate;
+          return candidate.commandPath;
         }
       }
       return null;
@@ -581,6 +633,20 @@ async function runSetup({
     };
 
     await runDdev(['exec', 'drush', 'en', 'jsonapi', 'path', 'pathauto', '-y'], {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+    });
+
+    await applyRecipe('dak_decoupled_base');
+
+    await runDdev([
+      'exec',
+      'drush',
+      'config:import',
+      '--partial',
+      '--source=../web/recipes/dak/dak_decoupled_base/config/install',
+      '-y',
+    ], {
       cwd: drupalBackendPath,
       env: { ...process.env, ...dockerEnv },
     });
@@ -816,21 +882,49 @@ export default async function run() {
     throw error;
   }
 
-  p.note(
-    [
-      '1. Start the Drupal backend:',
-      '   cd drupal-backend && ddev launch',
-      '',
-      '2. Start the Astro frontend (in a new terminal from project root):',
-      '   cd astro-frontend && npm run dev',
-      '   (If port 4321 is in use: npm run dev -- --port 4322)',
-      '',
-      '3. Your sites will be available at:',
-      `   Drupal: http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`,
-      '   Astro:  http://localhost:4321',
-    ].join('\n'),
-    'Next Steps',
-  );
+  const finalNoteLines = buildFinalNoteLines({
+    projectName,
+    adminUsername,
+    adminPassword,
+    astroMode,
+  });
+
+  if (astroMode !== 'skip') {
+    p.note(
+      [
+        `Drupal is already available at http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`,
+        'Astro is installed and ready to start.',
+      ].join('\n'),
+      'Setup Complete',
+    );
+
+    const startAstroNow = unwrapPrompt(
+      await p.confirm({
+        message: 'Start Astro dev now in this terminal?',
+        initialValue: false,
+      }),
+    );
+
+    if (startAstroNow) {
+      p.log.step('Handing this terminal to Astro dev. Press Ctrl+C to stop.');
+      const astroDevResult = await handoffToAstroDev(astroFrontendPath);
+
+      if (!astroDevResult.ok) {
+        p.note(
+          [
+            `Astro dev did not stay running: ${astroDevResult.detail}`,
+            ...finalNoteLines,
+          ].join('\n'),
+          'Start Astro Manually',
+        );
+        p.outro(pc.green(`${projectName} is ready!`));
+      }
+
+      return;
+    }
+  }
+
+  p.note(finalNoteLines.join('\n'), 'Next Steps');
 
   p.outro(pc.green(`${projectName} is ready!`));
 }

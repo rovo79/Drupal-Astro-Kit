@@ -7,3 +7,7 @@ install:
   - path
   - pathauto
 
+config:
+  import:
+    pathauto:
+      - pathauto.pattern.page
