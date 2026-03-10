@@ -402,6 +402,10 @@ async function runSetup({
           cwd: drupalBackendPath,
           stdin: 'ignore',
         });
+        await execa('composer', ['require', 'drush/drush', '--working-dir', bootstrapTmpDir, '--no-interaction'], {
+          cwd: drupalBackendPath,
+          stdin: 'ignore',
+        });
         await moveDirContents(bootstrapTmpPath, drupalBackendPath);
         drupalScaffolded = true;
       } finally {
@@ -411,13 +415,15 @@ async function runSetup({
   });
 
   await runStep('ddev-drush', STEP_TEXTS[5].text, async () => {
-    try {
-      await runDdev(['composer', 'require', 'drush/drush'], {
-        cwd: drupalBackendPath,
-        env: { ...process.env, ...dockerEnv },
-      });
-    } catch {
+    const drushBinaryPath = path.join(drupalBackendPath, 'vendor', 'bin', 'drush');
+    if (await pathExists(drushBinaryPath)) {
+      return;
     }
+
+    await execa('composer', ['require', 'drush/drush', '--working-dir', drupalBackendPath, '--no-interaction'], {
+      cwd: drupalBackendPath,
+      stdin: 'ignore',
+    });
   });
 
   await runStep('ddev-site-install', STEP_TEXTS[6].text, async () => {
