@@ -20,6 +20,10 @@ const STEP_TEXTS = [
   { id: 'complete', text: 'Setup Complete!' },
 ];
 
+const ASTRO_CREATE_VERSION = '4.13.2';
+const ASTRO_PACKAGE_VERSION = '5.18.0';
+const ASTRO_NODE_RANGE = '^20.3.0 || >=22.0.0';
+
 function validateProjectName(name) {
   if (!name || name.trim().length === 0) return 'Project name cannot be empty';
   if (name.includes('_')) return 'Project name cannot contain underscores (use hyphens instead)';
@@ -606,28 +610,10 @@ async function runSetup({
 
     const astroFrontendExists = await pathExists(astroFrontendPath);
     if (!astroFrontendExists) {
-      await execa('npm', ['create', 'astro@latest', 'astro-frontend', '--', '--template', astroTemplate, '--yes', '--no-git'], {
+      await execa('npm', ['create', `astro@${ASTRO_CREATE_VERSION}`, 'astro-frontend', '--', '--template', astroTemplate, '--yes', '--no-git', '--no-install'], {
         cwd: projectRoot,
         stdin: 'ignore',
       });
-    }
-
-    try {
-      await execa('npm', ['install'], { cwd: astroFrontendPath, stdin: 'ignore' });
-    } catch {
-    }
-
-    await execa('npm', ['install', '--save-dev', 'wrangler'], { cwd: astroFrontendPath, stdin: 'ignore' });
-    await execa('npm', ['install', '--save', 'astro'], { cwd: astroFrontendPath, stdin: 'ignore' });
-    await execa('npm', ['install', '--save', 'jsona', 'drupal-jsonapi-params', 'tslib@2.6.2'], {
-      cwd: astroFrontendPath,
-      stdin: 'ignore',
-    });
-
-    try {
-      await execa('node', ['-e', "require.resolve('tslib')"], { cwd: astroFrontendPath, stdin: 'ignore' });
-    } catch {
-      await execa('npm', ['install', '--save', 'tslib@2.6.2'], { cwd: astroFrontendPath, stdin: 'ignore' });
     }
 
     const packageJsonPath = path.join(astroFrontendPath, 'package.json');
@@ -636,10 +622,11 @@ async function runSetup({
     packageJson.name = `${projectName}-frontend`;
 
     const engines = { ...(packageJson.engines ?? {}) };
-    engines.node = '>=20 <21';
+    engines.node = ASTRO_NODE_RANGE;
     packageJson.engines = engines;
 
     const deps = { ...(packageJson.dependencies ?? {}) };
+    deps.astro = ASTRO_PACKAGE_VERSION;
     if (deps.tslib && deps.tslib !== '2.6.2') {
       deps.tslib = '2.6.2';
     } else if (!deps.tslib) {
@@ -657,6 +644,13 @@ async function runSetup({
 
     await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
     await fs.writeFile(path.join(astroFrontendPath, '.nvmrc'), '20\n');
+
+    await execa('npm', ['install'], { cwd: astroFrontendPath, stdin: 'ignore' });
+    await execa('npm', ['install', '--save-dev', 'wrangler'], { cwd: astroFrontendPath, stdin: 'ignore' });
+    await execa('npm', ['install', '--save', 'jsona', 'drupal-jsonapi-params', 'tslib@2.6.2'], {
+      cwd: astroFrontendPath,
+      stdin: 'ignore',
+    });
 
     const astroConfigContent = `import { defineConfig } from 'astro/config';
 
