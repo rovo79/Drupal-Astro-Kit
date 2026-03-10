@@ -90,7 +90,7 @@ $pages = [
   [
     'title' => 'Homepage',
     'alias' => '/home',
-    'body' => '<p>Welcome! This is your homepage.</p><p>Edit this content in Drupal, then run <code>npm run build</code> to rebuild your static site.</p>',
+    'body' => '<p>Welcome! This is your homepage.</p><p>Edit this content in Drupal; refresh the browser while Astro dev is running to see the update, and run <code>npm run build</code> when you add new pages so static routes become discoverable.</p>',
   ],
   [
     'title' => 'About Us',

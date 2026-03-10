@@ -80,7 +80,8 @@ const description = bodyText.slice(0, 160).trim() + (bodyText.length > 160 ? '..
         </p>
         <p>
           Create a published “Basic page” in Drupal and set its URL alias to <code>{homepageAlias}</code>{' '}
-          (or <code>/</code>), then restart the Astro dev server.
+          (or <code>/</code>). Refresh the browser while Astro dev is running or rerun <code>npm run build</code> so the new alias is
+          picked up, then revisit <code>/</code>.
         </p>
       </div>
     </article>
