@@ -222,7 +222,7 @@ async function moveDirContents(src, dest) {
     const destPath = path.join(dest, entry.name);
 
     if (await pathExists(destPath)) {
-      throw new Error(`Cannot finalize Drupal scaffold because "${entry.name}" already exists in ${dest}`);
+      await fs.rm(destPath, { recursive: true, force: true });
     }
 
     await fs.rename(fromPath, destPath);
@@ -298,6 +298,7 @@ async function runSetup({
   astroMode,
 }) {
   const runStep = createStepRunner(STEP_TEXTS.length);
+  let drupalScaffolded = false;
 
   const envPath = path.join(projectRoot, '.env');
   const exampleEnvPath = path.join(projectRoot, '.env.example');
@@ -397,11 +398,12 @@ async function runSetup({
       await fs.rm(bootstrapTmpPath, { recursive: true, force: true });
 
       try {
-        await runDdev(['composer', 'create-project', 'drupal/recommended-project:^11', bootstrapTmpDir, '--no-interaction'], {
+        await execa('composer', ['create-project', 'drupal/recommended-project:^11', bootstrapTmpDir, '--no-interaction'], {
           cwd: drupalBackendPath,
-          env: { ...process.env, ...dockerEnv },
+          stdin: 'ignore',
         });
         await moveDirContents(bootstrapTmpPath, drupalBackendPath);
+        drupalScaffolded = true;
       } finally {
         await fs.rm(bootstrapTmpPath, { recursive: true, force: true });
       }
@@ -419,6 +421,24 @@ async function runSetup({
   });
 
   await runStep('ddev-site-install', STEP_TEXTS[6].text, async () => {
+    if (drupalScaffolded) {
+      await runDdev(['start', '-y'], {
+        cwd: drupalBackendPath,
+        env: { ...process.env, ...dockerEnv },
+        timeout: 300000,
+      });
+    }
+
+    await runDdev([
+      'exec',
+      'bash',
+      '-lc',
+      'set -euo pipefail; mkdir -p web/sites/default/files; if [ ! -w web/sites/default/files ]; then sudo chown -R "$(id -u):$(id -g)" web/sites/default/files || true; fi; mkdir -p web/sites/default/files/sync web/sites/default/files/media-icons/generic; chmod -R u+rwX web/sites/default/files || true',
+    ], {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+    });
+
     let isInstalled = false;
     try {
       await runDdev(['exec', 'drush', 'sql:query', 'SELECT count(*) FROM users LIMIT 1'], {
