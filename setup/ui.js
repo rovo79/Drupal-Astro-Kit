@@ -495,25 +495,26 @@ async function runSetup({
       }
     }
 
-    const composerRequires = ['drupal/pathauto', 'drupal/default_content'];
+    const composerRequires = ['drupal/pathauto', 'drupal/default_content:^2.0@beta'];
     if (enableStructuredContent) {
       composerRequires.push('drupal/paragraphs', 'drupal/entity_reference_revisions');
     }
 
-    try {
-      await runDdev(['composer', 'require', ...composerRequires], {
-        cwd: drupalBackendPath,
-        env: { ...process.env, ...dockerEnv },
-      });
-    } catch {
-    }
+    await execa('composer', ['require', '--working-dir', drupalBackendPath, '--no-interaction', ...composerRequires], {
+      cwd: drupalBackendPath,
+      stdin: 'ignore',
+    });
   });
 
   await runStep('apply-recipes', STEP_TEXTS[8].text, async () => {
-    const recipeName = 'dak_decoupled_base';
-    const recipeCandidates = [`recipes/${recipeName}`, `web/recipes/${recipeName}`];
+    const resolveRecipePath = async (recipeName) => {
+      const recipeCandidates = [
+        `recipes/${recipeName}`,
+        `recipes/dak/${recipeName}`,
+        `web/recipes/${recipeName}`,
+        `web/recipes/dak/${recipeName}`,
+      ];
 
-    const resolveRecipePath = async () => {
       for (const candidate of recipeCandidates) {
         const recipeYml = path.join(drupalBackendPath, candidate, 'recipe.yml');
         if (await pathExists(recipeYml)) {
@@ -523,82 +524,74 @@ async function runSetup({
       return null;
     };
 
-    const recipePath = await resolveRecipePath();
-    if (!recipePath) {
-      return;
-    }
-
-    const attempts = [
-      {
-        label: 'drush recipe:apply (path)',
-        ddevArgs: ['exec', 'drush', 'recipe:apply', recipePath, '-y'],
-        command: `drush recipe:apply ${recipePath} -y`,
-      },
-      {
-        label: 'drush recipe:apply (name)',
-        ddevArgs: ['exec', 'drush', 'recipe:apply', recipeName, '-y'],
-        command: `drush recipe:apply ${recipeName} -y`,
-      },
-      {
-        label: 'drush recipe (path)',
-        ddevArgs: ['exec', 'drush', 'recipe', recipePath, '-y'],
-        command: `drush recipe ${recipePath} -y`,
-      },
-      {
-        label: 'drush recipe (name)',
-        ddevArgs: ['exec', 'drush', 'recipe', recipeName, '-y'],
-        command: `drush recipe ${recipeName} -y`,
-      },
-      {
-        label: 'core script (path)',
-        ddevArgs: ['exec', 'php', 'web/core/scripts/drupal', 'recipe', recipePath],
-        command: `php web/core/scripts/drupal recipe ${recipePath}`,
-      },
-      {
-        label: 'core script (name)',
-        ddevArgs: ['exec', 'php', 'web/core/scripts/drupal', 'recipe', recipeName],
-        command: `php web/core/scripts/drupal recipe ${recipeName}`,
-      },
-    ];
-
-    const errors = [];
-    let applied = false;
-
-    for (const attempt of attempts) {
-      try {
-        await runDdev(attempt.ddevArgs, { cwd: drupalBackendPath, env: { ...process.env, ...dockerEnv } });
-        applied = true;
-        break;
-      } catch (error) {
-        errors.push(`- ${attempt.label}: Failed to execute command \`${attempt.command}\`: ${error.message}`);
-      }
-    }
-
-    if (!applied) {
-      try {
-        await runDdev(['exec', 'drush', 'en', 'jsonapi', 'path', '-y'], {
-          cwd: drupalBackendPath,
-          env: { ...process.env, ...dockerEnv },
-        });
-        applied = true;
-      } catch (error) {
-        errors.push(`- drush en fallback (core): Failed to execute command \`drush en jsonapi path -y\`: ${error.message}`);
+    const applyRecipe = async (recipeName) => {
+      const recipePath = await resolveRecipePath(recipeName);
+      if (!recipePath) {
+        throw new Error(`Recipe "${recipeName}" was copied but could not be resolved for application.`);
       }
 
-      if (applied) {
+      const attempts = [
+        {
+          label: 'drush recipe:apply (path)',
+          ddevArgs: ['exec', 'drush', 'recipe:apply', recipePath, '-y'],
+          command: `drush recipe:apply ${recipePath} -y`,
+        },
+        {
+          label: 'drush recipe:apply (name)',
+          ddevArgs: ['exec', 'drush', 'recipe:apply', recipeName, '-y'],
+          command: `drush recipe:apply ${recipeName} -y`,
+        },
+        {
+          label: 'drush recipe (path)',
+          ddevArgs: ['exec', 'drush', 'recipe', recipePath, '-y'],
+          command: `drush recipe ${recipePath} -y`,
+        },
+        {
+          label: 'drush recipe (name)',
+          ddevArgs: ['exec', 'drush', 'recipe', recipeName, '-y'],
+          command: `drush recipe ${recipeName} -y`,
+        },
+        {
+          label: 'core script (path)',
+          ddevArgs: ['exec', 'php', 'web/core/scripts/drupal', 'recipe', recipePath],
+          command: `php web/core/scripts/drupal recipe ${recipePath}`,
+        },
+        {
+          label: 'core script (name)',
+          ddevArgs: ['exec', 'php', 'web/core/scripts/drupal', 'recipe', recipeName],
+          command: `php web/core/scripts/drupal recipe ${recipeName}`,
+        },
+      ];
+
+      const errors = [];
+      for (const attempt of attempts) {
         try {
-          await runDdev(['exec', 'drush', 'en', 'pathauto', '-y'], {
-            cwd: drupalBackendPath,
-            env: { ...process.env, ...dockerEnv },
-          });
+          await runDdev(attempt.ddevArgs, { cwd: drupalBackendPath, env: { ...process.env, ...dockerEnv } });
+          return;
         } catch (error) {
-          errors.push(`- drush en fallback (optional pathauto): Failed to execute command \`drush en pathauto -y\`: ${error.message}`);
+          errors.push(`- ${attempt.label}: Failed to execute command \`${attempt.command}\`: ${error.message}`);
         }
       }
-    }
 
-    if (!applied) {
       throw new Error(`Failed to apply recipe "${recipeName}". Attempts:\n${errors.join('\n')}`);
+    };
+
+    await runDdev(['exec', 'drush', 'en', 'jsonapi', 'path', 'pathauto', '-y'], {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+    });
+
+    await execa('bash', [path.join(projectRoot, 'scripts', 'seed-content.sh'), projectName], {
+      cwd: projectRoot,
+      stdin: 'ignore',
+    });
+
+    if (enableStructuredContent) {
+      await runDdev(['exec', 'drush', 'en', 'paragraphs', 'entity_reference_revisions', '-y'], {
+        cwd: drupalBackendPath,
+        env: { ...process.env, ...dockerEnv },
+      });
+      await applyRecipe('dak_structured_content');
     }
   });
 
