@@ -23,6 +23,14 @@ const STEP_TEXTS = [
 const ASTRO_CREATE_VERSION = '4.13.2';
 const ASTRO_PACKAGE_VERSION = '5.18.0';
 const ASTRO_NODE_RANGE = '^20.3.0 || >=22.0.0';
+const ASTRO_ENV_KEYS_TO_UNSET = [
+  'PROJECT_NAME',
+  'DRUPAL_BASE_URL',
+  'DRUPAL_JSONAPI_URL',
+  'DRUPAL_API_URL',
+  'API_BASE_URL',
+  'HOMEPAGE_ALIAS',
+];
 
 function validateProjectName(name) {
   if (!name || name.trim().length === 0) return 'Project name cannot be empty';
@@ -821,6 +829,48 @@ async function runSetup({
     const packageJson = JSON.parse(packageContent);
     packageJson.name = `${projectName}-frontend`;
 
+    const astroRunnerPath = path.join(astroFrontendPath, 'scripts', 'run-astro.mjs');
+    const astroRunnerContent = `import { spawn } from 'node:child_process';
+
+const ENV_KEYS_TO_UNSET = ${JSON.stringify(ASTRO_ENV_KEYS_TO_UNSET)};
+const args = process.argv.slice(2);
+const env = { ...process.env };
+const clearedKeys = [];
+
+for (const key of ENV_KEYS_TO_UNSET) {
+  if (Object.prototype.hasOwnProperty.call(env, key)) {
+    delete env[key];
+    clearedKeys.push(key);
+  }
+}
+
+if (clearedKeys.length > 0) {
+  console.warn('[dak] Ignoring exported env vars for Astro: ' + clearedKeys.join(', '));
+}
+
+const child = spawn(process.execPath, ['./node_modules/astro/astro.js', ...args], {
+  cwd: process.cwd(),
+  env,
+  stdio: 'inherit',
+});
+
+child.on('error', (error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});
+
+child.on('exit', (code, signal) => {
+  if (signal) {
+    process.kill(process.pid, signal);
+    return;
+  }
+
+  process.exit(code ?? 0);
+});
+`;
+    await fs.mkdir(path.dirname(astroRunnerPath), { recursive: true });
+    await fs.writeFile(astroRunnerPath, astroRunnerContent);
+
     const engines = { ...(packageJson.engines ?? {}) };
     engines.node = ASTRO_NODE_RANGE;
     packageJson.engines = engines;
@@ -835,11 +885,11 @@ async function runSetup({
     packageJson.dependencies = deps;
 
     const scripts = { ...(packageJson.scripts ?? {}) };
-    if (!scripts.dev) scripts.dev = 'astro dev';
-    if (!scripts.start) scripts.start = scripts.dev;
-    if (!scripts.build) scripts.build = 'astro build';
-    if (!scripts.preview) scripts.preview = 'astro preview';
-    if (!scripts.astro) scripts.astro = 'astro';
+    scripts.dev = 'node ./scripts/run-astro.mjs dev';
+    scripts.start = scripts.dev;
+    scripts.build = 'node ./scripts/run-astro.mjs build';
+    scripts.preview = 'node ./scripts/run-astro.mjs preview';
+    scripts.astro = 'node ./scripts/run-astro.mjs';
     packageJson.scripts = scripts;
 
     await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
