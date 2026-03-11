@@ -245,6 +245,128 @@ async function pathExists(targetPath) {
   }
 }
 
+async function directoryHasEntries(targetPath) {
+  try {
+    const entries = await fs.readdir(targetPath);
+    return entries.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function getDdevProject(projectName) {
+  try {
+    const result = await execa('ddev', ['list', '--json-output'], { stdin: 'ignore' });
+    const projects = JSON.parse(result.stdout);
+    if (!Array.isArray(projects)) {
+      return null;
+    }
+
+    return projects.find((project) => {
+      const candidateNames = [
+        project?.name,
+        project?.Name,
+        project?.project,
+        project?.Project,
+        project?.projectName,
+        project?.ProjectName,
+        project?.projectname,
+        project?.Projectname,
+      ]
+        .filter((value) => typeof value === 'string')
+        .map((value) => value.trim());
+
+      return candidateNames.includes(projectName);
+    }) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function detectDrupalRerunRisk({ drupalBackendPath, projectName }) {
+  const stateMarkers = [
+    path.join(drupalBackendPath, '.ddev', 'config.yaml'),
+    path.join(drupalBackendPath, 'composer.json'),
+    path.join(drupalBackendPath, 'web', 'core'),
+    path.join(drupalBackendPath, 'web', 'sites', 'default', 'settings.php'),
+    path.join(drupalBackendPath, 'web', 'sites', 'default', 'files'),
+  ];
+
+  let hasDrupalDirState = false;
+  for (const marker of stateMarkers) {
+    if (await pathExists(marker)) {
+      hasDrupalDirState = true;
+      break;
+    }
+  }
+
+  if (!hasDrupalDirState) {
+    hasDrupalDirState = await directoryHasEntries(drupalBackendPath);
+  }
+
+  const ddevProject = await getDdevProject(projectName);
+  const hasDdevProject = Boolean(ddevProject);
+
+  return {
+    hasRisk: hasDrupalDirState || hasDdevProject,
+    hasDrupalDirState,
+    hasDdevProject,
+  };
+}
+
+async function resetDrupalState({ projectRoot, drupalBackendPath, projectName, dockerEnv, hasDdevProject }) {
+  const env = { ...process.env, ...dockerEnv };
+  const localDdevConfigExists = await pathExists(path.join(drupalBackendPath, '.ddev', 'config.yaml'));
+
+  const deleteAttempts = [];
+  if (localDdevConfigExists) {
+    deleteAttempts.push({ args: ['delete', '--omit-snapshot', '-Oy'], cwd: drupalBackendPath });
+  }
+  deleteAttempts.push({ args: ['delete', '--omit-snapshot', '-Oy', projectName], cwd: projectRoot });
+
+  let deleted = false;
+  let lastDeleteError = null;
+
+  for (const attempt of deleteAttempts) {
+    try {
+      await runDdev(attempt.args, {
+        cwd: attempt.cwd,
+        env,
+        timeout: 300000,
+      });
+      deleted = true;
+      break;
+    } catch (error) {
+      lastDeleteError = error;
+    }
+  }
+
+  if (!deleted && (localDdevConfigExists || hasDdevProject)) {
+    throw lastDeleteError ?? new Error(`Failed to delete existing DDEV project data for ${projectName}.`);
+  }
+
+  try {
+    await runDdev(['stop', '--unlist', projectName], {
+      cwd: projectRoot,
+      env,
+      timeout: 300000,
+    });
+  } catch {
+  }
+
+  await fs.rm(drupalBackendPath, { recursive: true, force: true });
+}
+
+function describeDrupalMode(drupalMode) {
+  if (drupalMode === 'reset') {
+    return 'clean reset';
+  }
+  if (drupalMode === 'reuse') {
+    return 'reuse existing Drupal';
+  }
+  return 'create new Drupal';
+}
+
 async function copyDir(src, dest) {
   await fs.mkdir(dest, { recursive: true });
   const entries = await fs.readdir(src, { withFileTypes: true });
@@ -340,6 +462,8 @@ async function runSetup({
   astroTemplate,
   enableStructuredContent,
   astroMode,
+  drupalMode,
+  hasExistingDdevProject,
 }) {
   const runStep = createStepRunner(STEP_TEXTS.length);
   let drupalScaffolded = false;
@@ -404,6 +528,16 @@ async function runSetup({
   });
 
   await runStep('ddev-config', STEP_TEXTS[2].text, async () => {
+    if (drupalMode === 'reset') {
+      await resetDrupalState({
+        projectRoot,
+        drupalBackendPath,
+        projectName,
+        dockerEnv,
+        hasDdevProject: hasExistingDdevProject,
+      });
+    }
+
     await fs.mkdir(drupalBackendPath, { recursive: true });
 
     try {
@@ -770,6 +904,7 @@ export default async function run() {
 
   const projectRoot = path.resolve(process.cwd(), '..');
   const defaultProjectName = path.basename(path.resolve(process.cwd(), '..'));
+  const drupalBackendPath = path.join(projectRoot, 'drupal-backend');
   const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
   const astroExists = await pathExists(astroFrontendPath);
 
@@ -780,6 +915,53 @@ export default async function run() {
       validate: (value) => validateProjectName(String(value ?? '')),
     }),
   );
+
+  const drupalRerunRisk = await detectDrupalRerunRisk({
+    drupalBackendPath,
+    projectName: String(projectName),
+  });
+
+  let drupalMode = 'create';
+  if (drupalRerunRisk.hasRisk) {
+    p.note(
+      [
+        drupalRerunRisk.hasDrupalDirState ? '- `drupal-backend/` already contains Drupal files or site state.' : null,
+        drupalRerunRisk.hasDdevProject ? `- DDEV already has a project named "${projectName}".` : null,
+        '',
+        'Reusing Drupal keeps the current database, content, aliases, and routes.',
+        'That old state can change Astro pages on reruns if stale content survives.',
+      ].filter(Boolean).join('\n'),
+      'Existing Drupal State Detected',
+    );
+
+    const drupalOptions = [
+      {
+        value: 'reset',
+        label: 'Clean reset Drupal (recommended) - delete DDEV data and rebuild drupal-backend',
+      },
+    ];
+
+    if (drupalRerunRisk.hasDrupalDirState) {
+      drupalOptions.push({
+        value: 'reuse',
+        label: 'Reuse existing Drupal - keep current database/content/routes',
+      });
+    }
+
+    drupalOptions.push({ value: 'cancel', label: 'Cancel setup' });
+
+    drupalMode = unwrapPrompt(
+      await p.select({
+        message: 'How should setup handle the existing Drupal state?',
+        initialValue: 'reset',
+        options: drupalOptions,
+      }),
+    );
+
+    if (drupalMode === 'cancel') {
+      cancelAndExit('Setup cancelled. Existing Drupal state was left unchanged.');
+    }
+  }
 
   const adminUsernameInput = unwrapPrompt(
     await p.text({
@@ -847,6 +1029,7 @@ export default async function run() {
   p.note(
     [
       `Project name: ${projectName}`,
+      `Drupal mode: ${describeDrupalMode(drupalMode)}`,
       `Admin username: ${adminUsername}`,
       `Admin password: ${'•'.repeat(adminPassword.length)}`,
       `Astro mode: ${astroMode}`,
@@ -876,6 +1059,8 @@ export default async function run() {
       astroTemplate: String(astroTemplate),
       enableStructuredContent,
       astroMode,
+      drupalMode,
+      hasExistingDdevProject: drupalRerunRisk.hasDdevProject,
     });
   } catch (error) {
     p.log.error(error.message || String(error));
