@@ -14,6 +14,7 @@ import {DrupalJsonApiParams} from 'drupal-jsonapi-params';
 
 const dataFormatter: Jsona = new Jsona();
 const DEFAULT_HOMEPAGE_ALIAS = '/home';
+const PAGE_QUERY_FIELDS = ['title', 'body', 'path', 'status', 'created', 'changed'];
 
 // Type definitions for Drupal Page nodes
 export interface DrupalPage {
@@ -57,17 +58,31 @@ function getDrupalJsonApiBaseUrl(): string {
   return `${getDrupalBaseUrl()}/jsonapi`;
 }
 
+function buildPageQueryParams(limit: number): DrupalJsonApiParams {
+  const params = new DrupalJsonApiParams();
+  params
+    .addFilter('status', '1')
+    .addFields('node--page', PAGE_QUERY_FIELDS)
+    .addPageLimit(limit);
+
+  return params;
+}
+
+function getPageCollectionUrl(limit: number): string {
+  const jsonApiBase = getDrupalJsonApiBaseUrl();
+  const params = buildPageQueryParams(limit);
+  return `${jsonApiBase}/node/page?${params.getQueryString()}`;
+}
+
 /**
  * Check if the Drupal JSON:API is accessible
  */
 export async function checkApiConnection(): Promise<void> {
-  const jsonApiBase = getDrupalJsonApiBaseUrl();
-  const response = await fetch(jsonApiBase, {
-    method: 'HEAD',
-  });
-  
+  const endpoint = getPageCollectionUrl(1);
+  const response = await fetch(endpoint);
+
   if (!response.ok) {
-    throw new Error(`JSON:API returned ${response.status}: ${response.statusText}`);
+    throw new Error(`JSON:API page collection ${endpoint} returned ${response.status}: ${response.statusText}`);
   }
 }
 
@@ -75,17 +90,8 @@ export async function checkApiConnection(): Promise<void> {
  * Fetch all published pages from Drupal JSON:API with pagination support
  */
 export async function getAllPages(): Promise<DrupalPage[]> {
-  const jsonApiBase = getDrupalJsonApiBaseUrl();
   const allPages: DrupalPage[] = [];
-  
-  // Build query params
-  const params = new DrupalJsonApiParams();
-  params
-    .addFilter('status', '1') // Published only
-    .addFields('node--page', ['title', 'body', 'path', 'status', 'created', 'changed'])
-    .addPageLimit(50); // Fetch 50 per page
-  
-  let nextUrl: string | null = `${jsonApiBase}/node/page?${params.getQueryString()}`;
+  let nextUrl: string | null = getPageCollectionUrl(50);
   
   while (nextUrl) {
     const response = await fetch(nextUrl);
