@@ -9,9 +9,9 @@ Requirements for this tightening pass. Each maps to roadmap phases.
 
 ### Identity
 
-- [ ] **IDEN-01**: README states this is a static-first starter kit for developers, not a platform or SSR framework
-- [ ] **IDEN-02**: AGENTS.md reflects the tightened identity and operating model
-- [ ] **IDEN-03**: Repo description/metadata aligns with static-first starter kit identity
+- [x] **IDEN-01**: README states this is a static-first starter kit for developers, not a platform or SSR framework
+- [x] **IDEN-02**: AGENTS.md reflects the tightened identity and operating model
+- [x] **IDEN-03**: Repo description/metadata aligns with static-first starter kit identity
 
 ### Documentation
 
@@ -70,9 +70,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IDEN-01 | Phase 1: Identity | Pending |
-| IDEN-02 | Phase 1: Identity | Pending |
-| IDEN-03 | Phase 1: Identity | Pending |
+| IDEN-01 | Phase 1: Identity | Complete |
+| IDEN-02 | Phase 1: Identity | Complete |
+| IDEN-03 | Phase 1: Identity | Complete |
 | DOCS-01 | Phase 2: Documentation Structure | Pending |
 | DOCS-02 | Phase 2: Documentation Structure | Pending |
 | DOCS-03 | Phase 2: Documentation Structure | Pending |
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-12 after roadmap creation*
+*Last updated: 2026-03-12 after Phase 1 completion*
