@@ -27,9 +27,9 @@ Requirements for this tightening pass. Each maps to roadmap phases.
 
 ### Build Source
 
-- [ ] **BLDS-01**: Local-first (DDEV + local build + manual deploy) is documented as the V1 default operating model
-- [ ] **BLDS-02**: CI/hosted build path is labeled as optional advanced, not the happy path
-- [ ] **BLDS-03**: Environment variables and `.env.example` reflect local-first as primary
+- [x] **BLDS-01**: Local-first (DDEV + local build + manual deploy) is documented as the V1 default operating model
+- [x] **BLDS-02**: CI/hosted build path is labeled as optional advanced, not the happy path
+- [x] **BLDS-03**: Environment variables and `.env.example` reflect local-first as primary
 
 ## v2 Requirements
 
@@ -79,9 +79,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PUBL-01 | Phase 3: Publishing Workflow | Complete |
 | PUBL-02 | Phase 3: Publishing Workflow | Complete |
 | PUBL-03 | Phase 3: Publishing Workflow | Complete |
-| BLDS-01 | Phase 4: Build Source Model | Pending |
-| BLDS-02 | Phase 4: Build Source Model | Pending |
-| BLDS-03 | Phase 4: Build Source Model | Pending |
+| BLDS-01 | Phase 4: Build Source Model | Complete |
+| BLDS-02 | Phase 4: Build Source Model | Complete |
+| BLDS-03 | Phase 4: Build Source Model | Complete |
 
 **Coverage:**
 - v1 requirements: 12 total
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-12 after Phase 3 completion*
+*Last updated: 2026-03-12 after Phase 4 completion — all v1 requirements complete*
