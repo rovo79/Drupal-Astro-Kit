@@ -22,11 +22,11 @@ This is a tightening pass — no new runtime capabilities, just clarity. The rep
   2. README does not mention SSR, Workers, or edge rendering as current capabilities
   3. AGENTS.md reflects the tightened identity: static-first generator repo, not a platform
   4. Repo description/metadata (GitHub description, package.json if applicable) says "static-first starter kit"
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: Rewrite README identity and framing
-- [ ] 01-02: Update AGENTS.md and repo metadata
+- [ ] 01-01-PLAN.md — Rewrite README opening, headers, and framing; remove SSR roadmap section and emoji
+- [ ] 01-02-PLAN.md — Tighten AGENTS.md identity, remove outdated ExecPlans, update GitHub repo description
 
 ### Phase 2: Documentation Structure
 **Goal**: A developer browsing docs/ finds only V1-supported content on the happy path; legacy SSR-era docs are clearly walled off and cannot be mistaken for current guidance
