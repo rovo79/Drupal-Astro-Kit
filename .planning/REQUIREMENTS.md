@@ -21,9 +21,9 @@ Requirements for this tightening pass. Each maps to roadmap phases.
 
 ### Publishing
 
-- [ ] **PUBL-01**: Publishing workflow is documented — editor publishes in Drupal, developer rebuilds and deploys, static output updates
-- [ ] **PUBL-02**: The tradeoff is stated plainly: Drupal publish does not equal live publish, and that is deliberate
-- [ ] **PUBL-03**: The deploy flow (`npm run build` → `wrangler pages deploy`) is documented as the canonical publish path
+- [x] **PUBL-01**: Publishing workflow is documented — editor publishes in Drupal, developer rebuilds and deploys, static output updates
+- [x] **PUBL-02**: The tradeoff is stated plainly: Drupal publish does not equal live publish, and that is deliberate
+- [x] **PUBL-03**: The deploy flow (`npm run build` → `wrangler pages deploy`) is documented as the canonical publish path
 
 ### Build Source
 
@@ -76,9 +76,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOCS-01 | Phase 2: Documentation Structure | Complete |
 | DOCS-02 | Phase 2: Documentation Structure | Complete |
 | DOCS-03 | Phase 2: Documentation Structure | Complete |
-| PUBL-01 | Phase 3: Publishing Workflow | Pending |
-| PUBL-02 | Phase 3: Publishing Workflow | Pending |
-| PUBL-03 | Phase 3: Publishing Workflow | Pending |
+| PUBL-01 | Phase 3: Publishing Workflow | Complete |
+| PUBL-02 | Phase 3: Publishing Workflow | Complete |
+| PUBL-03 | Phase 3: Publishing Workflow | Complete |
 | BLDS-01 | Phase 4: Build Source Model | Pending |
 | BLDS-02 | Phase 4: Build Source Model | Pending |
 | BLDS-03 | Phase 4: Build Source Model | Pending |
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-12 after Phase 2 completion*
+*Last updated: 2026-03-12 after Phase 3 completion*

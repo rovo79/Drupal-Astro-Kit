@@ -8,7 +8,7 @@ This is a tightening pass — no new runtime capabilities, just clarity. The rep
 
 - [x] **Phase 1: Identity** - Establish what this repo is (and isn't) across README, AGENTS.md, and repo metadata
 - [x] **Phase 2: Documentation Structure** - Reorganize docs into V1-supported vs future/reference, wall off legacy SSR content
-- [ ] **Phase 3: Publishing Workflow** - Document the rebuild-to-publish model as deliberate first-class behavior
+- [x] **Phase 3: Publishing Workflow** - Document the rebuild-to-publish model as deliberate first-class behavior
 - [ ] **Phase 4: Build Source Model** - Declare local-first as the V1 default and label CI/hosted as optional advanced
 
 ## Phase Details
@@ -55,7 +55,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md — Create publishing workflow doc with tradeoff framing and wire into README/architecture
+- [x] 03-01-PLAN.md — Create publishing workflow doc with tradeoff framing and wire into README/architecture
 
 ### Phase 4: Build Source Model
 **Goal**: A developer knows that local-first (DDEV + local build + manual deploy) is the supported V1 path, and that CI/hosted alternatives exist but are optional advanced territory
@@ -78,5 +78,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Identity | 2/2 | Complete | 2026-03-12 |
 | 2. Documentation Structure | 2/2 | Complete | 2026-03-12 |
-| 3. Publishing Workflow | 0/1 | Not started | - |
+| 3. Publishing Workflow | 1/1 | Complete | 2026-03-12 |
 | 4. Build Source Model | 0/2 | Not started | - |
