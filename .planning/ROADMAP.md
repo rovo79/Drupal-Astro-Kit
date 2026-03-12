@@ -7,7 +7,7 @@ This is a tightening pass — no new runtime capabilities, just clarity. The rep
 ## Phases
 
 - [x] **Phase 1: Identity** - Establish what this repo is (and isn't) across README, AGENTS.md, and repo metadata
-- [ ] **Phase 2: Documentation Structure** - Reorganize docs into V1-supported vs future/reference, wall off legacy SSR content
+- [x] **Phase 2: Documentation Structure** - Reorganize docs into V1-supported vs future/reference, wall off legacy SSR content
 - [ ] **Phase 3: Publishing Workflow** - Document the rebuild-to-publish model as deliberate first-class behavior
 - [ ] **Phase 4: Build Source Model** - Declare local-first as the V1 default and label CI/hosted as optional advanced
 
@@ -40,8 +40,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Move legacy SSR-era docs to docs/future/ and fix cross-references in V1 docs
-- [ ] 02-02-PLAN.md — Update AI-maintained docs to reflect docs/future/ reorganization and V1 framing
+- [x] 02-01-PLAN.md — Move legacy SSR-era docs to docs/future/ and fix cross-references in V1 docs
+- [x] 02-02-PLAN.md — Update AI-maintained docs to reflect docs/future/ reorganization and V1 framing
 
 ### Phase 3: Publishing Workflow
 **Goal**: A developer understands exactly how content goes from Drupal to the live site — and understands that rebuild-to-publish is a deliberate design choice, not a limitation
@@ -77,6 +77,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Identity | 2/2 | Complete | 2026-03-12 |
-| 2. Documentation Structure | 0/2 | Not started | - |
+| 2. Documentation Structure | 2/2 | Complete | 2026-03-12 |
 | 3. Publishing Workflow | 0/1 | Not started | - |
 | 4. Build Source Model | 0/2 | Not started | - |
