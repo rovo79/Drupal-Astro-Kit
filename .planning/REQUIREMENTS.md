@@ -70,24 +70,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IDEN-01 | TBD | Pending |
-| IDEN-02 | TBD | Pending |
-| IDEN-03 | TBD | Pending |
-| DOCS-01 | TBD | Pending |
-| DOCS-02 | TBD | Pending |
-| DOCS-03 | TBD | Pending |
-| PUBL-01 | TBD | Pending |
-| PUBL-02 | TBD | Pending |
-| PUBL-03 | TBD | Pending |
-| BLDS-01 | TBD | Pending |
-| BLDS-02 | TBD | Pending |
-| BLDS-03 | TBD | Pending |
+| IDEN-01 | Phase 1: Identity | Pending |
+| IDEN-02 | Phase 1: Identity | Pending |
+| IDEN-03 | Phase 1: Identity | Pending |
+| DOCS-01 | Phase 2: Documentation Structure | Pending |
+| DOCS-02 | Phase 2: Documentation Structure | Pending |
+| DOCS-03 | Phase 2: Documentation Structure | Pending |
+| PUBL-01 | Phase 3: Publishing Workflow | Pending |
+| PUBL-02 | Phase 3: Publishing Workflow | Pending |
+| PUBL-03 | Phase 3: Publishing Workflow | Pending |
+| BLDS-01 | Phase 4: Build Source Model | Pending |
+| BLDS-02 | Phase 4: Build Source Model | Pending |
+| BLDS-03 | Phase 4: Build Source Model | Pending |
 
 **Coverage:**
 - v1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12
+- Mapped to phases: 12
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after initial definition*
+*Last updated: 2026-03-12 after roadmap creation*
