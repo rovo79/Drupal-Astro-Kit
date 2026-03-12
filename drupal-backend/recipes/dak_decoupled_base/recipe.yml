@@ -1,9 +1,0 @@
-name: 'DAK: Decoupled base'
-description: 'Baseline modules for a decoupled Drupal instance serving JSON:API for Astro SSG.'
-type: 'Feature'
-
-install:
-  - jsonapi
-  - path
-  - pathauto
-
