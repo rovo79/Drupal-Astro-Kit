@@ -6,7 +6,7 @@ This is a tightening pass — no new runtime capabilities, just clarity. The rep
 
 ## Phases
 
-- [ ] **Phase 1: Identity** - Establish what this repo is (and isn't) across README, AGENTS.md, and repo metadata
+- [x] **Phase 1: Identity** - Establish what this repo is (and isn't) across README, AGENTS.md, and repo metadata
 - [ ] **Phase 2: Documentation Structure** - Reorganize docs into V1-supported vs future/reference, wall off legacy SSR content
 - [ ] **Phase 3: Publishing Workflow** - Document the rebuild-to-publish model as deliberate first-class behavior
 - [ ] **Phase 4: Build Source Model** - Declare local-first as the V1 default and label CI/hosted as optional advanced
@@ -26,7 +26,7 @@ This is a tightening pass — no new runtime capabilities, just clarity. The rep
 
 Plans:
 - [x] 01-01-PLAN.md — Rewrite README opening, headers, and framing; remove SSR roadmap section and emoji
-- [ ] 01-02-PLAN.md — Tighten AGENTS.md identity, remove outdated ExecPlans, update GitHub repo description
+- [x] 01-02-PLAN.md — Tighten AGENTS.md identity, remove outdated ExecPlans, update GitHub repo description
 
 ### Phase 2: Documentation Structure
 **Goal**: A developer browsing docs/ finds only V1-supported content on the happy path; legacy SSR-era docs are clearly walled off and cannot be mistaken for current guidance
@@ -76,7 +76,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Identity | 1/2 | In progress | - |
+| 1. Identity | 2/2 | Complete | 2026-03-12 |
 | 2. Documentation Structure | 0/2 | Not started | - |
 | 3. Publishing Workflow | 0/1 | Not started | - |
 | 4. Build Source Model | 0/2 | Not started | - |
