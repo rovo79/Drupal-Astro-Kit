@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** A developer can go from zero to a deployed static site backed by Drupal in one setup command, with clean separation between content authoring, static rendering, and hosting.
-**Current focus:** Phase 3 — Publishing Workflow
+**Current focus:** Phase 4 — Build Source Model
 
 ## Current Position
 
-Phase: 2 of 4 (Documentation Structure) — Complete
-Plan: 2 of 2 in current phase
+Phase: 3 of 4 (Publishing Workflow) — Complete
+Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-03-12 — Completed 02-01-PLAN.md
+Last activity: 2026-03-12 — Completed 03-01-PLAN.md
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~2 min
-- Total execution time: ~7 min
+- Total execution time: ~9 min
 
 **By Phase:**
 
@@ -29,9 +29,10 @@ Progress: [██████░░░░] 57%
 |-------|-------|-------|----------|
 | 1-Identity | 2/2 | ~4 min | ~2 min |
 | 2-Documentation Structure | 2/2 | ~3 min | ~1.5 min |
+| 3-Publishing Workflow | 1/1 | ~2 min | ~2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (2 min), 01-02 (1 min), 02-02 (1 min), 02-01 (2 min)
+- Last 5 plans: 01-02 (1 min), 02-02 (1 min), 02-01 (2 min), 03-01 (2 min)
 - Trend: Fast (docs-only changes)
 
 *Updated after each plan completion*
@@ -63,5 +64,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-12
-Stopped at: Completed 02-01-PLAN.md — Phase 2 complete
+Stopped at: Completed 03-01-PLAN.md — Phase 3 complete
 Resume file: None
