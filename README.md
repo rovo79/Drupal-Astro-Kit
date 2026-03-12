@@ -1,14 +1,14 @@
-# 🚀 Drupal + Astro + Cloudflare Starter Kit
+# Drupal + Astro Starter Kit
 
-Local Drupal CMS → Astro Static Site → Cloudflare Pages
+A static-first starter kit for developers. Local Drupal CMS, Astro static site generator, Cloudflare Pages hosting.
 
-This starter kit turns Drupal 11 into a local-only CMS and uses Astro to generate a fully static site that deploys to Cloudflare Pages. You get modern frontend development with the stability of Drupal—but your production site is static, fast, secure, and free to host.
+This is a static-first starter kit that turns Drupal 11 into a local-only content source and uses Astro to generate a fully static site. The production site is pre-rendered HTML served from Cloudflare Pages — no server-side rendering, no runtime CMS dependency, no edge workers.
 
-This is built for Drupal developers who want to escape Twig templating hell and ship modern frontends with minimal friction.
+Built for developers who want Drupal's content modeling with a modern static frontend.
 
 ---
 
-## 🌟 What You Get
+## What You Get
 
 Core (Static-first)
 
@@ -22,7 +22,7 @@ Core (Static-first)
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - Features
 - Prerequisites
@@ -35,9 +35,9 @@ Core (Static-first)
 
 ---
 
-## ✨ Features
+## Features
 
-🟩 Static-first (default)
+### Static-first (default)
 
 This kit assumes:
 
@@ -46,7 +46,7 @@ This kit assumes:
 - Cloudflare Pages serves a static site
 - No SSR dependency on Drupal in production
 
-🟩 One-command Bootstrap
+### One-command bootstrap
 
 The interactive CLI:
 
@@ -56,13 +56,13 @@ The interactive CLI:
 - Wires Drupal → Astro environment variables
 - Generates example routes that map Drupal aliases into Astro pages
 
-🟩 Modern Frontend for Drupal
+### Modern frontend for Drupal
 
 Astro replaces Twig entirely.
 
 Use React/Svelte/Solid/Vue islands if you want interactivity.
 
-🟩 Clean Separation
+### Clean separation
 
 - Drupal → content
 - Astro → presentation
@@ -70,7 +70,7 @@ Use React/Svelte/Solid/Vue islands if you want interactivity.
 
 ---
 
-## 🧰 Prerequisites
+## Prerequisites
 
 Tool | Version | Install
 --- | --- | ---
@@ -84,7 +84,7 @@ Important: In static mode, Drupal does not need to be hosted anywhere. It only n
 
 ---
 
-## 🚦 Quick Start
+## Quick Start
 
 1. Clone this kit and initialize your project
 
@@ -142,7 +142,7 @@ You now have:
 
 ---
 
-## 🧱 Local Development Flow
+## Local Development Flow
 
 You maintain content in Drupal locally.
 
@@ -178,7 +178,7 @@ That means your homepage content is authored once in Drupal (usually at `/home`)
 
 ---
 
-## 📦 Build & Deployment
+## Build & Deployment
 
 ### Prerequisites for Deployment
 
@@ -259,7 +259,7 @@ Your changes will be live in seconds!
 
 ---
 
-## 🧬 Architecture
+## Architecture
 
 Drupal responsibilities
 
@@ -282,7 +282,7 @@ Cloudflare responsibilities
 
 ---
 
-## 🧪 Example Drupal → Astro Route
+## Example Drupal → Astro Route
 
 The setup script generates something like:
 
@@ -319,7 +319,7 @@ This means:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```plaintext
 my-project/
@@ -341,7 +341,7 @@ my-project/
 
 ---
 
-## 🩺 Troubleshooting
+## Troubleshooting
 
 Astro cannot reach Drupal during build
 
@@ -364,14 +364,6 @@ This kit expects published **Basic pages** to have a **URL alias** (e.g. `/about
 
 ---
 
-## 📝 License
+## License
 
 MIT
-
----
-
-## 🔮 Roadmap (Phase 2: Workers SSR)
-
-This kit is intentionally **static-first** (Pages + SSG). If you need SSR (host Drupal somewhere reachable, add previews/auth, fetch at request time), see:
-
-- `/Users/rob/Dev/Drupal_Astro_Kit/docs/phase-2-workers-ssr.md`
