@@ -65,7 +65,9 @@ The flow above shows:
 - **Free tier**: Sufficient for most static sites
 - **Custom domains**: Easy to configure
 
-### 4. CI/CD (Optional)
+### 4. CI/CD (Optional Advanced)
+
+> The V1 operating model is local-first. CI/CD is optional for teams that need automated deploys.
 
 For automated deployments:
 

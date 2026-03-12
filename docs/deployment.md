@@ -4,6 +4,8 @@ This guide covers how to deploy your Drupal + Astro static site to Cloudflare Pa
 
 > **V1 Static-First**: This kit deploys a fully static site to Cloudflare Pages. No server-side infrastructure required.
 
+> **V1 Default:** Build locally, deploy manually. CI/hosted Drupal paths are optional advanced territory — see the [CI/CD section](#cicd-automation-optional-advanced) at the bottom.
+
 ## Prerequisites
 
 1. **Cloudflare Account**: Sign up at [dash.cloudflare.com](https://dash.cloudflare.com)
@@ -89,7 +91,9 @@ The deployment workflow is simple:
 
 Changes go live in seconds.
 
-## CI/CD Automation (Optional)
+## CI/CD Automation (Optional Advanced)
+
+> **This section is optional.** The V1 operating model is local-first: DDEV for Drupal, local `npm run build`, manual deploy via `./scripts/deploy-frontend.sh`. CI/CD is for teams or projects that have outgrown the manual workflow.
 
 For automated deployments, you need Drupal accessible during builds.
 
@@ -124,6 +128,8 @@ jobs:
 ### Option 2: Hosted Drupal for CI
 
 For full CI/CD with automatic rebuilds:
+
+> **This requires hosting Drupal publicly.** The V1 kit is designed for local-only Drupal. Hosting Drupal is a significant step beyond the starter kit scope.
 
 1. Host Drupal on a staging server (Pantheon, Acquia, Platform.sh)
 2. Set `DRUPAL_API_URL` to the hosted instance
