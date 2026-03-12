@@ -3,6 +3,7 @@
 ## What this repo is
 
 - This is a **generator repo** (tooling + templates), not the final app.
+- This is a **static-first starter kit** for developers — not a platform, not an SSR framework, not an editorial CMS.
 - Running `./setup.sh` generates two **gitignored** projects:
   - `drupal-backend/` (Drupal 11 in DDEV)
   - `astro-frontend/` (Astro SSG site)
@@ -13,9 +14,11 @@
   - Specs/contracts: `specs/**`
   - Docs: `docs/**` and `docs/ai/**`
 
-# ExecPlans
+### What this repo is NOT
 
-When writing complex features or significant refactors, use an ExecPlan (as described in .agent/PLANS.md) from design to implementation.
+- Not an SSR framework — there is no server-side rendering, no Workers runtime, no edge rendering
+- Not an editorial platform — Drupal is a local-only content source, not a hosted CMS
+- Not a CI/CD pipeline — the default is local build + manual deploy
 
 ## Default architecture (static-first)
 
@@ -63,5 +66,5 @@ Run all: `cd audit && npm run audit:all`
 
 - Overview: `README.md`
 - AI-maintained maps/checklists: `docs/ai/**` (start with `docs/ai/CODEBASE_MAP.md` and `docs/ai/COMMANDS.md`)
-
-- Legacy SSR-era docs: `docs/ssr-guide.md`, `docs/cloudflare-setup.md`, `docs/github-actions.md` — all have banners marking them as Phase 2 (not current V1 architecture)
+- Planning artifacts: `.planning/` (roadmap, phase plans, state)
+- Legacy docs exist in `docs/` — files like `ssr-guide.md`, `cloudflare-setup.md`, `github-actions.md` are **not V1 architecture**; they carry Phase 2 banners and should not inform current work
