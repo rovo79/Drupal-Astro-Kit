@@ -66,11 +66,10 @@ Plans:
   2. CI/hosted build paths are labeled as "optional advanced" wherever they appear — not mixed in with the default flow
   3. .env.example reflects local-first as primary (local URLs as defaults, CI/hosted vars clearly marked optional)
   4. A developer setting up for the first time follows a local-first path without encountering CI/hosted instructions as if they were required
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: Document local-first build model and update .env.example
-- [ ] 04-02: Label CI/hosted paths as optional advanced
+- [ ] 04-01-PLAN.md — Restructure .env.example with local-first grouping and label CI/hosted as optional advanced in docs
 
 ## Progress
 
@@ -79,4 +78,4 @@ Plans:
 | 1. Identity | 2/2 | Complete | 2026-03-12 |
 | 2. Documentation Structure | 2/2 | Complete | 2026-03-12 |
 | 3. Publishing Workflow | 1/1 | Complete | 2026-03-12 |
-| 4. Build Source Model | 0/2 | Not started | - |
+| 4. Build Source Model | 0/1 | Not started | - |
