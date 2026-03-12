@@ -15,9 +15,9 @@ Requirements for this tightening pass. Each maps to roadmap phases.
 
 ### Documentation
 
-- [ ] **DOCS-01**: Docs are reorganized into "supported V1" vs "future/reference" with clear separation
-- [ ] **DOCS-02**: Legacy SSR-era docs (`ssr-guide.md`, `cloudflare-setup.md`, `github-actions.md`) are moved or clearly walled off from the happy path
-- [ ] **DOCS-03**: AI-maintained docs (`docs/ai/`) reflect the tightened V1 architecture
+- [x] **DOCS-01**: Docs are reorganized into "supported V1" vs "future/reference" with clear separation
+- [x] **DOCS-02**: Legacy SSR-era docs (`ssr-guide.md`, `cloudflare-setup.md`, `github-actions.md`) are moved or clearly walled off from the happy path
+- [x] **DOCS-03**: AI-maintained docs (`docs/ai/`) reflect the tightened V1 architecture
 
 ### Publishing
 
@@ -73,9 +73,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IDEN-01 | Phase 1: Identity | Complete |
 | IDEN-02 | Phase 1: Identity | Complete |
 | IDEN-03 | Phase 1: Identity | Complete |
-| DOCS-01 | Phase 2: Documentation Structure | Pending |
-| DOCS-02 | Phase 2: Documentation Structure | Pending |
-| DOCS-03 | Phase 2: Documentation Structure | Pending |
+| DOCS-01 | Phase 2: Documentation Structure | Complete |
+| DOCS-02 | Phase 2: Documentation Structure | Complete |
+| DOCS-03 | Phase 2: Documentation Structure | Complete |
 | PUBL-01 | Phase 3: Publishing Workflow | Pending |
 | PUBL-02 | Phase 3: Publishing Workflow | Pending |
 | PUBL-03 | Phase 3: Publishing Workflow | Pending |
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-12 after Phase 1 completion*
+*Last updated: 2026-03-12 after Phase 2 completion*
