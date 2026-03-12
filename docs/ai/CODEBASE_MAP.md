@@ -21,7 +21,7 @@
   - `scripts/seed-content.sh`: seeds sample Drupal content via `ddev exec drush php:eval`.
 - `audit/`: Node-based audit toolkit (structured JSON report) intended to validate setup/integration/CI/docs.
   - Entrypoint: `audit/index.js` (via `npm run audit:*` scripts in `audit/package.json`).
-- `docs/`: user-facing docs (architecture/deployment/troubleshooting/etc).
+- `docs/`: user-facing docs. V1 docs at root (`architecture.md`, `deployment.md`, `troubleshooting.md`); legacy SSR-era docs walled off in `docs/future/`.
 - `specs/`: “spec kit” style feature specs + contracts (e.g., audit report schema, JSON:API contracts, OpenAPI).
 - `.github/workflows/main.yml`: CI/CD workflow (expects generated artifacts in repo root; see risks in `docs/ai/SECURITY_AND_RISKS.md`).
 
@@ -57,7 +57,9 @@
   - No unit-test suite in this repo; validation is mostly via CI + manual workflows + `audit/` scripts.
   - CI config references: `.github/workflows/main.yml`
 - **Docs**
-  - User docs: `docs/`
+  - V1 user docs: `docs/architecture.md`, `docs/deployment.md`, `docs/troubleshooting.md`
+  - Legacy/future reference: `docs/future/` (SSR-era docs, walled off)
+  - AI-maintained docs: `docs/ai/`
   - Specs/decision records: `specs/`
 
 ## Assumptions

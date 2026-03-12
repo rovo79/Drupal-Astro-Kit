@@ -39,10 +39,10 @@
 ## Phase 2 (Future): Workers SSR
 
 - SSR/Workers is a potential Phase 2 addition, not the current architecture.
-- Legacy SSR-era docs (`docs/ssr-guide.md`, `docs/cloudflare-setup.md`, `docs/github-actions.md`) carry banners marking them as Phase 2 reference material.
+- Legacy SSR-era docs (`docs/future/ssr-guide.md`, `docs/future/cloudflare-setup.md`, `docs/future/github-actions.md`) are walled off in `docs/future/` as Phase 2 reference material.
 - The setup script writes **Pages** config (`astro-frontend/wrangler.jsonc`) and sets Astro to **static** output (`setup/ui.js` writes `astro-frontend/astro.config.mjs` with `output: 'static'`).
 
 ## Assumptions
 
 - Static-first is the intended default because `setup/ui.js` writes `output: 'static'` into the generated `astro-frontend/astro.config.mjs`; confirm by running `./setup.sh` and inspecting `astro-frontend/astro.config.mjs`.
-- SSR/Workers is Phase 2 future roadmap; see `docs/phase-2-workers-ssr.md` and the legacy docs with banners.
+- SSR/Workers is Phase 2 future roadmap; see `docs/future/phase-2-workers-ssr.md` and the legacy docs walled off in `docs/future/`.

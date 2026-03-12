@@ -28,7 +28,7 @@
 ## Configuration Drift (Correctness → Security Impact)
 
 - Cloudflare config format is now consistent: setup writes `astro-frontend/wrangler.jsonc`, CI deploys via `cloudflare/pages-action@v1`, and deploy script uses `wrangler pages deploy`.
-  - Legacy SSR-era docs (`docs/cloudflare-setup.md`) reference older config patterns but carry Phase 2 banners.
+  - Legacy SSR-era docs (`docs/future/cloudflare-setup.md`) reference older config patterns and are walled off in `docs/future/`.
 - Env var contract for Drupal API base:
   - Templates read `import.meta.env.API_BASE_URL`: `templates/astro-src/lib/drupal.ts`
   - Setup stamps both `API_BASE_URL` and `DRUPAL_JSONAPI_URL` (plus deprecated `DRUPAL_API_URL` for backwards compatibility): `setup/ui.js`
