@@ -37,11 +37,11 @@ Plans:
   2. Legacy SSR-era docs (ssr-guide.md, cloudflare-setup.md, github-actions.md, phase-2-workers-ssr.md) are moved to a clearly labeled subdirectory or carry unmissable warnings at the top
   3. A developer following the happy path (README → docs/) never encounters SSR-era content without an explicit "this is not V1" signal
   4. AI-maintained docs (docs/ai/) reflect the tightened V1 architecture and don't reference SSR as current
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Reorganize docs/ directory and wall off legacy content
-- [ ] 02-02: Update AI-maintained docs to reflect V1 architecture
+- [ ] 02-01-PLAN.md — Move legacy SSR-era docs to docs/future/ and fix cross-references in V1 docs
+- [ ] 02-02-PLAN.md — Update AI-maintained docs to reflect docs/future/ reorganization and V1 framing
 
 ### Phase 3: Publishing Workflow
 **Goal**: A developer understands exactly how content goes from Drupal to the live site — and understands that rebuild-to-publish is a deliberate design choice, not a limitation
