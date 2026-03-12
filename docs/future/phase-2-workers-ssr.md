@@ -54,9 +54,9 @@ SSR (Phase 2):
 
 The repo currently contains SSR/Workers-oriented docs that predate the static-first default:
 
-- `docs/ssr-guide.md`
-- `docs/cloudflare-setup.md`
-- `docs/github-actions.md`
+- `ssr-guide.md`
+- `cloudflare-setup.md`
+- `github-actions.md`
 
 These should be treated as **draft/legacy reference** until they’re updated to match the Phase 2 plan above.
 

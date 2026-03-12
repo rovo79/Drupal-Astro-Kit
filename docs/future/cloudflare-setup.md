@@ -2,8 +2,8 @@
 >
 > This document describes the Workers SSR architecture that is **not part of the current
 > static-first V1 stack**. It is preserved for future Phase 2 reference.
-> For current architecture, see [`docs/architecture.md`](architecture.md) and
-> [`docs/deployment.md`](deployment.md).
+> For current architecture, see [`docs/architecture.md`](../architecture.md) and
+> [`docs/deployment.md`](../deployment.md).
 
 # Cloudflare Workers Setup Guide
 
@@ -199,4 +199,4 @@ Common issues and solutions:
    - Review optimization settings
    - Monitor resource usage
 
-See [Troubleshooting Guide](troubleshooting.md) for more details.
+See [Troubleshooting Guide](../troubleshooting.md) for more details.

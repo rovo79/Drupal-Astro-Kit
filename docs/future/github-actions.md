@@ -2,8 +2,8 @@
 >
 > This document describes the Workers SSR architecture that is **not part of the current
 > static-first V1 stack**. It is preserved for future Phase 2 reference.
-> For current architecture, see [`docs/architecture.md`](architecture.md) and
-> [`docs/deployment.md`](deployment.md).
+> For current architecture, see [`docs/architecture.md`](../architecture.md) and
+> [`docs/deployment.md`](../deployment.md).
 
 > **Note**: The CI/CD pipeline (`main.yml`) has been rewritten for static-only
 > deployment. See the current workflow for up-to-date information.
@@ -203,4 +203,4 @@ Common issues and solutions:
    - Check Cloudflare access
    - Review DDEV configuration
 
-See [Troubleshooting Guide](troubleshooting.md) for more details.
+See [Troubleshooting Guide](../troubleshooting.md) for more details.
