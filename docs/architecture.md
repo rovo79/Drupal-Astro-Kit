@@ -133,6 +133,8 @@ Drupal path aliases map directly to Astro routes:
 - **Existing content**: While running `npm run dev`, edit pages in Drupal and simply refresh the browser to see the refreshed HTML; the dev server fetches the latest JSON:API output on navigation.
 - **New routes**: When you add a new path alias (a new page or custom alias), rerun `npm run build` so Astro can regenerate the static HTML that picks up the new route.
 
+For a full walkthrough of the publishing workflow and why rebuild-to-publish is deliberate, see [Publishing Workflow](publishing.md).
+
 ## Future: SSR Mode (V2+)
 
 If you need server-side rendering:

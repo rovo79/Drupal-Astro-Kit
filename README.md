@@ -29,6 +29,7 @@ Core (Static-first)
 - Quick Start
 - Local Development Flow
 - Build & Deployment
+- Publishing Workflow
 - Architecture
 - Project Structure
 - Troubleshooting
@@ -162,6 +163,8 @@ Cloudflare Pages Hosting
 
 - Editing an existing Basic page only requires saving in Drupal and refreshing the browser while `npm run dev` is running; the dev server pulls the latest JSON:API data on navigation.
 - Creating a new route or alias (new page or a different path) needs a fresh build (`npm run build`) so Astro can regenerate the static HTML that includes the new route.
+
+For the full publishing workflow and why rebuild-to-publish is intentional, see [docs/publishing.md](docs/publishing.md).
 
 There is no Drupal runtime dependency in production.
 
