@@ -17,3 +17,10 @@ setup/node_modules/*
 # Local agent/tooling artifacts (do not commit)
 .agent/
 skills/
+.sisyphus/
+.planning/
+audit/
+_verify/
+repomix.config.json
+.repomixignore
+*-output.xml
