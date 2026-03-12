@@ -25,7 +25,7 @@ This is a tightening pass — no new runtime capabilities, just clarity. The rep
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Rewrite README opening, headers, and framing; remove SSR roadmap section and emoji
+- [x] 01-01-PLAN.md — Rewrite README opening, headers, and framing; remove SSR roadmap section and emoji
 - [ ] 01-02-PLAN.md — Tighten AGENTS.md identity, remove outdated ExecPlans, update GitHub repo description
 
 ### Phase 2: Documentation Structure
@@ -76,7 +76,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Identity | 0/2 | Not started | - |
+| 1. Identity | 1/2 | In progress | - |
 | 2. Documentation Structure | 0/2 | Not started | - |
 | 3. Publishing Workflow | 0/1 | Not started | - |
 | 4. Build Source Model | 0/2 | Not started | - |
