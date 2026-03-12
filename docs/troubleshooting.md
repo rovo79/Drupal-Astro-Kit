@@ -216,7 +216,6 @@ If >100 pages, consider:
 1. **Documentation**
    - [Architecture Guide](architecture.md)
    - [Deployment Guide](deployment.md)
-   - [Cloudflare Setup](cloudflare-setup.md)
 
 2. **Community**
    - Astro Discord: https://astro.build/chat
