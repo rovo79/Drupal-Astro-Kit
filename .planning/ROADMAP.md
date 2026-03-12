@@ -52,10 +52,10 @@ Plans:
   2. The doc states plainly that "publish in Drupal" does not mean "live on the site" — and explains why this is intentional
   3. The canonical deploy command (`npm run build` → `wrangler pages deploy` or `scripts/deploy-frontend.sh`) is documented with copy-pasteable commands
   4. A developer new to the project can find and follow the publishing workflow without guessing
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: Write publishing workflow documentation with tradeoff statement
+- [ ] 03-01-PLAN.md — Create publishing workflow doc with tradeoff framing and wire into README/architecture
 
 ### Phase 4: Build Source Model
 **Goal**: A developer knows that local-first (DDEV + local build + manual deploy) is the supported V1 path, and that CI/hosted alternatives exist but are optional advanced territory
