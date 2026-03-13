@@ -427,7 +427,8 @@ async function normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv
       'exec',
       'bash',
       '-lc',
-      'for target in web vendor; do if [ -e "$target" ]; then sudo chmod -R a+rX "$target"; fi; done',
+      'if [ -e web ]; then sudo -n chmod -R a+rX web 2>/dev/null || chmod -R a+rX web; fi; ' +
+      'if [ -e vendor ]; then sudo -n chmod -R a+rX vendor 2>/dev/null || chmod -R a+rX vendor; fi',
     ],
     {
       cwd: drupalBackendPath,
