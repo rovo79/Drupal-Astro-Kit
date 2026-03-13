@@ -418,6 +418,24 @@ async function runDdev(args, options) {
   }
 }
 
+async function normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv }) {
+  // Mutagen can sync scaffolded Drupal files as owner-only inside the container.
+  // Drush still works as the project user, but nginx/php-fpm then returns 404 for
+  // otherwise valid routes because it cannot read the docroot.
+  await runDdev(
+    [
+      'exec',
+      'bash',
+      '-lc',
+      'for target in web vendor; do if [ -e "$target" ]; then sudo chmod -R a+rX "$target"; fi; done',
+    ],
+    {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+    },
+  );
+}
+
 async function checkPrerequisites() {
   p.log.step('Checking prerequisites...');
 
@@ -621,6 +639,8 @@ async function runSetup({
       });
     }
 
+    await normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv });
+
     await runDdev([
       'exec',
       'bash',
@@ -690,6 +710,8 @@ async function runSetup({
       cwd: drupalBackendPath,
       stdin: 'ignore',
     });
+
+    await normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv });
   });
 
   await runStep('apply-recipes', STEP_TEXTS[8].text, async () => {
