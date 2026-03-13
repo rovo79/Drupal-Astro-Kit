@@ -774,7 +774,28 @@ async function runSetup({
       throw new Error(`Failed to apply recipe "${recipeName}". Attempts:\n${errors.join('\n')}`);
     };
 
-    await runDdev(['exec', 'drush', 'en', 'jsonapi', 'path', 'pathauto', '-y'], {
+    const probeLinksetEndpoint = async (menuName) => {
+      const endpoint = `http://${projectName}.ddev.site/system/menu/${menuName}/linkset`;
+      try {
+        const response = await fetch(endpoint);
+        return {
+          endpoint,
+          ok: response.ok,
+          status: response.status,
+          statusText: response.statusText,
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          endpoint,
+          ok: false,
+          status: null,
+          statusText: message,
+        };
+      }
+    };
+
+    await runDdev(['exec', 'drush', 'en', 'jsonapi', 'menu_link_content', 'path', 'pathauto', '-y'], {
       cwd: drupalBackendPath,
       env: { ...process.env, ...dockerEnv },
     });
@@ -793,6 +814,8 @@ async function runSetup({
       env: { ...process.env, ...dockerEnv },
     });
 
+    await applyRecipe('dak_starter_content');
+
     await execa('bash', [path.join(projectRoot, 'scripts', 'seed-content.sh'), projectName], {
       cwd: projectRoot,
       stdin: 'ignore',
@@ -804,6 +827,34 @@ async function runSetup({
         env: { ...process.env, ...dockerEnv },
       });
       await applyRecipe('dak_structured_content');
+    }
+
+    await runDdev(['exec', 'drush', 'cr'], {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+      timeout: 300000,
+    });
+
+    const mainLinkset = await probeLinksetEndpoint('main');
+    if (!mainLinkset.ok) {
+      const statusDetails = mainLinkset.status === null
+        ? mainLinkset.statusText
+        : `${mainLinkset.status} ${mainLinkset.statusText}`;
+      throw new Error(
+        `Required Linkset endpoint check failed: ${mainLinkset.endpoint} (${statusDetails}). ` +
+        'Linkset may be disabled or Drupal caches may still need to be rebuilt (try: cd drupal-backend && ddev exec drush cr).',
+      );
+    }
+
+    const footerLinkset = await probeLinksetEndpoint('footer');
+    if (!footerLinkset.ok) {
+      const statusDetails = footerLinkset.status === null
+        ? footerLinkset.statusText
+        : `${footerLinkset.status} ${footerLinkset.statusText}`;
+      console.warn(
+        `[setup] Optional Linkset endpoint not available: ${footerLinkset.endpoint} (${statusDetails}). ` +
+        'Footer navigation will be empty until that menu exists.',
+      );
     }
   });
 

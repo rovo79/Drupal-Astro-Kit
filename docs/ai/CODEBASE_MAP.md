@@ -2,7 +2,7 @@
 
 - **What this repo is:** a starter-kit “generator” repo that bootstraps two *generated* projects:
   - `drupal-backend/` (Drupal 11 running in DDEV)
-  - `astro-frontend/` (Astro site that fetches Drupal JSON:API at build time and emits static HTML)
+  - `astro-frontend/` (Astro site that fetches Drupal JSON:API + Linkset at build time and emits static HTML)
 - **Primary user flow:** run `setup.sh` → interactive CLI provisions `.env`, Drupal (via DDEV), Astro frontend, and some config/templates.
 
 ## Top-Level Layout (what lives in git)
@@ -14,8 +14,8 @@
   - Key runtime template entrypoints:
     - `templates/astro-src/pages/index.astro` (homepage route).
     - `templates/astro-src/pages/[...slug].astro` (catch-all route + `getStaticPaths()`).
-    - `templates/astro-src/lib/drupal.ts` (JSON:API client + routing helpers).
-    - `templates/astro-src/layouts/Base.astro` (layout wrapper).
+    - `templates/astro-src/lib/drupal.ts` (JSON:API page client + Linkset menu client + routing helpers).
+    - `templates/astro-src/layouts/Base.astro` (layout wrapper; renders Linkset-backed navigation).
 - `scripts/`: helper scripts meant to run *after* setup created `drupal-backend/` + `astro-frontend/`.
   - `scripts/deploy-frontend.sh`: builds + deploys static site to Cloudflare Pages.
   - `scripts/seed-content.sh`: seeds sample Drupal content via `ddev exec drush php:eval`.

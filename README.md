@@ -53,6 +53,7 @@ The interactive CLI:
 
 - Creates a Drupal 11 project under DDEV
 - Installs JSON:API, CORS configuration, and a starter content type
+- Enables Drupal Linkset and seeds starter `main` + `footer` menus
 - Creates an Astro project
 - Wires Drupal → Astro environment variables
 - Generates example routes that map Drupal aliases into Astro pages
@@ -116,14 +117,25 @@ This will:
 - Map Drupal’s JSON:API into Astro
 - Generate working SSG routes: `src/pages/index.astro` + `src/pages/[...slug].astro`
 
-3. (Optional) Seed sample pages
+3. Starter content and menus are provisioned automatically
+
+The setup flow applies Drupal recipes and seeds starter navigation:
+
+- Pages: `/home`, `/about`, `/contact`
+- `main` menu: `Home`, `About`, `Contact`
+- `footer` menu: `About`, `Contact`
+
+It also validates the required endpoint:
+
+- `http://<project>.ddev.site/system/menu/main/linkset`
+
+Optional reseed command (safe to rerun):
 
 ```bash
 ./scripts/seed-content.sh
 ```
 
-This creates published Basic pages with stable aliases: `/home`, `/about`, `/contact`.
-These seeded Basic pages (and any new Basic page you save) get aliases automatically through the `pathauto.pattern.page` configuration created during setup. Manual alias editing is only needed for other content types or special cases.
+This ensures published Basic pages and menu links exist and keeps Linkset enabled.
 
 4. Launch local development
 
@@ -147,11 +159,16 @@ You now have:
 
 You maintain content in Drupal locally.
 
-Astro reads Drupal using JSON:API during `npm run dev` and `npm run build` to determine routes and render HTML. The deployed static site does not fetch Drupal at runtime.
+Astro reads Drupal during `npm run dev` and `npm run build`:
+
+- Page content and aliases from JSON:API
+- Navigation menus from Linkset (`/system/menu/<menu>/linkset`)
+
+The deployed static site does not fetch Drupal at runtime.
 
 ```text
 Drupal (local)
-    ↓ JSON:API
+    ↓ JSON:API + Linkset
 Astro build
     ↓
 Static HTML in dist/
@@ -162,6 +179,7 @@ Cloudflare Pages Hosting
 ### Content updates
 
 - Editing an existing Basic page only requires saving in Drupal and refreshing the browser while `npm run dev` is running; the dev server pulls the latest JSON:API data on navigation.
+- Editing a Drupal menu label only requires saving in Drupal and refreshing the browser while `npm run dev` is running; the dev server fetches fresh Linkset menu data per request.
 - Creating a new route or alias (new page or a different path) needs a fresh build (`npm run build`) so Astro can regenerate the static HTML that includes the new route.
 
 For the full publishing workflow and why rebuild-to-publish is intentional, see [docs/publishing.md](docs/publishing.md).
@@ -214,7 +232,7 @@ npm run build
 This will:
 
 1. Connect to your local Drupal's JSON:API
-2. Fetch all published pages
+2. Fetch all published pages and menu Linksets
 3. Generate static HTML in `dist/`
 
 ### Deploying to Cloudflare Pages
@@ -268,12 +286,13 @@ Drupal responsibilities
 
 - WYSIWYG content
 - Fields, media, menus
-- JSON:API output
+- JSON:API output (content + aliases)
+- Linkset output (menu trees)
 - URL aliases (Pathauto)
 
 Astro responsibilities
 
-- Fetch pages from Drupal at build time
+- Fetch pages from Drupal JSON:API and menus from Drupal Linkset at build time
 - Build static HTML from templates
 - Handle routing using Drupal aliases
 - Add interactivity using islands if desired

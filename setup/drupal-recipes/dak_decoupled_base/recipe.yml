@@ -4,6 +4,7 @@ type: 'Site'
 
 install:
   - jsonapi
+  - menu_link_content
   - path
   - pathauto
 
@@ -11,3 +12,10 @@ config:
   import:
     pathauto:
       - pathauto.pattern.page
+  actions:
+    system.feature_flags:
+      simpleConfigUpdate:
+        linkset_endpoint: true
+    system.site:
+      simpleConfigUpdate:
+        page.front: /home

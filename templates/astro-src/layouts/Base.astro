@@ -12,11 +12,18 @@ interface Props {
   canonicalUrl?: string;
 }
 
+import Navigation from '../components/Navigation.astro';
+import { getMenu } from '../lib/drupal';
+
 const { 
   title, 
   description = 'A page powered by Drupal and Astro',
   canonicalUrl 
 } = Astro.props;
+
+const currentPath = Astro.url.pathname;
+const mainMenu = await getMenu('main', { required: true });
+const footerMenu = await getMenu('footer', { required: false });
 ---
 
 <!DOCTYPE html>
@@ -76,9 +83,7 @@ const {
   <body>
     <div class="container">
       <header class="site-header">
-        <nav>
-          <a href="/" class="site-logo">Home</a>
-        </nav>
+        <Navigation items={mainMenu} label="Primary" currentPath={currentPath} className="main-navigation" />
       </header>
       
       <main>
@@ -86,6 +91,9 @@ const {
       </main>
       
       <footer class="site-footer">
+        {footerMenu.length > 0 && (
+          <Navigation items={footerMenu} label="Footer" currentPath={currentPath} className="footer-navigation" />
+        )}
         <p>Built with <a href="https://www.drupal.org/" target="_blank" rel="noopener">Drupal</a> + <a href="https://astro.build/" target="_blank" rel="noopener">Astro</a></p>
       </footer>
     </div>
@@ -105,16 +113,25 @@ const {
         border-bottom: 1px solid #e5e7eb;
         margin-bottom: 2rem;
       }
-      
-      .site-logo {
-        font-weight: 600;
-        font-size: 1.25rem;
-        color: #1a1a1a;
+
+      .main-navigation :global(.navigation-list) {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
       }
-      
-      .site-logo:hover {
-        text-decoration: none;
-        color: #0969da;
+
+      .main-navigation :global(.navigation-item) {
+        position: relative;
+      }
+
+      .main-navigation :global(.navigation-sublist) {
+        margin-left: 0;
+        padding-left: 0.75rem;
+      }
+
+      .main-navigation :global(.navigation-link) {
+        font-weight: 500;
       }
       
       main {
@@ -128,6 +145,17 @@ const {
         color: #666;
         font-size: 0.875rem;
         text-align: center;
+      }
+
+      .footer-navigation {
+        margin-bottom: 1rem;
+      }
+
+      .footer-navigation :global(.navigation-list) {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
       }
     </style>
   </body>

@@ -1,0 +1,35 @@
+---
+import type { DrupalMenuItem } from '../lib/drupal';
+import NavigationItem from './NavigationItem.astro';
+
+interface Props {
+  items: DrupalMenuItem[];
+  label: string;
+  currentPath?: string;
+  className?: string;
+}
+
+const {
+  items,
+  label,
+  currentPath = '/',
+  className = '',
+} = Astro.props;
+---
+
+<nav class:list={['navigation', className]} aria-label={label}>
+  <ul class="navigation-list">
+    {items.map((item) => (
+      <NavigationItem item={item} currentPath={currentPath} />
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .navigation-list,
+  .navigation-sublist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+</style>

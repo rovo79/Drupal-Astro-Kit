@@ -12,13 +12,13 @@ This document provides a high-level overview of how the Drupal + Astro starter k
 │  Drupal Backend │────►│  Astro Build    │────►│ Cloudflare      │
 │  (DDEV Local)   │     │  (Static SSG)   │     │   Pages         │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
-      JSON:API              getStaticPaths()        Static HTML
+   JSON:API + Linkset       getStaticPaths()        Static HTML
       at build time         generates HTML          served globally
 ```
 
 The flow above shows:
 
-1. **Drupal Backend**: Runs locally via DDEV, provides content via JSON:API
+1. **Drupal Backend**: Runs locally via DDEV, provides page content via JSON:API and navigation via Linkset
 2. **Astro Build**: Fetches all content at build time, generates static HTML
 3. **Cloudflare Pages**: Serves static files globally via CDN
 
@@ -55,6 +55,7 @@ The flow above shows:
 
 - **Local only**: Runs on DDEV in development
 - **JSON:API**: Provides content via `/jsonapi/node/page`
+- **Linkset**: Provides menu trees via `/system/menu/<menu-name>/linkset`
 - **Path aliases**: URL structure defined in Drupal, replicated in Astro routes
 - **Not exposed**: No public Drupal instance needed in production
 
@@ -88,7 +89,7 @@ For automated deployments:
 │             │     │  :4321      │     │  :80        │
 └─────────────┘     └─────────────┘     └─────────────┘
                     
-In dev mode, Astro fetches fresh content on each page navigation.
+In dev mode, Astro fetches fresh page and menu data on each page navigation.
 Hot reload works for Astro component changes.
 ```
 
@@ -99,8 +100,9 @@ Build Time:
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │             │     │             │     │             │
 │  Drupal     │────►│  npm run    │────►│  dist/      │
-│  JSON:API   │     │  build      │     │  static     │
-│             │     │             │     │  HTML       │
+│  JSON:API + │     │  build      │     │  static     │
+│  Linkset    │     │             │     │  HTML       │
+│             │     │             │     │             │
 └─────────────┘     └─────────────┘     └─────────────┘
 
 Production:
@@ -132,7 +134,7 @@ Drupal path aliases map directly to Astro routes:
 
 ## Content Updates
 
-- **Existing content**: While running `npm run dev`, edit pages in Drupal and simply refresh the browser to see the refreshed HTML; the dev server fetches the latest JSON:API output on navigation.
+- **Existing content**: While running `npm run dev`, edit pages or menu labels in Drupal and refresh to see updated HTML; the dev server fetches fresh JSON:API and Linkset output on navigation.
 - **New routes**: When you add a new path alias (a new page or custom alias), rerun `npm run build` so Astro can regenerate the static HTML that picks up the new route.
 
 For a full walkthrough of the publishing workflow and why rebuild-to-publish is deliberate, see [Publishing Workflow](publishing.md).

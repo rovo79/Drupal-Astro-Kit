@@ -1,0 +1,72 @@
+---
+import type { DrupalMenuItem } from '../lib/drupal';
+
+interface Props {
+  item: DrupalMenuItem;
+  currentPath?: string;
+}
+
+const {
+  item,
+  currentPath = '/',
+} = Astro.props;
+
+const normalizedCurrentPath =
+  currentPath.length > 1 && currentPath.endsWith('/')
+    ? currentPath.replace(/\/+$/, '')
+    : currentPath;
+
+const isCurrent =
+  item.href === normalizedCurrentPath ||
+  (item.href !== '/' && normalizedCurrentPath.startsWith(`${item.href}/`));
+---
+
+<li class="navigation-item">
+  <a
+    href={item.href}
+    class:list={['navigation-link', isCurrent && 'is-current']}
+    target={item.external ? '_blank' : undefined}
+    rel={item.external ? 'noopener noreferrer' : undefined}
+  >
+    {item.title}
+  </a>
+
+  {item.children.length > 0 && (
+    <ul class="navigation-sublist">
+      {item.children.map((child) => (
+        <Astro.self item={child} currentPath={currentPath} />
+      ))}
+    </ul>
+  )}
+</li>
+
+<style>
+  .navigation-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .navigation-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .navigation-link:hover {
+    text-decoration: underline;
+  }
+
+  .navigation-link.is-current {
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.2rem;
+  }
+
+  .navigation-sublist {
+    margin-left: 1rem;
+    border-left: 1px solid #e5e7eb;
+    padding-left: 0.75rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+</style>

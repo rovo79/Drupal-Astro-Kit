@@ -15,7 +15,7 @@
 
 ## Build (static SSG)
 
-- Build static output (requires Drupal JSON:API reachable during build):
+- Build static output (requires Drupal JSON:API + Linkset reachable during build):
   - `cd astro-frontend && npm run build`
 
 ## Deploy (Cloudflare Pages)
@@ -27,8 +27,13 @@
 
 ## Seed Content (Drupal)
 
-- Create sample pages in Drupal:
+- Create sample pages and starter menus in Drupal:
   - `./scripts/seed-content.sh` (assumes `drupal-backend/` exists and DDEV is running)
+
+## Linkset verification
+
+- Verify required main menu Linkset endpoint:
+  - `curl -s http://<project>.ddev.site/system/menu/main/linkset`
 
 ## Audit / Validation Toolkit
 
@@ -43,4 +48,3 @@
 
 - Cloudflare deployment requires `.env` to contain `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and `PROJECT_NAME`; confirm by inspecting `.env.example` and `scripts/deploy-frontend.sh`.
 - Setup writes `astro-frontend/wrangler.jsonc` (Pages config, JSONC format); confirm by running setup and inspecting the generated file.
-

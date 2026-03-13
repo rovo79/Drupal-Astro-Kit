@@ -1,5 +1,5 @@
 name: 'DAK: Starter content'
-description: 'Starter Basic Pages with stable aliases for Astro SSG.'
+description: 'Starter Basic Pages and navigation links with stable aliases for Astro SSG.'
 type: 'Site'
 
 install:
@@ -7,4 +7,3 @@ install:
 
 content:
   - starter
-

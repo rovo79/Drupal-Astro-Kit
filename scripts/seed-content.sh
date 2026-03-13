@@ -85,7 +85,7 @@ set -euo pipefail
 
 cat > /tmp/dak_seed_content.php <<'PHP'
 <?php
-// Create sample pages for the starter kit
+// Create sample pages and navigation links for the starter kit.
 $pages = [
   [
     'title' => 'Homepage',
@@ -104,8 +104,8 @@ $pages = [
   ],
 ];
 
-$created = 0;
-$skipped = 0;
+$created_pages = 0;
+$skipped_pages = 0;
 
 foreach ($pages as $page_data) {
   // Check if page with this alias already exists
@@ -113,7 +113,7 @@ foreach ($pages as $page_data) {
   $existing_alias = $path_storage->loadByProperties(['alias' => $page_data['alias']]);
 
   if (!empty($existing_alias)) {
-    $skipped++;
+    $skipped_pages++;
     continue;
   }
 
@@ -132,10 +132,70 @@ foreach ($pages as $page_data) {
     'uid' => 1,
   ]);
   $node->save();
-  $created++;
+  $created_pages++;
 }
 
-echo "Created: $created pages, Skipped: $skipped (already exist)\n";
+// Align Drupal front page with the starter homepage alias contract.
+\Drupal::configFactory()
+  ->getEditable('system.site')
+  ->set('page.front', '/home')
+  ->save();
+
+// Ensure Linkset endpoint is enabled for Astro navigation fetches.
+\Drupal::configFactory()
+  ->getEditable('system.feature_flags')
+  ->set('linkset_endpoint', TRUE)
+  ->save();
+
+/** @var \Drupal\Core\Entity\EntityStorageInterface $menu_link_storage */
+$menu_link_storage = \Drupal::entityTypeManager()->getStorage('menu_link_content');
+
+$menu_links = [
+  ['title' => 'Home', 'menu_name' => 'main', 'uri' => 'route:<front>', 'weight' => -50],
+  ['title' => 'About', 'menu_name' => 'main', 'uri' => 'internal:/about', 'weight' => -40],
+  ['title' => 'Contact', 'menu_name' => 'main', 'uri' => 'internal:/contact', 'weight' => -30],
+  ['title' => 'About', 'menu_name' => 'footer', 'uri' => 'internal:/about', 'weight' => 0],
+  ['title' => 'Contact', 'menu_name' => 'footer', 'uri' => 'internal:/contact', 'weight' => 1],
+];
+
+$created_links = 0;
+$skipped_links = 0;
+
+foreach ($menu_links as $link_data) {
+  $candidates = $menu_link_storage->loadByProperties([
+    'menu_name' => $link_data['menu_name'],
+    'title' => $link_data['title'],
+  ]);
+
+  $already_exists = FALSE;
+  foreach ($candidates as $candidate) {
+    $uri = (string) ($candidate->get('link')->first()->getValue()['uri'] ?? '');
+    if ($uri === $link_data['uri']) {
+      $already_exists = TRUE;
+      break;
+    }
+  }
+
+  if ($already_exists) {
+    $skipped_links++;
+    continue;
+  }
+
+  $menu_link = \Drupal\menu_link_content\Entity\MenuLinkContent::create([
+    'title' => $link_data['title'],
+    'menu_name' => $link_data['menu_name'],
+    'link' => ['uri' => $link_data['uri']],
+    'weight' => $link_data['weight'],
+    'enabled' => TRUE,
+  ]);
+  $menu_link->save();
+  $created_links++;
+}
+
+\Drupal::service('router.builder')->rebuild();
+
+echo "Pages created: $created_pages, skipped: $skipped_pages\n";
+echo "Menu links created: $created_links, skipped: $skipped_links\n";
 PHP
 
 drush php:script /tmp/dak_seed_content.php
@@ -143,9 +203,13 @@ BASH
 
 print_status "Sample content created successfully!"
 echo ""
-echo "Created pages:"
+echo "Starter pages:"
 echo "  - Homepage (/home)"
 echo "  - About (/about)"
 echo "  - Contact (/contact)"
+echo ""
+echo "Starter menus:"
+echo "  - Main: Home, About, Contact"
+echo "  - Footer: About, Contact"
 echo ""
 echo "View content: http://$PROJECT_NAME.ddev.site/admin/content"
