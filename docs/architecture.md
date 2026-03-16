@@ -116,6 +116,83 @@ Production:
 No Drupal involved at runtime!
 ```
 
+## Page Composition Strategy
+
+For landing pages, homepages, and most listing pages, the default composition flow is:
+
+```text
+Astro page/template
+-> calls the Drupal data layer
+-> Drupal JSON:API queries entity collections directly
+-> Astro assembles the final page
+```
+
+Not:
+
+```text
+Astro page/template
+-> consumes a Drupal View by default
+```
+
+This kit treats Astro as the owner of layout, section ordering, and presentation. Drupal owns the content model and exposes it through core JSON:API resources. In practice, that means Astro should usually fetch entity collections directly with JSON:API filters, sorting, pagination, sparse fieldsets, and includes, then compose the page in the frontend.
+
+### Default: direct JSON:API queries
+
+Use direct JSON:API collection queries when:
+
+- Astro owns the page composition
+- The data maps cleanly to Drupal entity types and bundles
+- Section ordering and layout belong in the frontend
+- You want explicit, predictable contracts that normalize cleanly in Astro
+
+Typical examples:
+
+```text
+Homepage hero/supporting sections
+-> fetch featured content directly from node/product collections
+
+Collections page
+-> fetch collection entities directly
+
+Guides or category pages
+-> fetch filtered entity collections directly
+```
+
+For example, a homepage can stay frontend-owned while Drupal remains the source of truth for content flags:
+
+```text
+Section 1: featured collections
+-> filter collection nodes by a homepage flag
+
+Section 2: featured products
+-> filter products by featured=true and sort by weight
+
+Section 3: editor picks
+-> filter products by editor_pick=true
+
+Section 4: featured guides
+-> filter guides by featured=true
+```
+
+### Exception: View-backed feeds
+
+Use a Drupal View-backed JSON endpoint only when the extra Drupal-side query layer is deliberate:
+
+- Editors or admins need to control the feed logic in Drupal
+- The query is complex enough that centralizing it in Drupal is worth the extra abstraction
+- Multiple frontends or consumers should share the exact same curated result set
+
+If a View is used, it should be treated as a targeted exception for a reusable feed, not the primary population mechanism for ordinary landing pages.
+
+### Search is its own concern
+
+Search should be evaluated separately from page composition:
+
+- Simple browsing can start with direct JSON:API filtering
+- Faceted or relevance-driven search usually deserves a dedicated Search API-based decoupled endpoint
+
+That keeps homepage and listing-page architecture simple while leaving room for a more capable search backend later.
+
 ## URL Routing
 
 Drupal path aliases map directly to Astro routes:
@@ -153,3 +230,9 @@ This is an advanced configuration for use cases like:
 - Personalized content
 - Very large sites (>1000 pages)
 - Real-time content updates
+
+## References
+
+- [Drupal JSON:API module](https://www.drupal.org/docs/core-modules-and-themes/core-modules/jsonapi-module)
+- [Drupal JSON:API filtering](https://www.drupal.org/docs/core-modules-and-themes/core-modules/jsonapi-module/filtering)
+- [JSON:API Views module](https://www.drupal.org/project/jsonapi_views)

@@ -197,6 +197,20 @@ Set `HOMEPAGE_ALIAS` in your `.env` file (default: `/home`). The Astro homepage 
 
 That means your homepage content is authored once in Drupal (usually at `/home`) and appears at both `/` and `/home` in Astro.
 
+### Landing pages and feeds
+
+For this starter kit, Astro should usually compose landing pages directly from Drupal JSON:API entity queries, not from Drupal Views.
+
+Use direct JSON:API queries when:
+
+- Astro owns the page layout and section ordering
+- The data maps directly to content types or other entities
+- You want explicit frontend-side normalization and predictable contracts
+
+Use a View-backed JSON endpoint only when Drupal should own the feed logic, such as editor-managed curated feeds or unusually complex shared queries.
+
+Search is a separate concern: direct JSON:API filtering is fine for simple browse flows, but faceted search usually deserves a dedicated Search API-style endpoint later.
+
 ---
 
 ## Build & Deployment

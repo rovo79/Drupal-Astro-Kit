@@ -35,6 +35,7 @@ Drupal runs locally (DDEV) and exposes JSON:API. Astro fetches JSON:API **at bui
   - `setup/ui.js` (stamps/derives vars)
   - `templates/astro-src/**` (reads vars via `import.meta.env`)
 - **Static-first is the default.** Avoid reintroducing SSR/Workers assumptions unless explicitly requested; the current setup writes Astro `output: 'static'` and Pages config (`wrangler.jsonc` in the generated frontend).
+- **Prefer direct Drupal JSON:API entity queries over Drupal Views for Astro page composition.** Use Views-backed JSON endpoints only when the feed logic should live in Drupal, such as editorially managed curated feeds or unusually complex shared queries.
 - **Shell note (zsh):** when referencing template files like `templates/astro-src/pages/[...slug].astro`, quote paths to avoid glob expansion.
 
 ## Common commands
@@ -66,5 +67,5 @@ Run all: `cd audit && npm run audit:all`
 
 - Overview: `README.md`
 - AI-maintained maps/checklists: `docs/ai/**` (start with `docs/ai/CODEBASE_MAP.md` and `docs/ai/COMMANDS.md`)
-- Planning artifacts: `.planning/` (roadmap, phase plans, state)
+- Planning artifacts: `.agent/execplans/` for ExecPlans and `.agent/PLANS.md` for the ExecPlan contract. Plans do not live in `.planning/`.
 - Legacy docs exist in `docs/` — files like `ssr-guide.md`, `cloudflare-setup.md`, `github-actions.md` are **not V1 architecture**; they carry Phase 2 banners and should not inform current work
