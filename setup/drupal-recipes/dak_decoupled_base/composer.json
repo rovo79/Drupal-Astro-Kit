@@ -6,6 +6,8 @@
     "version": "1.0.0",
     "require": {
         "drupal/core": "^11",
-        "drupal/pathauto": "^1.13"
+        "drupal/pathauto": "^1.13",
+        "drupal/jsonapi_extras": "^3.28",
+        "drupal/jsonapi_include": "^2.0"
     }
 }
