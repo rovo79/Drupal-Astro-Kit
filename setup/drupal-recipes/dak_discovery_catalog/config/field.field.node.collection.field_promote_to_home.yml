@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_promote_to_home
+    - node.type.collection
+
+
+id: node.collection.field_promote_to_home
+field_name: field_promote_to_home
+entity_type: node
+bundle: collection
+label: Promote to Home
+description: 
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings: {}
+

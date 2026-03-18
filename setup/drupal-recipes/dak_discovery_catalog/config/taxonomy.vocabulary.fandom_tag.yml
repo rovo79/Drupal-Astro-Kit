@@ -1,0 +1,8 @@
+langcode: en
+status: true
+dependencies: { }
+name: 'Fandom Tag'
+vid: fandom_tag
+description: 'Fandom tags.'
+weight: 0
+new_revision: false

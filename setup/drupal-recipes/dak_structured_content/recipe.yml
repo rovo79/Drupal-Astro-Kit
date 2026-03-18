@@ -2,6 +2,9 @@ name: 'DAK: Structured content (Paragraphs)'
 description: 'Optional structured content model: headless_page with Paragraphs sections.'
 type: 'Site'
 
+recipes:
+  - dak-decoupled-base
+
 install:
   - paragraphs
   - entity_reference_revisions

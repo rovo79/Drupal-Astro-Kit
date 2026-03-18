@@ -1,0 +1,25 @@
+{
+  "core": [
+    {
+      "package": "dak/dak-decoupled-base",
+      "name": "dak_decoupled_base",
+      "label": "Decoupled base (JSON:API + Pathauto + Linkset)",
+      "required": true
+    },
+    {
+      "package": "dak/dak-starter-content",
+      "name": "dak_starter_content",
+      "label": "Starter content (Basic Pages + navigation)",
+      "required": true
+    }
+  ],
+  "optional": [
+    {
+      "package": "dak/dak-structured-content",
+      "name": "dak_structured_content",
+      "label": "Structured content (Paragraphs)",
+      "description": "Adds block-based content building with Paragraphs",
+      "prompt": "enableStructuredContent"
+    }
+  ]
+}

@@ -47,6 +47,83 @@ Drupal runs locally (DDEV) and exposes JSON:API. Astro fetches JSON:API **at bui
 - Deploy (Pages): `./scripts/deploy-frontend.sh`
 - Audits: `cd audit && npm install && npm run audit:all`
 
+## Adding custom Drupal recipes
+
+DAK treats recipes as **Composer packages** of type `drupal-recipe`, following Drupal's native recipe model. Dependencies belong in the recipe's `composer.json`, not in DAK-specific metadata.
+
+### Recipe package structure
+
+Each recipe is a folder containing at minimum:
+
+```
+my_recipe/
+  composer.json   # type: "drupal-recipe", lists Composer dependencies
+  recipe.yml      # Drupal recipe definition (install, config, recipes composition)
+  config/         # optional Drupal config YAML files
+  content/        # optional default content
+```
+
+### Recipe `composer.json` example
+
+```json
+{
+    "name": "acme/my-custom-recipe",
+    "description": "Adds a custom content model.",
+    "type": "drupal-recipe",
+    "license": ["GPL-2.0-or-later"],
+    "require": {
+        "drupal/core": "^11",
+        "drupal/some_contrib_module": "^1",
+        "dak/dak-decoupled-base": "*"
+    }
+}
+```
+
+Composer resolves all transitive dependencies. No separate module pre-enable or package list is needed.
+
+### Recipe ordering
+
+Use the `recipes:` key in `recipe.yml` for composition ordering, not weights:
+
+```yaml
+name: My Custom Recipe
+type: Site
+recipes:
+  - dak_decoupled_base
+install:
+  - some_module
+```
+
+### Adding a recipe to a DAK project
+
+**For published recipes:** Add the package to your project's generated `composer.json` and run `composer require`.
+
+**For local/development recipes:** Place the recipe folder under `setup/drupal-recipes/` and add an entry to `setup/recipe-manifest.json`. The setup script registers each recipe as a Composer path repository, then `composer require` resolves it locally.
+
+### Recipe manifest (`setup/recipe-manifest.json`)
+
+The manifest tells the setup wizard which recipes to offer. It contains only UI metadata — no dependency or ordering information:
+
+```json
+{
+  "core": [
+    { "package": "dak/dak-decoupled-base", "name": "dak_decoupled_base", "label": "Decoupled base", "required": true }
+  ],
+  "optional": [
+    { "package": "dak/dak-structured-content", "name": "dak_structured_content", "label": "Structured content", "prompt": "enableStructuredContent" }
+  ]
+}
+```
+
+### What belongs where
+
+| Concern | Where it lives |
+|---|---|
+| Composer dependencies | Recipe `composer.json` |
+| Module installs, config | Recipe `recipe.yml` |
+| Recipe ordering | `recipes:` key in `recipe.yml` |
+| UI labels, optional prompts | `setup/recipe-manifest.json` |
+
 ## Testing & validation
 
 - There is **no dedicated unit/integration test suite** at repo root.

@@ -673,114 +673,93 @@ async function runSetup({
 
   await runStep('configure-drupal', STEP_TEXTS[7].text, async () => {
     const recipesSrcRoot = path.join(projectRoot, 'setup', 'drupal-recipes');
-    const recipesDestRoot = path.join(drupalBackendPath, 'web', 'recipes', 'dak');
-    await fs.mkdir(recipesDestRoot, { recursive: true });
+    const recipesDir = path.join(drupalBackendPath, 'recipes');
+    await fs.mkdir(recipesDir, { recursive: true });
 
-    const recipeDirs = [
-      { name: 'dak_decoupled_base', required: true },
-      { name: 'dak_starter_content', required: true },
-      { name: 'dak_structured_content', required: false },
-    ];
+    // Load recipe manifest
+    const manifestPath = path.join(projectRoot, 'setup', 'recipe-manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
 
-    for (const recipe of recipeDirs) {
-      const src = path.join(recipesSrcRoot, recipe.name);
-      const dest = path.join(recipesDestRoot, recipe.name);
-      const exists = await pathExists(src);
-      if (!exists) {
-        if (recipe.required) {
-          throw new Error(`Missing recipe source folder: ${src}`);
-        }
-        continue;
+    // Collect applicable recipe entries from manifest
+    const recipeEntries = [...manifest.core];
+    for (const entry of (manifest.optional || [])) {
+      if (entry.prompt && !{ enableStructuredContent }[entry.prompt]) continue;
+      recipeEntries.push(entry);
+    }
+
+    // Make the generated Drupal project recipe-ready:
+    // Add installer-path for type:drupal-recipe → ./recipes/{$name}
+    // Add core-recipe-unpack plugin allowance
+    const composerJsonPath = path.join(drupalBackendPath, 'composer.json');
+    const composerJson = JSON.parse(await fs.readFile(composerJsonPath, 'utf8'));
+
+    // Allow recipes to pull in dev/alpha/beta dependencies
+    composerJson['minimum-stability'] = 'dev';
+    composerJson['prefer-stable'] = true;
+
+    const extra = composerJson.extra || {};
+    const installerPaths = extra['installer-paths'] || {};
+    installerPaths['./recipes/{$name}'] = ['type:drupal-recipe'];
+    extra['installer-paths'] = installerPaths;
+    composerJson.extra = extra;
+
+    const configSection = composerJson.config || {};
+    const allowPlugins = configSection['allow-plugins'] || {};
+    allowPlugins['drupal/core-recipe-unpack'] = true;
+    configSection['allow-plugins'] = allowPlugins;
+    composerJson.config = configSection;
+
+    // Register local recipe paths as Composer path repositories (with symlink: false
+    // so files are copied into the project — symlinks break inside the DDEV container
+    // because they point to host-only paths)
+    const repositories = composerJson.repositories || {};
+    for (const entry of recipeEntries) {
+      const localRecipePath = path.join(recipesSrcRoot, entry.name);
+      if (await pathExists(path.join(localRecipePath, 'composer.json'))) {
+        repositories[entry.name] = {
+          type: 'path',
+          url: localRecipePath,
+          options: { symlink: false },
+        };
       }
-      await copyDir(src, dest);
     }
+    composerJson.repositories = repositories;
 
-    for (const recipe of recipeDirs.filter((item) => item.required || enableStructuredContent)) {
-      const recipeYmlPath = path.join(recipesDestRoot, recipe.name, 'recipe.yml');
-      if (!(await pathExists(recipeYmlPath))) {
-        throw new Error(`Recipe copy failed (missing recipe.yml): ${recipeYmlPath}`);
-      }
+    await fs.writeFile(composerJsonPath, JSON.stringify(composerJson, null, 4) + '\n');
+
+    // Require core-recipe-unpack, then require all recipe packages
+    // Composer handles all transitive dependencies (contrib modules, etc.)
+    await execa('composer', [
+      'require', 'drupal/core-recipe-unpack', '--working-dir', drupalBackendPath, '--no-interaction',
+    ], { cwd: drupalBackendPath, stdin: 'ignore' });
+
+    const recipePackages = recipeEntries.map((e) => `${e.package}:*`);
+    if (recipePackages.length > 0) {
+      await execa('composer', [
+        'require', '--working-dir', drupalBackendPath, '--no-interaction', ...recipePackages,
+      ], { cwd: drupalBackendPath, stdin: 'ignore' });
     }
-
-    const composerRequires = ['drupal/pathauto', 'drupal/default_content:^2.0@beta'];
-    if (enableStructuredContent) {
-      composerRequires.push('drupal/paragraphs', 'drupal/entity_reference_revisions');
-    }
-
-    await execa('composer', ['require', '--working-dir', drupalBackendPath, '--no-interaction', ...composerRequires], {
-      cwd: drupalBackendPath,
-      stdin: 'ignore',
-    });
 
     await normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv });
   });
 
   await runStep('apply-recipes', STEP_TEXTS[8].text, async () => {
-    const resolveRecipePath = async (recipeName) => {
-      const recipeCandidates = [
-        {
-          hostPath: `recipes/${recipeName}`,
-          commandPath: `../recipes/${recipeName}`,
-        },
-        {
-          hostPath: `recipes/dak/${recipeName}`,
-          commandPath: `../recipes/dak/${recipeName}`,
-        },
-        {
-          hostPath: `web/recipes/${recipeName}`,
-          commandPath: `../web/recipes/${recipeName}`,
-        },
-        {
-          hostPath: `web/recipes/dak/${recipeName}`,
-          commandPath: `../web/recipes/dak/${recipeName}`,
-        },
-      ];
-
-      for (const candidate of recipeCandidates) {
-        const recipeYml = path.join(drupalBackendPath, candidate.hostPath, 'recipe.yml');
-        if (await pathExists(recipeYml)) {
-          return candidate.commandPath;
-        }
-      }
-      return null;
-    };
-
-    const applyRecipe = async (recipeName) => {
-      const recipePath = await resolveRecipePath(recipeName);
-      if (!recipePath) {
-        throw new Error(`Recipe "${recipeName}" was copied but could not be resolved for application.`);
-      }
+    const applyRecipe = async (recipeDirName) => {
+      // Recipes are installed by Composer into ./recipes/{package-short-name}
+      const recipePath = `../recipes/${recipeDirName}`;
 
       const attempts = [
         {
-          label: 'drush recipe:apply (path)',
+          label: 'drush recipe:apply',
           ddevArgs: ['exec', 'drush', 'recipe:apply', recipePath, '-y'],
-          command: `drush recipe:apply ${recipePath} -y`,
         },
         {
-          label: 'drush recipe:apply (name)',
-          ddevArgs: ['exec', 'drush', 'recipe:apply', recipeName, '-y'],
-          command: `drush recipe:apply ${recipeName} -y`,
-        },
-        {
-          label: 'drush recipe (path)',
+          label: 'drush recipe',
           ddevArgs: ['exec', 'drush', 'recipe', recipePath, '-y'],
-          command: `drush recipe ${recipePath} -y`,
         },
         {
-          label: 'drush recipe (name)',
-          ddevArgs: ['exec', 'drush', 'recipe', recipeName, '-y'],
-          command: `drush recipe ${recipeName} -y`,
-        },
-        {
-          label: 'core script (path)',
+          label: 'core script',
           ddevArgs: ['exec', 'php', 'web/core/scripts/drupal', 'recipe', recipePath],
-          command: `php web/core/scripts/drupal recipe ${recipePath}`,
-        },
-        {
-          label: 'core script (name)',
-          ddevArgs: ['exec', 'php', 'web/core/scripts/drupal', 'recipe', recipeName],
-          command: `php web/core/scripts/drupal recipe ${recipeName}`,
         },
       ];
 
@@ -790,7 +769,7 @@ async function runSetup({
           await runDdev(attempt.ddevArgs, { cwd: drupalBackendPath, env: { ...process.env, ...dockerEnv } });
           return;
         } catch (error) {
-          errors.push(`- ${attempt.label}: Failed to execute command \`${attempt.command}\`: ${error.message}`);
+          errors.push(`- ${attempt.label}: ${firstErrorLine(error)}`);
         }
       }
 
@@ -818,38 +797,30 @@ async function runSetup({
       }
     };
 
-    await runDdev(['exec', 'drush', 'en', 'jsonapi', 'menu_link_content', 'path', 'pathauto', '-y'], {
-      cwd: drupalBackendPath,
-      env: { ...process.env, ...dockerEnv },
-    });
+    // Load recipe manifest to determine apply order
+    const manifestPath = path.join(projectRoot, 'setup', 'recipe-manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
 
-    await applyRecipe('dak_decoupled_base');
+    const recipeEntries = [...manifest.core];
+    for (const entry of (manifest.optional || [])) {
+      if (entry.prompt && !{ enableStructuredContent }[entry.prompt]) continue;
+      recipeEntries.push(entry);
+    }
 
-    await runDdev([
-      'exec',
-      'drush',
-      'config:import',
-      '--partial',
-      '--source=../web/recipes/dak/dak_decoupled_base/config/install',
-      '-y',
-    ], {
-      cwd: drupalBackendPath,
-      env: { ...process.env, ...dockerEnv },
-    });
+    // Apply each recipe via Drush — Drupal handles composition ordering
+    // via the recipes: key in recipe.yml
+    for (const entry of recipeEntries) {
+      // Composer installs into ./recipes/{short-package-name} (e.g., dak-decoupled-base)
+      const dirName = entry.package.split('/').pop();
+      await applyRecipe(dirName);
 
-    await applyRecipe('dak_starter_content');
-
-    await execa('bash', [path.join(projectRoot, 'scripts', 'seed-content.sh'), projectName], {
-      cwd: projectRoot,
-      stdin: 'ignore',
-    });
-
-    if (enableStructuredContent) {
-      await runDdev(['exec', 'drush', 'en', 'paragraphs', 'entity_reference_revisions', '-y'], {
-        cwd: drupalBackendPath,
-        env: { ...process.env, ...dockerEnv },
-      });
-      await applyRecipe('dak_structured_content');
+      // Post-apply hook: seed starter content
+      if (entry.name === 'dak_starter_content') {
+        await execa('bash', [path.join(projectRoot, 'scripts', 'seed-content.sh'), projectName], {
+          cwd: projectRoot,
+          stdin: 'ignore',
+        });
+      }
     }
 
     await runDdev(['exec', 'drush', 'cr'], {
@@ -1143,9 +1114,10 @@ export default async function run() {
     await p.select({
       message: 'Enable structured content model (Paragraphs)?',
       options: [
-        { value: 'no', label: 'No (recommended)' },
-        { value: 'yes', label: 'Yes (add Paragraphs structured content)' },
+        { value: 'yes', label: 'Yes (Recommended for DAK templates - allows block-based content building)' },
+        { value: 'no', label: 'No (Only choose if you are building a strict, flat data API)' },
       ],
+      initialValue: 'yes',
     }),
   );
   const enableStructuredContent = structuredContent === 'yes';

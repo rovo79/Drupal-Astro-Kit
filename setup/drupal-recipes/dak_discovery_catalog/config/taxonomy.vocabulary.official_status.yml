@@ -1,0 +1,8 @@
+langcode: en
+status: true
+dependencies: { }
+name: 'Official Status'
+vid: official_status
+description: 'Official status for products.'
+weight: 0
+new_revision: false

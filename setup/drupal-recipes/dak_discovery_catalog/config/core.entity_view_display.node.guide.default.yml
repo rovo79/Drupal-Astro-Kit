@@ -1,0 +1,122 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.guide.field_body_blocks
+    - field.field.node.guide.field_dek
+    - field.field.node.guide.field_editorial_flags
+    - field.field.node.guide.field_fandom_tags
+    - field.field.node.guide.field_featured
+    - field.field.node.guide.field_hero_image
+    - field.field.node.guide.field_read_time
+    - field.field.node.guide.field_related_collections
+    - field.field.node.guide.field_related_products
+    - field.field.node.guide.field_sort_weight
+    - field.field.node.guide.field_summary
+    - node.type.guide
+  module:
+    - text
+    - user
+    - entity_reference_revisions
+id: node.guide.default
+targetEntityType: node
+bundle: guide
+mode: default
+content:
+  field_body_blocks:
+    type: entity_reference_revisions_entity_view
+    weight: 4
+    region: content
+    label: hidden
+    settings:
+      view_mode: default
+      link: ''
+    third_party_settings: {}
+  field_dek:
+    type: string
+    weight: 1
+    region: content
+    label: hidden
+    settings:
+      link_to_entity: false
+    third_party_settings: {}
+  field_editorial_flags:
+    type: entity_reference_label
+    weight: 8
+    region: content
+    label: above
+    settings:
+      link: true
+    third_party_settings: {}
+  field_fandom_tags:
+    type: entity_reference_label
+    weight: 7
+    region: content
+    label: above
+    settings:
+      link: true
+    third_party_settings: {}
+  field_featured:
+    type: boolean
+    weight: 10
+    region: content
+    label: above
+    settings:
+      format: default
+      format_custom_false: ''
+      format_custom_true: ''
+    third_party_settings: {}
+  field_hero_image:
+    type: entity_reference_label
+    weight: 2
+    region: content
+    label: hidden
+    settings:
+      link: true
+    third_party_settings: {}
+  field_read_time:
+    type: number_integer
+    weight: 3
+    region: content
+    label: inline
+    settings:
+      thousand_separator: ''
+      prefix_suffix: true
+    third_party_settings: {}
+  field_related_collections:
+    type: entity_reference_label
+    weight: 6
+    region: content
+    label: above
+    settings:
+      link: true
+    third_party_settings: {}
+  field_related_products:
+    type: entity_reference_label
+    weight: 5
+    region: content
+    label: above
+    settings:
+      link: true
+    third_party_settings: {}
+  field_sort_weight:
+    type: number_integer
+    weight: 9
+    region: content
+    label: above
+    settings:
+      thousand_separator: ''
+      prefix_suffix: true
+    third_party_settings: {}
+  field_summary:
+    type: text_default
+    weight: 0
+    region: content
+    label: hidden
+    settings: {}
+    third_party_settings: {}
+  links:
+    weight: 100
+    region: content
+hidden:
+  langcode: true

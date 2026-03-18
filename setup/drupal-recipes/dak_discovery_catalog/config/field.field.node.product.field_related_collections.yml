@@ -1,0 +1,27 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_related_collections
+    - node.type.product
+
+
+id: node.product.field_related_collections
+field_name: field_related_collections
+entity_type: node
+bundle: product
+label: Related Collections
+description: 
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings:
+  handler: default:node
+  handler_settings:
+    target_bundles:
+      collection: collection
+
+
+
