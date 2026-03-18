@@ -1,0 +1,12 @@
+{
+    "name": "dak/dak-media-images",
+    "description": "Optional Drupal media image handling for decoupled Astro builds.",
+    "type": "drupal-recipe",
+    "license": ["GPL-2.0-or-later"],
+    "version": "1.0.0",
+    "require": {
+        "drupal/core": "^11",
+        "drupal/jsonapi_image_styles": "^3.0",
+        "dak/dak-decoupled-base": "*"
+    }
+}

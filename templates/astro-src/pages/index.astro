@@ -11,6 +11,7 @@
  */
 
 import Base from '../layouts/Base.astro';
+import PageHeroImage from '../components/PageHeroImage.astro';
 import {
   checkApiConnection,
   getAllPages,
@@ -58,6 +59,8 @@ const description = bodyText.slice(0, 160).trim() + (bodyText.length > 160 ? '..
           </time>
         )}
       </header>
+
+      <PageHeroImage image={page.heroImage} title={page.title} />
 
       <div class="page-content">
         {page.body?.processed ? (

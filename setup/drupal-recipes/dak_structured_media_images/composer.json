@@ -1,0 +1,12 @@
+{
+    "name": "dak/dak-structured-media-images",
+    "description": "Adds media image references to the optional structured content model.",
+    "type": "drupal-recipe",
+    "license": ["GPL-2.0-or-later"],
+    "version": "1.0.0",
+    "require": {
+        "drupal/core": "^11",
+        "dak/dak-media-images": "*",
+        "dak/dak-structured-content": "*"
+    }
+}

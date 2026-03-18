@@ -195,6 +195,22 @@ curl -s "http://your-project.ddev.site/jsonapi/node/page" | jq '.data[0].attribu
 
 Should return `{ "alias": "/about", ... }`.
 
+### Hero Image Missing in Astro
+
+If you enabled the optional media image recipe and a page image is not rendering:
+
+```bash
+cd drupal-backend
+ddev exec drush cr
+curl -s "http://your-project.ddev.site/jsonapi/node/page?include=field_hero_image,field_hero_image.field_media_image" | jq '.included[]? | {type, id, attributes}'
+```
+
+Verify that:
+
+- the page has a `field_hero_image` Media reference
+- the referenced Media item has an uploaded `field_media_image` file
+- the included file resource exposes `image_style_uri` values from `jsonapi_image_styles`
+
 ## Performance Issues
 
 ### Slow Builds

@@ -54,6 +54,7 @@ The interactive CLI:
 - Creates a Drupal 11 project under DDEV
 - Installs JSON:API, CORS configuration, and a starter content type
 - Enables Drupal Linkset and seeds starter `main` + `footer` menus
+- Can optionally install Media-based image handling with JSON:API image style URLs
 - Creates an Astro project
 - Wires Drupal → Astro environment variables
 - Generates example routes that map Drupal aliases into Astro pages
@@ -137,6 +138,10 @@ Optional reseed command (safe to rerun):
 
 This ensures published Basic pages and menu links exist and keeps Linkset enabled.
 
+Optional setup capability:
+
+- Media images: adds a Drupal Image media type, a `field_hero_image` Media reference on starter page models, and JSON:API image style URLs for Astro build-time rendering
+
 4. Launch local development
 
 ```bash
@@ -162,6 +167,7 @@ You maintain content in Drupal locally.
 Astro reads Drupal during `npm run dev` and `npm run build`:
 
 - Page content and aliases from JSON:API
+- Optional page hero images from Media references and JSON:API image style URLs
 - Navigation menus from Linkset (`/system/menu/<menu>/linkset`)
 
 The deployed static site does not fetch Drupal at runtime.

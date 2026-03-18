@@ -1,0 +1,14 @@
+langcode: en
+status: true
+dependencies: { }
+name: dak_card
+label: 'DAK card'
+effects:
+  5ce36377-681f-4eb1-95c4-9b78bc63ee1d:
+    uuid: 5ce36377-681f-4eb1-95c4-9b78bc63ee1d
+    id: image_scale
+    weight: 1
+    data:
+      width: 960
+      height: null
+      upscale: false

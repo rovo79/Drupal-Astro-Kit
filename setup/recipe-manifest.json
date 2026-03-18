@@ -15,6 +15,13 @@
   ],
   "optional": [
     {
+      "package": "dak/dak-media-images",
+      "name": "dak_media_images",
+      "label": "Media images (Media entities + JSON:API image styles)",
+      "description": "Adds an Image media type, hero image fields, and image-style URLs for decoupled builds",
+      "prompt": "enableMediaImages"
+    },
+    {
       "package": "dak/dak-structured-content",
       "name": "dak_structured_content",
       "label": "Structured content (Paragraphs)",

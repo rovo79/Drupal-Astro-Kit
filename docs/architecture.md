@@ -55,6 +55,7 @@ The flow above shows:
 
 - **Local only**: Runs on DDEV in development
 - **JSON:API**: Provides content via `/jsonapi/node/page`
+- **Optional media images**: Can expose Media-backed `field_hero_image` relationships plus derivative URLs from `jsonapi_image_styles`
 - **Linkset**: Provides menu trees via `/system/menu/<menu-name>/linkset`
 - **Path aliases**: URL structure defined in Drupal, replicated in Astro routes
 - **Not exposed**: No public Drupal instance needed in production
@@ -208,6 +209,7 @@ Drupal path aliases map directly to Astro routes:
 - **Machine Names**: Use `field_` prefix for all custom fields
 - **Path Aliases**: `pathauto.pattern.page` ensures Basic pages (the seeded content type) get an alias during setup and on every save; manual alias entry is only needed for other content types or when you want a custom override.
 - **Body Field**: Uses `text_with_summary` for processed HTML output
+- **Images in decoupled builds**: Prefer Media entity references such as `field_hero_image`, then include related Media/File resources in JSON:API so Astro can render original and styled image URLs at build time
 
 ## Content Updates
 

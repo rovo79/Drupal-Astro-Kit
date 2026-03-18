@@ -11,7 +11,45 @@ import { DrupalJsonApiParams } from 'drupal-jsonapi-params';
 const dataFormatter: Jsona = new Jsona();
 const DEFAULT_HOMEPAGE_ALIAS = '/home';
 const PAGE_QUERY_FIELDS = ['title', 'body', 'path', 'status', 'created', 'changed'];
+const PAGE_MEDIA_FIELDS = ['name', 'field_media_image'];
+const PAGE_FILE_FIELDS = ['uri', 'image_style_uri'];
+const PAGE_INCLUDE_FIELDS = ['field_hero_image', 'field_hero_image.field_media_image'];
 const menuCache = new Map<string, Promise<DrupalMenuItem[]>>();
+let pageQueryMode: 'basic' | 'with-images' | undefined;
+
+interface JsonApiResourceIdentifier {
+  id: string;
+  type: string;
+  meta?: Record<string, unknown>;
+}
+
+interface JsonApiRelationship {
+  data?: JsonApiResourceIdentifier | JsonApiResourceIdentifier[] | null;
+}
+
+interface JsonApiResource {
+  id: string;
+  type: string;
+  attributes?: Record<string, unknown>;
+  relationships?: Record<string, JsonApiRelationship>;
+}
+
+interface JsonApiDocument {
+  data?: JsonApiResource[] | JsonApiResource | null;
+  included?: JsonApiResource[];
+  links?: {
+    next?: {
+      href?: string;
+    };
+  };
+}
+
+export interface DrupalPageImage {
+  alt?: string;
+  mediaName?: string;
+  originalSrc?: string;
+  styles: Record<string, string>;
+}
 
 export interface DrupalPage {
   id: string;
@@ -31,6 +69,7 @@ export interface DrupalPage {
   status: boolean;
   created: string;
   changed: string;
+  heroImage?: DrupalPageImage;
 }
 
 export interface DrupalMenuItem {
@@ -66,20 +105,30 @@ function getDrupalJsonApiBaseUrl(): string {
   return `${getDrupalBaseUrl()}/jsonapi`;
 }
 
-function buildPageQueryParams(limit: number): DrupalJsonApiParams {
+function buildPageQueryParams(limit: number, mode: 'basic' | 'with-images' = 'with-images'): DrupalJsonApiParams {
   const params = new DrupalJsonApiParams();
-  params.addFilter('status', '1').addFields('node--page', PAGE_QUERY_FIELDS).addPageLimit(limit);
+  const pageFields = mode === 'with-images' ? [...PAGE_QUERY_FIELDS, 'field_hero_image'] : PAGE_QUERY_FIELDS;
+
+  params.addFilter('status', '1').addFields('node--page', pageFields).addPageLimit(limit);
+
+  if (mode === 'with-images') {
+    params
+      .addFields('media--image', PAGE_MEDIA_FIELDS)
+      .addFields('file--file', PAGE_FILE_FIELDS)
+      .addInclude(PAGE_INCLUDE_FIELDS);
+  }
+
   return params;
 }
 
-function getPageCollectionUrl(limit: number): string {
+function getPageCollectionUrl(limit: number, mode: 'basic' | 'with-images' = 'with-images'): string {
   const jsonApiBase = getDrupalJsonApiBaseUrl();
-  const params = buildPageQueryParams(limit);
+  const params = buildPageQueryParams(limit, mode);
   return `${jsonApiBase}/node/page?${params.getQueryString()}`;
 }
 
 export async function checkApiConnection(): Promise<void> {
-  const endpoint = getPageCollectionUrl(1);
+  const endpoint = getPageCollectionUrl(1, 'basic');
   const response = await fetch(endpoint);
 
   if (!response.ok) {
@@ -89,28 +138,148 @@ export async function checkApiConnection(): Promise<void> {
 
 export async function getAllPages(): Promise<DrupalPage[]> {
   const allPages: DrupalPage[] = [];
-  let nextUrl: string | null = getPageCollectionUrl(50);
+  let activeMode: 'basic' | 'with-images' = pageQueryMode ?? 'with-images';
+  let nextUrl: string | null = getPageCollectionUrl(50, activeMode);
 
   while (nextUrl) {
     const response = await fetch(nextUrl);
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch pages: ${response.status} ${response.statusText}`);
+      const detail = await response.text().catch(() => '');
+      if (
+        activeMode === 'with-images'
+        && allPages.length === 0
+        && shouldRetryWithoutImages(response.status, detail)
+      ) {
+        activeMode = 'basic';
+        pageQueryMode = 'basic';
+        nextUrl = getPageCollectionUrl(50, activeMode);
+        continue;
+      }
+
+      throw new Error(`Failed to fetch pages: ${response.status} ${response.statusText}${detail ? ` - ${detail}` : ''}`);
     }
 
-    const json = await response.json();
-    const pages = dataFormatter.deserialize(json) as DrupalPage | DrupalPage[];
+    pageQueryMode = activeMode;
 
-    if (Array.isArray(pages)) {
-      allPages.push(...pages);
-    } else if (pages) {
-      allPages.push(pages);
+    const json = await response.json() as JsonApiDocument;
+    const pages = dataFormatter.deserialize(json) as DrupalPage | DrupalPage[];
+    const rawPages = normalizeJsonApiData(json.data);
+    const includedMap = createIncludedResourceMap(json.included);
+    const rawPageMap = new Map(rawPages.map((page) => [getResourceKey(page.type, page.id), page]));
+    const normalizedPages = Array.isArray(pages) ? pages : (pages ? [pages] : []);
+
+    for (const page of normalizedPages) {
+      const rawPage = rawPageMap.get(getResourceKey(page.type, page.id));
+      const heroImage = rawPage ? extractHeroImage(rawPage, includedMap) : undefined;
+      allPages.push(heroImage ? { ...page, heroImage } : page);
     }
 
     nextUrl = json.links?.next?.href || null;
   }
 
   return allPages;
+}
+
+function shouldRetryWithoutImages(status: number, detail: string): boolean {
+  if (status !== 400) {
+    return false;
+  }
+
+  return /field_hero_image|media--image|file--file|include/i.test(detail);
+}
+
+function getResourceKey(type: string, id: string): string {
+  return `${type}:${id}`;
+}
+
+function normalizeJsonApiData(data: JsonApiDocument['data']): JsonApiResource[] {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  return data ? [data] : [];
+}
+
+function createIncludedResourceMap(included?: JsonApiResource[]): Map<string, JsonApiResource> {
+  const entries = Array.isArray(included) ? included : [];
+  return new Map(entries.map((resource) => [getResourceKey(resource.type, resource.id), resource]));
+}
+
+function getSingleRelationshipIdentifier(
+  resource: JsonApiResource,
+  relationshipName: string,
+): JsonApiResourceIdentifier | undefined {
+  const relationship = resource.relationships?.[relationshipName]?.data;
+  if (!relationship || Array.isArray(relationship)) {
+    return undefined;
+  }
+  return relationship;
+}
+
+function getIncludedRelationshipResource(
+  resource: JsonApiResource,
+  relationshipName: string,
+  includedMap: Map<string, JsonApiResource>,
+): { identifier?: JsonApiResourceIdentifier; resource?: JsonApiResource } {
+  const identifier = getSingleRelationshipIdentifier(resource, relationshipName);
+  if (!identifier) {
+    return {};
+  }
+
+  return {
+    identifier,
+    resource: includedMap.get(getResourceKey(identifier.type, identifier.id)),
+  };
+}
+
+function extractStringRecord(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(([, candidate]) => typeof candidate === 'string' && candidate.trim() !== ''),
+  );
+}
+
+function extractOriginalSrc(fileResource?: JsonApiResource): string | undefined {
+  const uri = fileResource?.attributes?.uri;
+  if (!uri || typeof uri !== 'object' || Array.isArray(uri)) {
+    return undefined;
+  }
+
+  const url = (uri as { url?: unknown }).url;
+  return typeof url === 'string' && url.trim() !== '' ? url : undefined;
+}
+
+function extractHeroImage(
+  pageResource: JsonApiResource,
+  includedMap: Map<string, JsonApiResource>,
+): DrupalPageImage | undefined {
+  const mediaRelationship = getIncludedRelationshipResource(pageResource, 'field_hero_image', includedMap);
+  if (!mediaRelationship.resource) {
+    return undefined;
+  }
+
+  const fileRelationship = getIncludedRelationshipResource(mediaRelationship.resource, 'field_media_image', includedMap);
+  const styles = extractStringRecord(fileRelationship.resource?.attributes?.image_style_uri);
+  const originalSrc = extractOriginalSrc(fileRelationship.resource);
+  const meta = fileRelationship.identifier?.meta || {};
+  const alt = typeof meta.alt === 'string' && meta.alt.trim() !== '' ? meta.alt : undefined;
+  const mediaName = typeof mediaRelationship.resource.attributes?.name === 'string'
+    ? mediaRelationship.resource.attributes.name
+    : undefined;
+
+  if (!originalSrc && Object.keys(styles).length === 0) {
+    return undefined;
+  }
+
+  return {
+    alt,
+    mediaName,
+    originalSrc,
+    styles,
+  };
 }
 
 function normalizeAliasOrEmpty(alias?: string | null): string {

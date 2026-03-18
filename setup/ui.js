@@ -68,6 +68,213 @@ function fullErrorText(error) {
   return error?.message ? String(error.message) : String(error ?? 'Unknown error');
 }
 
+function parseRecipeDependenciesFromYaml(recipeYaml) {
+  const lines = String(recipeYaml ?? '').split(/\r?\n/);
+  const deps = [];
+  let inRecipesSection = false;
+
+  for (const line of lines) {
+    if (!inRecipesSection) {
+      if (/^\s*recipes\s*:\s*$/.test(line)) {
+        inRecipesSection = true;
+      }
+      continue;
+    }
+
+    if (/^\S/.test(line)) {
+      break;
+    }
+
+    const match = line.match(/^\s*-\s*["']?([A-Za-z0-9._-]+)["']?\s*(?:#.*)?$/);
+    if (match?.[1]) {
+      deps.push(match[1]);
+    }
+  }
+
+  return deps;
+}
+
+function rewriteRecipeYamlWithoutDependencies(recipeYaml, dependenciesToSkip) {
+  if (!dependenciesToSkip || dependenciesToSkip.size === 0) {
+    return recipeYaml;
+  }
+
+  const lines = String(recipeYaml ?? '').split(/\r?\n/);
+  const output = [];
+  let inRecipesSection = false;
+  let recipesHeaderIndex = -1;
+  let keptRecipeLines = [];
+
+  const flushRecipesSection = () => {
+    if (recipesHeaderIndex === -1) return;
+    if (keptRecipeLines.length > 0) {
+      output.push(...keptRecipeLines);
+    } else {
+      output.splice(recipesHeaderIndex, 1);
+    }
+    recipesHeaderIndex = -1;
+    keptRecipeLines = [];
+  };
+
+  for (const line of lines) {
+    if (!inRecipesSection) {
+      if (/^\s*recipes\s*:\s*$/.test(line)) {
+        inRecipesSection = true;
+        recipesHeaderIndex = output.length;
+        output.push(line);
+        continue;
+      }
+
+      output.push(line);
+      continue;
+    }
+
+    if (/^\S/.test(line)) {
+      flushRecipesSection();
+      inRecipesSection = false;
+      output.push(line);
+      continue;
+    }
+
+    const match = line.match(/^\s*-\s*["']?([A-Za-z0-9._-]+)["']?\s*(?:#.*)?$/);
+    if (match?.[1]) {
+      if (!dependenciesToSkip.has(match[1])) {
+        keptRecipeLines.push(line);
+      }
+      continue;
+    }
+
+    if (line.trim() !== '') {
+      keptRecipeLines.push(line);
+    }
+  }
+
+  if (inRecipesSection) {
+    flushRecipesSection();
+  }
+
+  return output.join('\n');
+}
+
+function getSelectedRecipeEntries(manifest, recipePromptAnswers) {
+  const recipeEntries = [...(manifest.core || [])];
+
+  for (const entry of (manifest.optional || [])) {
+    if (entry.prompt && !recipePromptAnswers[entry.prompt]) continue;
+    recipeEntries.push(entry);
+  }
+
+  if (recipePromptAnswers.enableMediaImages && recipePromptAnswers.enableStructuredContent) {
+    recipeEntries.push({
+      package: 'dak/dak-structured-media-images',
+      name: 'dak_structured_media_images',
+      label: 'Structured content media images',
+      generated: true,
+    });
+  }
+
+  return recipeEntries;
+}
+
+async function runDrupalPhpScript({ drupalBackendPath, dockerEnv, runDdev, scriptContents, scriptLabel }) {
+  const scriptBasename = `.dak-${scriptLabel}.php`;
+  const scriptPath = path.join(drupalBackendPath, scriptBasename);
+
+  await fs.writeFile(scriptPath, scriptContents.endsWith('\n') ? scriptContents : `${scriptContents}\n`);
+
+  try {
+    await runDdev(['exec', 'drush', 'php:script', `/var/www/html/${scriptBasename}`], {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+    });
+  } finally {
+    await fs.rm(scriptPath, { force: true });
+  }
+}
+
+async function configureOptionalMediaAuthoring({ drupalBackendPath, dockerEnv, runDdev }) {
+  const script = `<?php
+$field_manager = \\Drupal::service('entity_field.manager');
+$display_repository = \\Drupal::service('entity_display.repository');
+
+$targets = [
+  [
+    'entity_type' => 'node',
+    'bundle' => 'page',
+    'field_name' => 'field_hero_image',
+    'require_existing_display' => true,
+    'component' => [
+      'type' => 'entity_reference_autocomplete',
+      'weight' => 2,
+      'region' => 'content',
+      'settings' => [
+        'match_operator' => 'CONTAINS',
+        'match_limit' => 10,
+        'size' => 60,
+        'placeholder' => '',
+      ],
+      'third_party_settings' => [],
+    ],
+  ],
+  [
+    'entity_type' => 'node',
+    'bundle' => 'headless_page',
+    'field_name' => 'field_hero_image',
+    'require_existing_display' => true,
+    'component' => [
+      'type' => 'entity_reference_autocomplete',
+      'weight' => 2,
+      'region' => 'content',
+      'settings' => [
+        'match_operator' => 'CONTAINS',
+        'match_limit' => 10,
+        'size' => 60,
+        'placeholder' => '',
+      ],
+      'third_party_settings' => [],
+    ],
+  ],
+];
+
+$updated = [];
+$skipped = [];
+
+foreach ($targets as $target) {
+  $definitions = $field_manager->getFieldDefinitions($target['entity_type'], $target['bundle']);
+  if (!isset($definitions[$target['field_name']])) {
+    $skipped[] = $target['entity_type'] . '.' . $target['bundle'] . '.' . $target['field_name'];
+    continue;
+  }
+
+  $display_id = $target['entity_type'] . '.' . $target['bundle'] . '.default';
+  if (!empty($target['require_existing_display'])) {
+    $existing_display = \\Drupal::entityTypeManager()->getStorage('entity_form_display')->load($display_id);
+    if (!$existing_display) {
+      $skipped[] = $display_id . ' (no existing display config)';
+      continue;
+    }
+  }
+
+  $display = $display_repository->getFormDisplay($target['entity_type'], $target['bundle'], 'default');
+  $display->setComponent($target['field_name'], $target['component']);
+  $display->save();
+
+  $updated[] = $target['entity_type'] . '.' . $target['bundle'] . '.' . $target['field_name'];
+}
+
+echo 'Updated form displays: ' . (empty($updated) ? 'none' : implode(', ', $updated)) . PHP_EOL;
+echo 'Skipped form displays: ' . (empty($skipped) ? 'none' : implode(', ', $skipped)) . PHP_EOL;
+`;
+
+  await runDrupalPhpScript({
+    drupalBackendPath,
+    dockerEnv,
+    runDdev,
+    scriptContents: script,
+    scriptLabel: 'configure-media-authoring',
+  });
+}
+
 function buildFinalNoteLines({ projectName, adminUsername, adminPassword, astroMode }) {
   const lines = [
     `Drupal is already available at http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`,
@@ -111,6 +318,9 @@ async function handoffToAstroDev(astroFrontendPath) {
 function toActionableError(stepId, label, error) {
   const detail = firstErrorLine(error);
   const fullDetail = fullErrorText(error);
+  if (stepId === 'apply-recipes') {
+    return `Step failed: ${label}. Error: ${fullDetail}`;
+  }
   if (stepId === 'docker-socket') {
     return 'Docker is not running. Start Docker Desktop or Colima, then re-run ./setup.sh';
   }
@@ -437,6 +647,56 @@ async function normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv
   );
 }
 
+async function normalizeRecipeFieldConfigs({ drupalBackendPath }) {
+  const recipesRoot = path.join(drupalBackendPath, 'recipes');
+  if (!await pathExists(recipesRoot)) {
+    return;
+  }
+
+  const recipeDirs = await fs.readdir(recipesRoot, { withFileTypes: true });
+  for (const recipeDir of recipeDirs) {
+    if (!recipeDir.isDirectory()) continue;
+
+    const configDir = path.join(recipesRoot, recipeDir.name, 'config');
+    if (!await pathExists(configDir)) continue;
+
+    const configEntries = await fs.readdir(configDir, { withFileTypes: true });
+    for (const entry of configEntries) {
+      if (!entry.isFile()) continue;
+      if (!entry.name.startsWith('field.field.')) continue;
+      if (!entry.name.endsWith('.yml')) continue;
+
+      const fieldConfigPath = path.join(configDir, entry.name);
+      const fieldConfigContent = await fs.readFile(fieldConfigPath, 'utf8');
+
+      if (/^field_type:\s*\S+/m.test(fieldConfigContent)) {
+        continue;
+      }
+
+      const fieldNameMatch = fieldConfigContent.match(/^field_name:\s*([A-Za-z0-9_]+)/m);
+      const entityTypeMatch = fieldConfigContent.match(/^entity_type:\s*([A-Za-z0-9_]+)/m);
+      if (!fieldNameMatch?.[1] || !entityTypeMatch?.[1]) {
+        continue;
+      }
+
+      const storageFileName = `field.storage.${entityTypeMatch[1]}.${fieldNameMatch[1]}.yml`;
+      const storageConfigPath = path.join(configDir, storageFileName);
+      if (!await pathExists(storageConfigPath)) {
+        continue;
+      }
+
+      const storageConfigContent = await fs.readFile(storageConfigPath, 'utf8');
+      const storageTypeMatch = storageConfigContent.match(/^type:\s*([A-Za-z0-9_]+)/m);
+      if (!storageTypeMatch?.[1]) {
+        continue;
+      }
+
+      const normalizedContent = `${fieldConfigContent.trimEnd()}\nfield_type: ${storageTypeMatch[1]}\n`;
+      await fs.writeFile(fieldConfigPath, normalizedContent);
+    }
+  }
+}
+
 async function checkPrerequisites() {
   p.log.step('Checking prerequisites...');
 
@@ -488,6 +748,7 @@ async function runSetup({
   adminPassword,
   astroTemplate,
   enableStructuredContent,
+  recipePromptAnswers,
   astroMode,
   drupalMode,
   hasExistingDdevProject,
@@ -681,11 +942,7 @@ async function runSetup({
     const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
 
     // Collect applicable recipe entries from manifest
-    const recipeEntries = [...manifest.core];
-    for (const entry of (manifest.optional || [])) {
-      if (entry.prompt && !{ enableStructuredContent }[entry.prompt]) continue;
-      recipeEntries.push(entry);
-    }
+    const recipeEntries = getSelectedRecipeEntries(manifest, recipePromptAnswers);
 
     // Make the generated Drupal project recipe-ready:
     // Add installer-path for type:drupal-recipe → ./recipes/{$name}
@@ -748,13 +1005,15 @@ async function runSetup({
       ], { cwd: drupalBackendPath, stdin: 'ignore' });
     }
 
+    // Some custom recipe exports omit field_type on field.field.* configs.
+    // Normalize these from matching field.storage.* config so recipe apply is deterministic.
+    await normalizeRecipeFieldConfigs({ drupalBackendPath });
+
     await normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv });
   });
 
   await runStep('apply-recipes', STEP_TEXTS[8].text, async () => {
-    const applyRecipe = async (recipeDirName) => {
-      // Recipes are installed by Composer into ./recipes/{package-short-name}
-      const recipePath = `../recipes/${recipeDirName}`;
+    const applyRecipe = async ({ recipeDirName, recipePath }) => {
 
       const attempts = [
         {
@@ -777,11 +1036,40 @@ async function runSetup({
           await runDdev(attempt.ddevArgs, { cwd: drupalBackendPath, env: { ...process.env, ...dockerEnv } });
           return;
         } catch (error) {
-          errors.push(`- ${attempt.label}: ${firstErrorLine(error)}`);
+          const detail = fullErrorText(error)
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .join(' | ');
+          errors.push(`- ${attempt.label}: ${detail}`);
         }
       }
 
-      throw new Error(`Failed to apply recipe "${recipeName}". Attempts:\n${errors.join('\n')}`);
+      throw new Error(`Failed to apply recipe "${recipeDirName}". Attempts:\n${errors.join('\n')}`);
+    };
+
+    const getRecipeDependencies = async (recipeDirName) => {
+      const recipeYmlPath = path.join(drupalBackendPath, 'recipes', recipeDirName, 'recipe.yml');
+      const recipeYaml = await fs.readFile(recipeYmlPath, 'utf8');
+      return parseRecipeDependenciesFromYaml(recipeYaml);
+    };
+
+    const buildRuntimeRecipePath = async ({ recipeDirName, dependenciesToSkip }) => {
+      const sourceDir = path.join(drupalBackendPath, 'recipes', recipeDirName);
+      const runtimeRoot = path.join(drupalBackendPath, '.dak-runtime-recipes');
+      const runtimeDir = path.join(runtimeRoot, recipeDirName);
+      const sourceRecipeYml = path.join(sourceDir, 'recipe.yml');
+      const runtimeRecipeYml = path.join(runtimeDir, 'recipe.yml');
+
+      await fs.mkdir(runtimeRoot, { recursive: true });
+      await fs.rm(runtimeDir, { recursive: true, force: true });
+      await fs.cp(sourceDir, runtimeDir, { recursive: true });
+
+      const recipeYaml = await fs.readFile(sourceRecipeYml, 'utf8');
+      const rewritten = rewriteRecipeYamlWithoutDependencies(recipeYaml, dependenciesToSkip);
+      await fs.writeFile(runtimeRecipeYml, rewritten.endsWith('\n') ? rewritten : `${rewritten}\n`);
+
+      return `../.dak-runtime-recipes/${recipeDirName}`;
     };
 
     const probeLinksetEndpoint = async (menuName) => {
@@ -809,18 +1097,37 @@ async function runSetup({
     const manifestPath = path.join(projectRoot, 'setup', 'recipe-manifest.json');
     const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
 
-    const recipeEntries = [...manifest.core];
-    for (const entry of (manifest.optional || [])) {
-      if (entry.prompt && !{ enableStructuredContent }[entry.prompt]) continue;
-      recipeEntries.push(entry);
-    }
+    const recipeEntries = getSelectedRecipeEntries(manifest, recipePromptAnswers);
 
-    // Apply each recipe via Drush — Drupal handles composition ordering
-    // via the recipes: key in recipe.yml
+    // Apply recipes while preventing sub-recipes from being re-applied across the stack.
+    // If a recipe depends on something already applied, create a runtime copy with that
+    // dependency removed from its `recipes:` list for this run.
+    const appliedRecipeNames = new Set();
+
     for (const entry of recipeEntries) {
       // Composer installs into ./recipes/{short-package-name} (e.g., dak-decoupled-base)
       const dirName = entry.package.split('/').pop();
-      await applyRecipe(dirName);
+      const declaredDependencies = await getRecipeDependencies(dirName);
+      const dependenciesToSkip = new Set(
+        declaredDependencies.filter((dependencyName) => appliedRecipeNames.has(dependencyName)),
+      );
+
+      let recipePath = `../recipes/${dirName}`;
+      if (dependenciesToSkip.size > 0) {
+        recipePath = await buildRuntimeRecipePath({
+          recipeDirName: dirName,
+          dependenciesToSkip,
+        });
+      }
+
+      await applyRecipe({ recipeDirName: dirName, recipePath });
+
+      appliedRecipeNames.add(dirName);
+      for (const dependencyName of declaredDependencies) {
+        if (!dependenciesToSkip.has(dependencyName)) {
+          appliedRecipeNames.add(dependencyName);
+        }
+      }
 
       // Post-apply hook: seed starter content
       if (entry.name === 'dak_starter_content') {
@@ -829,6 +1136,10 @@ async function runSetup({
           stdin: 'ignore',
         });
       }
+    }
+
+    if (recipePromptAnswers.enableMediaImages) {
+      await configureOptionalMediaAuthoring({ drupalBackendPath, dockerEnv, runDdev });
     }
 
     await runDdev(['exec', 'drush', 'cr'], {
@@ -1130,6 +1441,25 @@ export default async function run() {
   );
   const enableStructuredContent = structuredContent === 'yes';
 
+  // Dynamically prompt for any additional optional recipes from the manifest
+  const manifestPath = path.join(projectRoot, 'setup', 'recipe-manifest.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  const recipePromptAnswers = { enableStructuredContent };
+  for (const entry of (manifest.optional || [])) {
+    if (!entry.prompt || entry.prompt === 'enableStructuredContent') continue;
+    const answer = unwrapPrompt(
+      await p.select({
+        message: `Enable ${entry.label}?`,
+        options: [
+          { value: 'yes', label: `Yes${entry.description ? ` (${entry.description})` : ''}` },
+          { value: 'no', label: 'No' },
+        ],
+        initialValue: 'yes',
+      }),
+    );
+    recipePromptAnswers[entry.prompt] = answer === 'yes';
+  }
+
   p.note(
     [
       `Project name: ${projectName}`,
@@ -1139,6 +1469,12 @@ export default async function run() {
       `Astro mode: ${astroMode}`,
       `Astro template: ${astroMode === 'skip' ? 'n/a (skipped)' : astroTemplate}`,
       `Structured content: ${enableStructuredContent ? 'yes' : 'no'}`,
+      ...Object.entries(recipePromptAnswers)
+        .filter(([key]) => key !== 'enableStructuredContent')
+        .map(([key, val]) => {
+          const entry = (manifest.optional || []).find((e) => e.prompt === key);
+          return `${entry ? entry.label : key}: ${val ? 'yes' : 'no'}`;
+        }),
     ].join('\n'),
     'Configuration Summary',
   );
@@ -1162,6 +1498,7 @@ export default async function run() {
       adminPassword,
       astroTemplate: String(astroTemplate),
       enableStructuredContent,
+      recipePromptAnswers,
       astroMode,
       drupalMode,
       hasExistingDdevProject: drupalRerunRisk.hasDdevProject,
