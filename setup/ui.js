@@ -712,7 +712,15 @@ async function runSetup({
     // Register local recipe paths as Composer path repositories (with symlink: false
     // so files are copied into the project — symlinks break inside the DDEV container
     // because they point to host-only paths)
-    const repositories = composerJson.repositories || {};
+    // Composer's default repositories can be an array — normalize to object keyed format
+    let repositories = composerJson.repositories || {};
+    if (Array.isArray(repositories)) {
+      const repoObj = {};
+      for (let i = 0; i < repositories.length; i++) {
+        repoObj[String(i)] = repositories[i];
+      }
+      repositories = repoObj;
+    }
     for (const entry of recipeEntries) {
       const localRecipePath = path.join(recipesSrcRoot, entry.name);
       if (await pathExists(path.join(localRecipePath, 'composer.json'))) {
