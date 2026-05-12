@@ -236,7 +236,7 @@ function inferProvenance(url) {
 }
 
 function sanitizePathSegment(value) {
-  return value.replace(/[/\\:*?"<>|]/g, '_')
+  return value.replace(/\0/g, '').replace(/[/\\:*?"<>|]/g, '_').replace(/^\.+|\.+$/g, '')
 }
 
 function isLikelyImageUrl(url) {

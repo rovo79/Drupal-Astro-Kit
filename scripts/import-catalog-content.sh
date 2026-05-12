@@ -10,7 +10,7 @@ COLLECTIONS_CSV="$REPO_ROOT/setup/content/catalog/collections.csv"
 FEED_HELPER="$REPO_ROOT/scripts/import_catalog_feeds.php"
 
 ddev_hostname() {
-  ddev describe -j | node -e "process.stdin.resume(); let d=''; process.stdin.on('data', c => d += c); process.stdin.on('end', () => { try { const o = JSON.parse(d); process.stdout.write(o.raw?.hostname ?? ''); } catch {} });"
+  ddev describe -j | node -e "process.stdin.resume(); let d=''; process.stdin.on('data', c => d += c); process.stdin.on('end', () => { try { const o = JSON.parse(d); process.stdout.write(o.raw?.hostname ?? ''); } catch (e) { process.stderr.write('Warning: could not parse ddev describe output: ' + e.message + '\n'); } });"
 }
 
 if [ ! -d "$DRUPAL_DIR" ]; then
