@@ -9,6 +9,10 @@ on:
 env:
   PROJECT_NAME: ${{ github.event.repository.name }}
 
+permissions:
+  contents: read
+  deployments: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
