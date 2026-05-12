@@ -10,12 +10,12 @@ id: node.collection.field_promote_to_home
 field_name: field_promote_to_home
 entity_type: node
 bundle: collection
-label: Promote to Home
-description: 
+label: Feature on Homepage
+description: Homepage promotion flag. Astro reads this to determine whether the Collection is eligible for homepage collection placement.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
 settings: {}
-
+field_type: boolean

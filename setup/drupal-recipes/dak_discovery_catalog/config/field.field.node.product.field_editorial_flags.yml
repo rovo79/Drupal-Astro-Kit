@@ -11,7 +11,7 @@ field_name: field_editorial_flags
 entity_type: node
 bundle: product
 label: Editorial Flags
-description: 
+description: Merchandising labels such as Giftable or Premium. Astro uses these for badges, filtered lists, and themed discovery views.
 required: false
 translatable: false
 default_value: []
@@ -22,6 +22,4 @@ settings:
   handler_settings:
     target_bundles:
       editorial_flag: editorial_flag
-
-
-
+field_type: entity_reference

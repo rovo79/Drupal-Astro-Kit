@@ -10,8 +10,8 @@ id: node.collection.field_featured_products
 field_name: field_featured_products
 entity_type: node
 bundle: collection
-label: Featured Products
-description: 
+label: Collection Products
+description: Ordered Product references rendered on the Collection detail page and other editorial Collection surfaces in Astro.
 required: false
 translatable: false
 default_value: []
@@ -22,6 +22,4 @@ settings:
   handler_settings:
     target_bundles:
       product: product
-
-
-
+field_type: entity_reference

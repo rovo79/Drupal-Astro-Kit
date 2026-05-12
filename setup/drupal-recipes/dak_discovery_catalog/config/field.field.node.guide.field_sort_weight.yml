@@ -11,11 +11,11 @@ field_name: field_sort_weight
 entity_type: node
 bundle: guide
 label: Sort Weight
-description: 
+description: Manual ordering hint. Lower values generally surface earlier when guides are merchandised together.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
 settings: {}
-
+field_type: integer

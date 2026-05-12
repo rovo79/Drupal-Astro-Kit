@@ -11,7 +11,7 @@ field_name: field_category
 entity_type: node
 bundle: product
 label: Category
-description: 
+description: Primary merch bucket used by Astro category pages and browse groupings. Choose the single category this Product should live under.
 required: false
 translatable: false
 default_value: []
@@ -22,6 +22,4 @@ settings:
   handler_settings:
     target_bundles:
       product_category: product_category
-
-
-
+field_type: entity_reference

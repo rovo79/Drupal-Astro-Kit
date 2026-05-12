@@ -1,0 +1,23 @@
+uuid: 6bc09c19-ff15-4f47-8039-b4f126e86fbd
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.paragraph.field_sort_weight
+    - paragraphs.paragraphs_type.buy_link
+id: paragraph.buy_link.field_sort_weight
+field_name: field_sort_weight
+entity_type: paragraph
+bundle: buy_link
+label: 'Sort Weight'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

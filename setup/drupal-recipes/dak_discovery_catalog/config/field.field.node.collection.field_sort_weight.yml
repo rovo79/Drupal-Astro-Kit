@@ -11,11 +11,11 @@ field_name: field_sort_weight
 entity_type: node
 bundle: collection
 label: Sort Weight
-description: 
+description: Manual ordering hint for Collections. Lower values generally surface earlier where Astro sorts by editorial priority.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
+field_type: integer
 settings: {}
-

@@ -11,7 +11,7 @@ field_name: field_fandom_tags
 entity_type: node
 bundle: product
 label: Fandom Tags
-description: 
+description: Character, crew, or world tags used by Astro fandom browsing and related discovery surfaces.
 required: false
 translatable: false
 default_value: []
@@ -22,6 +22,4 @@ settings:
   handler_settings:
     target_bundles:
       fandom_tag: fandom_tag
-
-
-
+field_type: entity_reference

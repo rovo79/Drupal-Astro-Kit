@@ -11,7 +11,7 @@ field_name: field_product_image
 entity_type: node
 bundle: product
 label: Product Image
-description: 
+description: Main shopper-facing Product image used by Astro for cards and item detail pages.
 required: false
 translatable: false
 default_value: []
@@ -22,6 +22,4 @@ settings:
   handler_settings:
     target_bundles:
       image: image
-
-
-
+field_type: entity_reference

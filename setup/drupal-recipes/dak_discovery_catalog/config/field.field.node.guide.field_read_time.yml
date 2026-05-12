@@ -10,12 +10,12 @@ id: node.guide.field_read_time
 field_name: field_read_time
 entity_type: node
 bundle: guide
-label: Read Time
-description: 
+label: Estimated Read Time
+description: Estimated reading length in whole minutes.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
 settings: {}
-
+field_type: integer

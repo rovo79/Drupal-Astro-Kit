@@ -1,0 +1,10 @@
+uuid: d4934ac9-6b08-4384-bf59-06a55e6dc57e
+langcode: en
+status: true
+dependencies: {  }
+id: buy_link
+label: 'Buy link'
+icon_uuid: null
+icon_default: null
+description: 'A repeatable retailer link row for a product.'
+behavior_plugins: {  }

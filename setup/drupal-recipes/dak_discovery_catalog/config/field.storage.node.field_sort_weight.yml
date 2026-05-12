@@ -10,7 +10,11 @@ id: node.field_sort_weight
 field_name: field_sort_weight
 entity_type: node
 type: integer
-settings: {}
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
 
 module: core
 locked: false

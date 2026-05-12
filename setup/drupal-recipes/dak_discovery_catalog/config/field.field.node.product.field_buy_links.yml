@@ -1,0 +1,31 @@
+uuid: 5596d44c-af51-4d4b-a3c5-42a27038ee12
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_buy_links
+    - node.type.product
+    - paragraphs.paragraphs_type.buy_link
+  module:
+    - entity_reference_revisions
+id: node.product.field_buy_links
+field_name: field_buy_links
+entity_type: node
+bundle: product
+label: 'Secondary Buy Links'
+description: 'Structured backup retailer rows. Helpful for editorial comparison or future frontend expansion, but the Astro frontend still relies on Primary Buy Link as the primary live CTA.'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:paragraph'
+  handler_settings:
+    target_bundles:
+      buy_link: buy_link
+    negate: 0
+    target_bundles_drag_drop:
+      buy_link:
+        weight: 0
+        enabled: true
+field_type: entity_reference_revisions

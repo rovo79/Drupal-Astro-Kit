@@ -11,7 +11,7 @@ third_party_settings:
 name: Product
 type: product
 description: 'A product for the headless discovery catalog.'
-help: ''
+help: 'Create a product listing with affiliate links, pricing, images, and editorial metadata.'
 new_revision: true
 preview_mode: 1
 display_submitted: false

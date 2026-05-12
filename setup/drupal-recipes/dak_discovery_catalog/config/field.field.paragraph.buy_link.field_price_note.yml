@@ -1,0 +1,19 @@
+uuid: 6ece7e77-8854-4988-8769-ee2ddbf50f87
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.paragraph.field_price_note
+    - paragraphs.paragraphs_type.buy_link
+id: paragraph.buy_link.field_price_note
+field_name: field_price_note
+entity_type: paragraph
+bundle: buy_link
+label: 'Price Note'
+description: ''
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

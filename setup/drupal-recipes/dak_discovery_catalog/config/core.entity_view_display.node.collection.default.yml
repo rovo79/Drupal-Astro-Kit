@@ -4,6 +4,7 @@ dependencies:
   config:
     - field.field.node.collection.field_collection_image
     - field.field.node.collection.field_collection_type
+    - field.field.node.collection.field_external_key
     - field.field.node.collection.field_featured
     - field.field.node.collection.field_featured_products
     - field.field.node.collection.field_promote_to_home
@@ -81,4 +82,5 @@ content:
     weight: 100
     region: content
 hidden:
+  field_external_key: true
   langcode: true

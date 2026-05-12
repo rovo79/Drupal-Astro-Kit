@@ -11,17 +11,17 @@ field_name: field_collection_image
 entity_type: node
 bundle: collection
 label: Collection Image
-description: 
+description: Main shopper-facing Collection image used by Astro for Collection cards, headers, and editorial landing surfaces.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
+field_type: entity_reference
 settings:
   handler: default:media
   handler_settings:
     target_bundles:
       image: image
-
 
 

@@ -10,7 +10,11 @@ id: node.field_read_time
 field_name: field_read_time
 entity_type: node
 type: integer
-settings: {}
+settings:
+  min: null
+  max: null
+  prefix: ''
+  suffix: ''
 
 module: core
 locked: false

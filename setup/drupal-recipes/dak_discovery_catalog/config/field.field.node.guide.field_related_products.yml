@@ -10,8 +10,8 @@ id: node.guide.field_related_products
 field_name: field_related_products
 entity_type: node
 bundle: guide
-label: Related Products
-description: 
+label: Recommended Products
+description: Product recommendations tied to this guide. Use these for merch callouts and future frontend linkage.
 required: false
 translatable: false
 default_value: []
@@ -22,6 +22,5 @@ settings:
   handler_settings:
     target_bundles:
       product: product
-
-
+field_type: entity_reference
 

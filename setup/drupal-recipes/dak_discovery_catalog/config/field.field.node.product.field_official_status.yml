@@ -11,7 +11,7 @@ field_name: field_official_status
 entity_type: node
 bundle: product
 label: Official Status
-description: 
+description: Signals whether the merchandise is official, unofficial, or unknown. Astro can use this for trust cues and filtering.
 required: false
 translatable: false
 default_value: []
@@ -22,6 +22,4 @@ settings:
   handler_settings:
     target_bundles:
       official_status: official_status
-
-
-
+field_type: entity_reference

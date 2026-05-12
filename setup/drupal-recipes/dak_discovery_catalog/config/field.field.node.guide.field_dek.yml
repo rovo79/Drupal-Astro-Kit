@@ -10,12 +10,12 @@ id: node.guide.field_dek
 field_name: field_dek
 entity_type: node
 bundle: guide
-label: Dek
-description: 
+label: Hero Intro
+description: Short guide intro used as the lead-in for a future Drupal-backed guide hero and card excerpt.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
 settings: {}
-
+field_type: string

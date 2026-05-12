@@ -11,11 +11,11 @@ field_name: field_summary
 entity_type: node
 bundle: collection
 label: Summary
-description: 
+description: Short editorial summary used by Astro on Collection cards, Collection detail pages, and supporting editorial surfaces.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
+field_type: text_long
 settings: {}
-

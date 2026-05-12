@@ -11,7 +11,7 @@ third_party_settings:
 name: Guide
 type: guide
 description: 'A curated guide or article.'
-help: ''
+help: 'Create an editorial guide with rich content blocks and product recommendations.'
 new_revision: true
 preview_mode: 1
 display_submitted: false

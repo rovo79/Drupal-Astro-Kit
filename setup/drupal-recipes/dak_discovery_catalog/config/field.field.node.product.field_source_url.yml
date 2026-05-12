@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_source_url
+    - node.type.product
+
+id: node.product.field_source_url
+field_name: field_source_url
+entity_type: node
+bundle: product
+label: Source URL
+description: Canonical source page for the Product. Use the affiliate URL only when no separate source page exists.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings: {}
+field_type: link

@@ -11,11 +11,11 @@ field_name: field_price
 entity_type: node
 bundle: product
 label: Price
-description: 
+description: Display-ready price text shown on Product cards and detail views in Astro.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
 settings: {}
-
+field_type: string

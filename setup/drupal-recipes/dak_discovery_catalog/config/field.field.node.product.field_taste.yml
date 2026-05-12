@@ -11,7 +11,7 @@ field_name: field_taste
 entity_type: node
 bundle: product
 label: Taste
-description: 
+description: Style or vibe tags used for softer editorial discovery, such as Minimal, Premium, or Loud.
 required: false
 translatable: false
 default_value: []
@@ -22,6 +22,4 @@ settings:
   handler_settings:
     target_bundles:
       taste: taste
-
-
-
+field_type: entity_reference

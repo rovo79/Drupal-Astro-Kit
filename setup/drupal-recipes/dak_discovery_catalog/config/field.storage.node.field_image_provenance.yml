@@ -5,17 +5,15 @@ dependencies:
     - node
     - core
 
-
-id: node.field_body_blocks
-field_name: field_body_blocks
+id: node.field_image_provenance
+field_name: field_image_provenance
 entity_type: node
-type: entity_reference
-settings:
-  target_type: paragraph
+type: string
+settings: {}
 
 module: core
 locked: false
-cardinality: -1
+cardinality: 1
 translatable: true
 indexes: {}
 

@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_retailer_name
+    - node.type.product
+
+id: node.product.field_retailer_name
+field_name: field_retailer_name
+entity_type: node
+bundle: product
+label: Retailer Name
+description: Human-readable retailer or source name.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings: {}
+field_type: string

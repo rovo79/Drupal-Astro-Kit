@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_image_notes
+    - node.type.product
+
+id: node.product.field_image_notes
+field_name: field_image_notes
+entity_type: node
+bundle: product
+label: Image Notes
+description: Human review notes, exceptions, and recovery instructions for the Product image.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings: {}
+field_type: text_long

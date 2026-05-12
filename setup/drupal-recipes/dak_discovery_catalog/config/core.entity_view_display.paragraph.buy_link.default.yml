@@ -1,0 +1,66 @@
+uuid: e441914d-265f-400d-90a8-e82340675c8b
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.paragraph.buy_link.field_price_note
+    - field.field.paragraph.buy_link.field_region
+    - field.field.paragraph.buy_link.field_retailer
+    - field.field.paragraph.buy_link.field_sort_weight
+    - field.field.paragraph.buy_link.field_url
+    - paragraphs.paragraphs_type.buy_link
+  module:
+    - link
+id: paragraph.buy_link.default
+targetEntityType: paragraph
+bundle: buy_link
+mode: default
+content:
+  field_price_note:
+    type: string
+    label: hidden
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 3
+    region: content
+  field_region:
+    type: string
+    label: hidden
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 2
+    region: content
+  field_retailer:
+    type: string
+    label: hidden
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 0
+    region: content
+  field_sort_weight:
+    type: number_integer
+    label: hidden
+    settings:
+      thousand_separator: ''
+      prefix_suffix: true
+    third_party_settings: {  }
+    weight: 4
+    region: content
+  field_url:
+    type: link
+    label: hidden
+    settings:
+      trim_length: 80
+      url_only: false
+      url_plain: false
+      rel: ''
+      target: ''
+    third_party_settings: {  }
+    weight: 1
+    region: content
+hidden:
+  created: true
+  uid: true

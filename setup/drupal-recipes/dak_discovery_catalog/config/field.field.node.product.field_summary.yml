@@ -11,11 +11,11 @@ field_name: field_summary
 entity_type: node
 bundle: product
 label: Summary
-description: 
+description: Short editorial blurb used by Astro on Product cards, listings, and item detail pages.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
 settings: {}
-
+field_type: text_long

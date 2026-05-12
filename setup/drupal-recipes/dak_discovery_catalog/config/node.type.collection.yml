@@ -11,7 +11,7 @@ third_party_settings:
 name: Collection
 type: collection
 description: 'A grouping of curated items.'
-help: ''
+help: 'Create a curated collection grouping related products for discovery.'
 new_revision: true
 preview_mode: 1
 display_submitted: false

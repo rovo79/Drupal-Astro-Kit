@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_external_key
+    - node.type.product
+
+
+id: node.product.field_external_key
+field_name: field_external_key
+entity_type: node
+bundle: product
+label: Import Key
+description: Stable import identity key for product upserts. Set once and keep it stable across reimports.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback:
+settings: {}
+field_type: string

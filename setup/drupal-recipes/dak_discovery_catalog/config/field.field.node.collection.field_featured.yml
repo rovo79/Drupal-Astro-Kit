@@ -11,11 +11,11 @@ field_name: field_featured
 entity_type: node
 bundle: collection
 label: Featured
-description: 
+description: Promotion toggle for highlighted Collection surfaces. Use when this Collection should rank higher in editorial placement.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
+field_type: boolean
 settings: {}
-

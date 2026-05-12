@@ -11,11 +11,11 @@ field_name: field_collection_type
 entity_type: node
 bundle: collection
 label: Collection Type
-description: 
+description: Stored collection behavior key. Astro reads this to distinguish curated versus automated collection handling, so keep the stored values consistent.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
+field_type: list_string
 settings: {}
-

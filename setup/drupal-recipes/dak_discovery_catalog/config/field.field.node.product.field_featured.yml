@@ -11,11 +11,11 @@ field_name: field_featured
 entity_type: node
 bundle: product
 label: Featured
-description: 
+description: Promotion toggle for homepage and highlighted Product surfaces. Use when this item should rank higher in editorial placement.
 required: false
 translatable: false
 default_value: []
 
 default_value_callback: 
 settings: {}
-
+field_type: boolean

@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+    - core
+
+
+id: node.field_external_key
+field_name: field_external_key
+entity_type: node
+type: string
+settings: {}
+
+module: core
+locked: false
+cardinality: 1
+translatable: false
+indexes: {}
+
+persist_with_no_fields: false
+custom_storage: false
