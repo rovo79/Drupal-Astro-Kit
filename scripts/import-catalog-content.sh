@@ -10,7 +10,7 @@ COLLECTIONS_CSV="$REPO_ROOT/setup/content/catalog/collections.csv"
 FEED_HELPER="$REPO_ROOT/scripts/import_catalog_feeds.php"
 
 ddev_hostname() {
-  ddev describe -j | php -r '$data = json_decode(stream_get_contents(STDIN), true); echo $data["raw"]["hostname"] ?? "";'
+  ddev describe -j | node -e "process.stdin.resume(); let d=''; process.stdin.on('data', c => d += c); process.stdin.on('end', () => { try { const o = JSON.parse(d); process.stdout.write(o.raw?.hostname ?? ''); } catch {} });"
 }
 
 if [ ! -d "$DRUPAL_DIR" ]; then
@@ -21,7 +21,7 @@ fi
 cd "$DRUPAL_DIR"
 
 if ! ddev describe >/dev/null 2>&1; then
-  echo "DDEV is not running. Start it with: cd Web_Stack/drupal-backend && ddev start" >&2
+  echo "DDEV is not running. Start it with: cd drupal-backend && ddev start" >&2
   exit 1
 fi
 

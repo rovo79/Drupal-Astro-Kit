@@ -191,11 +191,19 @@ function formatTimestamp(date) {
   return date.toISOString().slice(0, 19)
 }
 
+function parseHostname(url) {
+  try {
+    return cleanValue(new URL(url).hostname).replace(/^www\./, '')
+  } catch {
+    return ''
+  }
+}
+
 function inferRetailerName(url) {
   if (!url) {
     return ''
   }
-  const host = cleanValue(new URL(url).hostname).replace(/^www\./, '')
+  const host = parseHostname(url)
   const map = new Map([
     ['amazon.com', 'Amazon'],
     ['amazon.co.uk', 'Amazon'],
@@ -214,7 +222,7 @@ function inferProvenance(url) {
   if (!url) {
     return 'editorial_placeholder'
   }
-  const host = cleanValue(new URL(url).hostname).replace(/^www\./, '')
+  const host = parseHostname(url)
   if (!host || host.includes('example.com')) {
     return 'editorial_placeholder'
   }
@@ -225,6 +233,10 @@ function inferProvenance(url) {
     return 'official_press'
   }
   return 'retailer_listing'
+}
+
+function sanitizePathSegment(value) {
+  return value.replace(/[/\\:*?"<>|]/g, '_')
 }
 
 function isLikelyImageUrl(url) {
@@ -406,13 +418,18 @@ async function optimizeImage(buffer, destinationDir) {
 }
 
 async function existingPublicPrimaryAsset(publicRoot, externalKey, imageAssetPath) {
+  const resolvedRoot = path.resolve(publicRoot)
   const candidates = []
   if (imageAssetPath) {
-    candidates.push(path.join(publicRoot, imageAssetPath.replace(/^\/+/, '')))
+    const resolved = path.resolve(resolvedRoot, imageAssetPath.replace(/^\/+/, ''))
+    if (resolved.startsWith(resolvedRoot + path.sep) || resolved === resolvedRoot) {
+      candidates.push(resolved)
+    }
   }
+  const safeKey = sanitizePathSegment(externalKey)
   candidates.push(
-    path.join(publicRoot, 'catalog', 'products', externalKey, 'primary.jpg'),
-    path.join(publicRoot, 'catalog', 'products', externalKey, 'primary.png'),
+    path.join(resolvedRoot, 'catalog', 'products', safeKey, 'primary.jpg'),
+    path.join(resolvedRoot, 'catalog', 'products', safeKey, 'primary.png'),
   )
 
   for (const candidate of candidates) {
@@ -542,9 +559,10 @@ async function processRow(row, context) {
 
   try {
     const { buffer, contentType, responseUrl } = await downloadImage(discoveredImageUrl)
-    const rawDir = path.join(context.cacheDir, 'raw', externalKey)
-    const optimizedDir = path.join(context.cacheDir, 'optimized', externalKey)
-    const publicDir = path.join(context.publicRoot, 'catalog', 'products', externalKey)
+    const safeKey = sanitizePathSegment(externalKey)
+    const rawDir = path.join(context.cacheDir, 'raw', safeKey)
+    const optimizedDir = path.join(context.cacheDir, 'optimized', safeKey)
+    const publicDir = path.join(context.publicRoot, 'catalog', 'products', safeKey)
     await ensureDir(rawDir)
     await ensureDir(optimizedDir)
     await ensureDir(publicDir)
@@ -577,7 +595,7 @@ async function processRow(row, context) {
 
     row.image_status = 'optimized_local'
     row.image_source_url = responseUrl
-    row.image_asset_path = `/catalog/products/${externalKey}/primary.jpg`
+    row.image_asset_path = `/catalog/products/${safeKey}/primary.jpg`
     row.alt_text = altText
     row.notes = notes.join(' ')
     row.last_checked = now
@@ -612,11 +630,19 @@ async function main() {
   const cacheDir = options.cacheDir || path.join(webStackRoot, '.cache/product-images')
   const publicRoot = options.publicRoot || path.join(webStackRoot, 'astro-frontend/public')
 
+  try {
+    await fs.access(inventoryPath)
+  } catch {
+    await ensureDir(path.dirname(inventoryPath))
+    await writeCsv(inventoryPath, REQUIRED_HEADERS, [])
+  }
+
   const inventory = await readCsv(inventoryPath)
   const headers = mergeHeaders(REQUIRED_HEADERS, inventory.headers)
   const filteredRows = inventory.rows.filter((row) => !options.key || cleanValue(row.external_key) === options.key)
   const limit = Number.parseInt(options.limit, 10)
   const selectedRows = Number.isFinite(limit) && limit > 0 ? filteredRows.slice(0, limit) : filteredRows
+  const selectedSet = new Set(selectedRows)
 
   const processedRows = []
   for (const row of inventory.rows) {
@@ -626,7 +652,7 @@ async function main() {
       continue
     }
 
-    if (selectedRows.includes(row)) {
+    if (selectedSet.has(row)) {
       processedRows.push(await processRow({ ...row }, { cacheDir, publicRoot }))
     } else {
       processedRows.push(row)

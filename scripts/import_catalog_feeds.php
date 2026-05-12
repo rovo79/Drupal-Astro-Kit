@@ -166,7 +166,7 @@ function ensureFeedType(
   $feedType->set('parser_configuration', [
     'delimiter' => ',',
     'no_headers' => FALSE,
-    'line_limit' => 1000,
+    'line_limit' => 0,
   ]);
   $feedType->set('processor', 'entity:node');
   $feedType->set('processor_configuration', [
@@ -321,7 +321,7 @@ function reportExternalKeyCount(string $bundle, string $prefix): int {
     ->execute();
 }
 
-ensurePathautoPattern('product', 'Product path pattern', 'product', '/items/[node:title]', -4);
+ensurePathautoPattern('product', 'Product path pattern', 'product', '/products/[node:title]', -4);
 ensurePathautoPattern('collection', 'Collection path pattern', 'collection', '/collections/[node:title]', -3);
 ensureStringField('product', 'field_external_key', 'External key', 'Stable import identity key for product upserts.');
 ensureStringField('collection', 'field_external_key', 'External key', 'Stable import identity key for collection upserts.');
