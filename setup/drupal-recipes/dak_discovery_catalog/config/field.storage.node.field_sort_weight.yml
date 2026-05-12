@@ -11,10 +11,8 @@ field_name: field_sort_weight
 entity_type: node
 type: integer
 settings:
-  min: null
-  max: null
-  prefix: ''
-  suffix: ''
+  unsigned: false
+  size: normal
 
 module: core
 locked: false
