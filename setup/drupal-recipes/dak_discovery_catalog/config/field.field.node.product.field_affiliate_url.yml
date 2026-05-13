@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_affiliate_url
+    - node.type.product
+
+
+id: node.product.field_affiliate_url
+field_name: field_affiliate_url
+entity_type: node
+bundle: product
+label: Primary Buy Link
+description: Primary outbound purchase link used by the Astro product detail page today. Keep this populated even if you also add Secondary Buy Links.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings: {}
+field_type: link

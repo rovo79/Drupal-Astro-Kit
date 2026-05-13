@@ -1,0 +1,39 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+    - options
+
+id: node.field_image_status
+field_name: field_image_status
+entity_type: node
+type: list_string
+settings:
+  allowed_values:
+    - value: missing
+      label: Missing
+
+    - value: sourced_remote
+      label: Sourced Remote
+
+    - value: downloaded_raw
+      label: Downloaded Raw
+
+    - value: optimized_local
+      label: Optimized Local
+
+    - value: needs_review
+      label: Needs Review
+
+    - value: blocked
+      label: Blocked
+
+module: options
+locked: false
+cardinality: 1
+translatable: true
+indexes: {}
+
+persist_with_no_fields: false
+custom_storage: false

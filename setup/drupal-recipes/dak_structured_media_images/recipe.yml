@@ -1,0 +1,8 @@
+name: 'DAK: Structured media images'
+description: 'Adds the shared hero image field to the optional headless_page content model.'
+type: 'Site'
+
+config:
+  import:
+    field:
+      - field.field.node.headless_page.field_hero_image

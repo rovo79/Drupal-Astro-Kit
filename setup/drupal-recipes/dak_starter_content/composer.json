@@ -1,0 +1,12 @@
+{
+    "name": "dak/dak-starter-content",
+    "description": "Starter Basic Pages and navigation links with stable aliases for Astro SSG.",
+    "type": "drupal-recipe",
+    "license": ["GPL-2.0-or-later"],
+    "version": "1.0.0",
+    "require": {
+        "drupal/core": "^11",
+        "drupal/default_content": "^2.0@beta",
+        "dak/dak-decoupled-base": "*"
+    }
+}

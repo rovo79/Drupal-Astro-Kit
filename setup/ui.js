@@ -1,0 +1,1556 @@
+import * as p from '@clack/prompts';
+import pc from 'picocolors';
+import { execa } from 'execa';
+import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+
+const STEP_TEXTS = [
+  { id: 'env', text: 'Syncing .env file' },
+  { id: 'docker-socket', text: 'Checking Docker socket' },
+  { id: 'ddev-config', text: 'Configuring DDEV' },
+  { id: 'ddev-start', text: 'Starting DDEV' },
+  { id: 'ddev-composer-create', text: 'Creating Drupal project with Composer' },
+  { id: 'ddev-drush', text: 'Installing Drush' },
+  { id: 'ddev-site-install', text: 'Installing Drupal site' },
+  { id: 'configure-drupal', text: 'Configuring Drupal (Content Types, CORS)' },
+  { id: 'apply-recipes', text: 'Applying Drupal recipes' },
+  { id: 'astro', text: 'Setting up Astro frontend' },
+  { id: 'complete', text: 'Setup Complete!' },
+];
+
+const ASTRO_CREATE_VERSION = '4.13.2';
+const ASTRO_PACKAGE_VERSION = '5.18.0';
+const ASTRO_NODE_RANGE = '^20.3.0 || >=22.0.0';
+const ASTRO_ENV_KEYS_TO_UNSET = [
+  'PROJECT_NAME',
+  'DRUPAL_BASE_URL',
+  'DRUPAL_JSONAPI_URL',
+  'DRUPAL_API_URL',
+  'API_BASE_URL',
+  'HOMEPAGE_ALIAS',
+];
+
+function validateProjectName(name) {
+  if (!name || name.trim().length === 0) return 'Project name cannot be empty';
+  if (name.includes('_')) return 'Project name cannot contain underscores (use hyphens instead)';
+  if (!/^[a-z0-9-]+$/.test(name)) return 'Project name can only contain lowercase letters, numbers, and hyphens';
+  return undefined;
+}
+
+function cancelAndExit(message = 'Setup cancelled.') {
+  p.cancel(message);
+  process.exit(0);
+}
+
+function unwrapPrompt(value) {
+  if (p.isCancel(value)) {
+    cancelAndExit();
+  }
+  return value;
+}
+
+function formatElapsed(startedAt) {
+  const totalSeconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
+function firstErrorLine(error) {
+  const raw = error?.message ? String(error.message) : String(error ?? 'Unknown error');
+  const line = raw.split('\n').map((part) => part.trim()).find(Boolean);
+  return line || 'Unknown error';
+}
+
+function fullErrorText(error) {
+  return error?.message ? String(error.message) : String(error ?? 'Unknown error');
+}
+
+function parseRecipeDependenciesFromYaml(recipeYaml) {
+  const lines = String(recipeYaml ?? '').split(/\r?\n/);
+  const deps = [];
+  let inRecipesSection = false;
+
+  for (const line of lines) {
+    if (!inRecipesSection) {
+      if (/^\s*recipes\s*:\s*$/.test(line)) {
+        inRecipesSection = true;
+      }
+      continue;
+    }
+
+    if (/^\S/.test(line)) {
+      break;
+    }
+
+    const match = line.match(/^\s*-\s*["']?([A-Za-z0-9._-]+)["']?\s*(?:#.*)?$/);
+    if (match?.[1]) {
+      deps.push(match[1]);
+    }
+  }
+
+  return deps;
+}
+
+function rewriteRecipeYamlWithoutDependencies(recipeYaml, dependenciesToSkip) {
+  if (!dependenciesToSkip || dependenciesToSkip.size === 0) {
+    return recipeYaml;
+  }
+
+  const lines = String(recipeYaml ?? '').split(/\r?\n/);
+  const output = [];
+  let inRecipesSection = false;
+  let recipesHeaderIndex = -1;
+  let keptRecipeLines = [];
+
+  const flushRecipesSection = () => {
+    if (recipesHeaderIndex === -1) return;
+    if (keptRecipeLines.length > 0) {
+      output.push(...keptRecipeLines);
+    } else {
+      output.splice(recipesHeaderIndex, 1);
+    }
+    recipesHeaderIndex = -1;
+    keptRecipeLines = [];
+  };
+
+  for (const line of lines) {
+    if (!inRecipesSection) {
+      if (/^\s*recipes\s*:\s*$/.test(line)) {
+        inRecipesSection = true;
+        recipesHeaderIndex = output.length;
+        output.push(line);
+        continue;
+      }
+
+      output.push(line);
+      continue;
+    }
+
+    if (/^\S/.test(line)) {
+      flushRecipesSection();
+      inRecipesSection = false;
+      output.push(line);
+      continue;
+    }
+
+    const match = line.match(/^\s*-\s*["']?([A-Za-z0-9._-]+)["']?\s*(?:#.*)?$/);
+    if (match?.[1]) {
+      if (!dependenciesToSkip.has(match[1])) {
+        keptRecipeLines.push(line);
+      }
+      continue;
+    }
+
+    if (line.trim() !== '') {
+      keptRecipeLines.push(line);
+    }
+  }
+
+  if (inRecipesSection) {
+    flushRecipesSection();
+  }
+
+  return output.join('\n');
+}
+
+function getSelectedRecipeEntries(manifest, recipePromptAnswers) {
+  const recipeEntries = [...(manifest.core || [])];
+
+  for (const entry of (manifest.optional || [])) {
+    if (entry.prompt && !recipePromptAnswers[entry.prompt]) continue;
+    recipeEntries.push(entry);
+  }
+
+  if (recipePromptAnswers.enableMediaImages && recipePromptAnswers.enableStructuredContent) {
+    recipeEntries.push({
+      package: 'dak/dak-structured-media-images',
+      name: 'dak_structured_media_images',
+      label: 'Structured content media images',
+      generated: true,
+    });
+  }
+
+  return recipeEntries;
+}
+
+async function runDrupalPhpScript({ drupalBackendPath, dockerEnv, runDdev, scriptContents, scriptLabel }) {
+  const scriptBasename = `.dak-${scriptLabel}.php`;
+  const scriptPath = path.join(drupalBackendPath, scriptBasename);
+
+  await fs.writeFile(scriptPath, scriptContents.endsWith('\n') ? scriptContents : `${scriptContents}\n`);
+
+  try {
+    await runDdev(['exec', 'drush', 'php:script', `/var/www/html/${scriptBasename}`], {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+    });
+  } finally {
+    await fs.rm(scriptPath, { force: true });
+  }
+}
+
+async function configureOptionalMediaAuthoring({ drupalBackendPath, dockerEnv, runDdev }) {
+  const script = `<?php
+$field_manager = \\Drupal::service('entity_field.manager');
+$display_repository = \\Drupal::service('entity_display.repository');
+
+$targets = [
+  [
+    'entity_type' => 'node',
+    'bundle' => 'page',
+    'field_name' => 'field_hero_image',
+    'require_existing_display' => true,
+    'component' => [
+      'type' => 'entity_reference_autocomplete',
+      'weight' => 2,
+      'region' => 'content',
+      'settings' => [
+        'match_operator' => 'CONTAINS',
+        'match_limit' => 10,
+        'size' => 60,
+        'placeholder' => '',
+      ],
+      'third_party_settings' => [],
+    ],
+  ],
+  [
+    'entity_type' => 'node',
+    'bundle' => 'headless_page',
+    'field_name' => 'field_hero_image',
+    'require_existing_display' => true,
+    'component' => [
+      'type' => 'entity_reference_autocomplete',
+      'weight' => 2,
+      'region' => 'content',
+      'settings' => [
+        'match_operator' => 'CONTAINS',
+        'match_limit' => 10,
+        'size' => 60,
+        'placeholder' => '',
+      ],
+      'third_party_settings' => [],
+    ],
+  ],
+];
+
+$updated = [];
+$skipped = [];
+
+foreach ($targets as $target) {
+  $definitions = $field_manager->getFieldDefinitions($target['entity_type'], $target['bundle']);
+  if (!isset($definitions[$target['field_name']])) {
+    $skipped[] = $target['entity_type'] . '.' . $target['bundle'] . '.' . $target['field_name'];
+    continue;
+  }
+
+  $display_id = $target['entity_type'] . '.' . $target['bundle'] . '.default';
+  if (!empty($target['require_existing_display'])) {
+    $existing_display = \\Drupal::entityTypeManager()->getStorage('entity_form_display')->load($display_id);
+    if (!$existing_display) {
+      $skipped[] = $display_id . ' (no existing display config)';
+      continue;
+    }
+  }
+
+  $display = $display_repository->getFormDisplay($target['entity_type'], $target['bundle'], 'default');
+  $display->setComponent($target['field_name'], $target['component']);
+  $display->save();
+
+  $updated[] = $target['entity_type'] . '.' . $target['bundle'] . '.' . $target['field_name'];
+}
+
+echo 'Updated form displays: ' . (empty($updated) ? 'none' : implode(', ', $updated)) . PHP_EOL;
+echo 'Skipped form displays: ' . (empty($skipped) ? 'none' : implode(', ', $skipped)) . PHP_EOL;
+`;
+
+  await runDrupalPhpScript({
+    drupalBackendPath,
+    dockerEnv,
+    runDdev,
+    scriptContents: script,
+    scriptLabel: 'configure-media-authoring',
+  });
+}
+
+function buildFinalNoteLines({ projectName, adminUsername, adminPassword, astroMode }) {
+  const lines = [
+    `Drupal is already available at http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`,
+  ];
+
+  if (astroMode === 'skip') {
+    lines.push('Astro setup was skipped, so your existing frontend still needs to be started manually.');
+  } else {
+    lines.push('Astro is set up, but its dev server is not running yet.');
+  }
+
+  lines.push('From project root: cd astro-frontend && npm run dev');
+  lines.push('If port 4321 is in use: npm run dev -- --port 4322');
+  lines.push('By default, Astro will be available at http://localhost:4321');
+
+  return lines;
+}
+
+async function handoffToAstroDev(astroFrontendPath) {
+  try {
+    const result = await execa('npm', ['run', 'dev'], {
+      cwd: astroFrontendPath,
+      stdio: 'inherit',
+      reject: false,
+    });
+
+    if (result.exitCode === 0 || result.exitCode === 130 || result.signal === 'SIGINT') {
+      return { ok: true };
+    }
+
+    const detail = result.signal
+      ? `Exited with signal ${result.signal}`
+      : `Exited with code ${result.exitCode ?? 'unknown'}`;
+
+    return { ok: false, detail };
+  } catch (error) {
+    return { ok: false, detail: firstErrorLine(error) };
+  }
+}
+
+function toActionableError(stepId, label, error) {
+  const detail = firstErrorLine(error);
+  const fullDetail = fullErrorText(error);
+  if (stepId === 'apply-recipes') {
+    return `Step failed: ${label}. Error: ${fullDetail}`;
+  }
+  if (stepId === 'docker-socket') {
+    return 'Docker is not running. Start Docker Desktop or Colima, then re-run ./setup.sh';
+  }
+  if (stepId === 'ddev-start') {
+    return `DDEV failed to start. Try: ddev poweroff && ddev start\nDetails: ${detail}`;
+  }
+  if (stepId === 'ddev-composer-create') {
+    if (/not empty|already exists/i.test(fullDetail)) {
+      return `Drupal project creation failed because the target directory is not empty.\nTry removing stale files in drupal-backend and rerun ./setup.sh.\nDetails: ${detail}`;
+    }
+    return `Drupal project creation failed. This is usually network/DDEV/composer related.\nIf running commands manually, run them inside drupal-backend.\nDetails: ${detail}`;
+  }
+  if (stepId === 'astro') {
+    return `Astro dependency install failed. Try: cd astro-frontend && npm install\nDetails: ${detail}`;
+  }
+  return `Step failed: ${label}. Error: ${detail}`;
+}
+
+function createStepRunner(totalSteps) {
+  let index = 0;
+  return async (stepId, label, task) => {
+    index += 1;
+    const prefix = `[${index}/${totalSteps}] ${label}`;
+    const spinner = p.spinner();
+    const startedAt = Date.now();
+    spinner.start(prefix);
+
+    let ticker = null;
+    if (typeof spinner.message === 'function') {
+      ticker = setInterval(() => {
+        spinner.message(`${prefix} (${formatElapsed(startedAt)})`);
+      }, 1000);
+    }
+
+    try {
+      const result = await task();
+      if (ticker) clearInterval(ticker);
+      spinner.stop(`${prefix} ${pc.green('✓')} (${formatElapsed(startedAt)})`);
+      return result;
+    } catch (error) {
+      if (ticker) clearInterval(ticker);
+      spinner.stop(`${prefix} ${pc.red('✗')} (${formatElapsed(startedAt)})`);
+      throw new Error(toActionableError(stepId, label, error));
+    }
+  };
+}
+
+async function resolveDockerEnv() {
+  const parseUnixSocketFromHost = (host) => {
+    if (!host || typeof host !== 'string') return null;
+    const match = host.match(/^unix:\/\/(.+)$/);
+    return match ? match[1] : null;
+  };
+
+  const isDockerSocketAvailable = async (socketPath, timeoutMs = 1500) => {
+    if (!socketPath) return false;
+    if (!fsSync.existsSync(socketPath)) return false;
+    return new Promise((resolve) => {
+      const req = http.request({ socketPath, path: '/_ping', method: 'GET' }, (res) => {
+        res.resume();
+        resolve(res.statusCode === 200);
+      });
+      req.setTimeout(timeoutMs, () => {
+        req.destroy();
+        resolve(false);
+      });
+      req.on('error', () => resolve(false));
+      req.end();
+    });
+  };
+
+  if (process.env.DOCKER_HOST && process.env.DOCKER_HOST.trim() !== '') {
+    const unixPath = parseUnixSocketFromHost(process.env.DOCKER_HOST.trim());
+    if (unixPath) {
+      if (await isDockerSocketAvailable(unixPath)) {
+        return { DOCKER_HOST: process.env.DOCKER_HOST.trim(), __socketPath: unixPath };
+      }
+    } else {
+      return { DOCKER_HOST: process.env.DOCKER_HOST.trim() };
+    }
+  }
+
+  try {
+    const result = await execa('colima', ['status'], { timeout: 2000, stdin: 'ignore' });
+    const stdout = result.stdout || '';
+    const match = stdout.match(/docker socket:\s*(\S+)/i);
+    if (match && match[1]) {
+      const colimaSocket = match[1].replace(/^unix:\/\//, '');
+      if (await isDockerSocketAvailable(colimaSocket)) {
+        return { DOCKER_HOST: `unix://${colimaSocket}`, __socketPath: colimaSocket };
+      }
+    }
+  } catch {
+  }
+
+  try {
+    const ctx = await execa('docker', ['context', 'inspect'], { timeout: 2000, stdin: 'ignore' });
+    const json = JSON.parse(ctx.stdout);
+    if (Array.isArray(json) && json.length > 0) {
+      const host = json[0]?.Endpoints?.docker?.Host;
+      const unixPath = parseUnixSocketFromHost(host);
+      if (unixPath) {
+        if (await isDockerSocketAvailable(unixPath)) {
+          return { DOCKER_HOST: `unix://${unixPath}`, __socketPath: unixPath };
+        }
+      } else if (host && typeof host === 'string') {
+        return { DOCKER_HOST: host };
+      }
+    }
+  } catch {
+  }
+
+  const defaultSocket = '/var/run/docker.sock';
+  if (await isDockerSocketAvailable(defaultSocket)) {
+    return { DOCKER_HOST: `unix://${defaultSocket}`, __socketPath: defaultSocket };
+  }
+
+  return {};
+}
+
+async function dockerInfoWorks(extraEnv = {}) {
+  try {
+    await execa('docker', ['info', '--format', '{{json .ServerVersion}}'], {
+      env: { ...process.env, ...extraEnv },
+      timeout: 3000,
+      stdin: 'ignore',
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function pathExists(targetPath) {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function directoryHasEntries(targetPath) {
+  try {
+    const entries = await fs.readdir(targetPath);
+    return entries.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function getDdevProject(projectName) {
+  try {
+    const result = await execa('ddev', ['list', '--json-output'], { stdin: 'ignore' });
+    const projects = JSON.parse(result.stdout);
+    if (!Array.isArray(projects)) {
+      return null;
+    }
+
+    return projects.find((project) => {
+      const candidateNames = [
+        project?.name,
+        project?.Name,
+        project?.project,
+        project?.Project,
+        project?.projectName,
+        project?.ProjectName,
+        project?.projectname,
+        project?.Projectname,
+      ]
+        .filter((value) => typeof value === 'string')
+        .map((value) => value.trim());
+
+      return candidateNames.includes(projectName);
+    }) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function detectDrupalRerunRisk({ drupalBackendPath, projectName }) {
+  const stateMarkers = [
+    path.join(drupalBackendPath, '.ddev', 'config.yaml'),
+    path.join(drupalBackendPath, 'composer.json'),
+    path.join(drupalBackendPath, 'web', 'core'),
+    path.join(drupalBackendPath, 'web', 'sites', 'default', 'settings.php'),
+    path.join(drupalBackendPath, 'web', 'sites', 'default', 'files'),
+  ];
+
+  let hasDrupalDirState = false;
+  for (const marker of stateMarkers) {
+    if (await pathExists(marker)) {
+      hasDrupalDirState = true;
+      break;
+    }
+  }
+
+  if (!hasDrupalDirState) {
+    hasDrupalDirState = await directoryHasEntries(drupalBackendPath);
+  }
+
+  const ddevProject = await getDdevProject(projectName);
+  const hasDdevProject = Boolean(ddevProject);
+
+  return {
+    hasRisk: hasDrupalDirState || hasDdevProject,
+    hasDrupalDirState,
+    hasDdevProject,
+  };
+}
+
+async function resetDrupalState({ projectRoot, drupalBackendPath, projectName, dockerEnv, hasDdevProject }) {
+  const env = { ...process.env, ...dockerEnv };
+  const localDdevConfigExists = await pathExists(path.join(drupalBackendPath, '.ddev', 'config.yaml'));
+
+  const deleteAttempts = [];
+  if (localDdevConfigExists) {
+    deleteAttempts.push({ args: ['delete', '--omit-snapshot', '-Oy'], cwd: drupalBackendPath });
+  }
+  deleteAttempts.push({ args: ['delete', '--omit-snapshot', '-Oy', projectName], cwd: projectRoot });
+
+  let deleted = false;
+  let lastDeleteError = null;
+
+  for (const attempt of deleteAttempts) {
+    try {
+      await runDdev(attempt.args, {
+        cwd: attempt.cwd,
+        env,
+        timeout: 300000,
+      });
+      deleted = true;
+      break;
+    } catch (error) {
+      lastDeleteError = error;
+    }
+  }
+
+  if (!deleted && (localDdevConfigExists || hasDdevProject)) {
+    throw lastDeleteError ?? new Error(`Failed to delete existing DDEV project data for ${projectName}.`);
+  }
+
+  try {
+    await runDdev(['stop', '--unlist', projectName], {
+      cwd: projectRoot,
+      env,
+      timeout: 300000,
+    });
+  } catch {
+  }
+
+  await fs.rm(drupalBackendPath, { recursive: true, force: true });
+}
+
+function describeDrupalMode(drupalMode) {
+  if (drupalMode === 'reset') {
+    return 'clean reset';
+  }
+  if (drupalMode === 'reuse') {
+    return 'reuse existing Drupal';
+  }
+  return 'create new Drupal';
+}
+
+async function copyDir(src, dest) {
+  await fs.mkdir(dest, { recursive: true });
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      await copyDir(srcPath, destPath);
+    } else {
+      await fs.copyFile(srcPath, destPath);
+    }
+  }
+}
+
+async function moveDirContents(src, dest) {
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const fromPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (await pathExists(destPath)) {
+      await fs.rm(destPath, { recursive: true, force: true });
+    }
+
+    await fs.rename(fromPath, destPath);
+  }
+}
+
+async function runDdev(args, options) {
+  try {
+    return await execa('ddev', args, { ...options, stdin: 'ignore' });
+  } catch (error) {
+    const parts = [];
+    const message = error?.message ? String(error.message) : 'Unknown error';
+    const stderr = error?.stderr ? String(error.stderr).trim() : '';
+    const stdout = error?.stdout ? String(error.stdout).trim() : '';
+    parts.push(message);
+    if (stderr) parts.push(stderr);
+    if (stdout) parts.push(stdout);
+    throw new Error(parts.join('\n'));
+  }
+}
+
+async function normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv }) {
+  // Mutagen can sync scaffolded Drupal files as owner-only inside the container.
+  // Drush still works as the project user, but nginx/php-fpm then returns 404 for
+  // otherwise valid routes because it cannot read the docroot.
+  await runDdev(
+    [
+      'exec',
+      'bash',
+      '-lc',
+      'if [ -e web ]; then sudo -n chmod -R a+rX web 2>/dev/null || chmod -R a+rX web; fi; ' +
+      'if [ -e vendor ]; then sudo -n chmod -R a+rX vendor 2>/dev/null || chmod -R a+rX vendor; fi',
+    ],
+    {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+    },
+  );
+}
+
+async function normalizeRecipeFieldConfigs({ drupalBackendPath }) {
+  const recipesRoot = path.join(drupalBackendPath, 'recipes');
+  if (!await pathExists(recipesRoot)) {
+    return;
+  }
+
+  const recipeDirs = await fs.readdir(recipesRoot, { withFileTypes: true });
+  for (const recipeDir of recipeDirs) {
+    if (!recipeDir.isDirectory()) continue;
+
+    const configDir = path.join(recipesRoot, recipeDir.name, 'config');
+    if (!await pathExists(configDir)) continue;
+
+    const configEntries = await fs.readdir(configDir, { withFileTypes: true });
+    for (const entry of configEntries) {
+      if (!entry.isFile()) continue;
+      if (!entry.name.startsWith('field.field.')) continue;
+      if (!entry.name.endsWith('.yml')) continue;
+
+      const fieldConfigPath = path.join(configDir, entry.name);
+      const fieldConfigContent = await fs.readFile(fieldConfigPath, 'utf8');
+
+      if (/^field_type:\s*\S+/m.test(fieldConfigContent)) {
+        continue;
+      }
+
+      const fieldNameMatch = fieldConfigContent.match(/^field_name:\s*([A-Za-z0-9_]+)/m);
+      const entityTypeMatch = fieldConfigContent.match(/^entity_type:\s*([A-Za-z0-9_]+)/m);
+      if (!fieldNameMatch?.[1] || !entityTypeMatch?.[1]) {
+        continue;
+      }
+
+      const storageFileName = `field.storage.${entityTypeMatch[1]}.${fieldNameMatch[1]}.yml`;
+      const storageConfigPath = path.join(configDir, storageFileName);
+      if (!await pathExists(storageConfigPath)) {
+        continue;
+      }
+
+      const storageConfigContent = await fs.readFile(storageConfigPath, 'utf8');
+      const storageTypeMatch = storageConfigContent.match(/^type:\s*([A-Za-z0-9_]+)/m);
+      if (!storageTypeMatch?.[1]) {
+        continue;
+      }
+
+      const normalizedContent = `${fieldConfigContent.trimEnd()}\nfield_type: ${storageTypeMatch[1]}\n`;
+      await fs.writeFile(fieldConfigPath, normalizedContent);
+    }
+  }
+}
+
+async function checkPrerequisites() {
+  p.log.step('Checking prerequisites...');
+
+  const nodeVersion = process.versions.node;
+  const nodeMajor = Number.parseInt(nodeVersion.split('.')[0], 10);
+  if (Number.isNaN(nodeMajor) || nodeMajor < 20) {
+    throw new Error(`Node.js 20+ is required. You have ${nodeVersion}. Install: https://nodejs.org`);
+  }
+  p.log.success(`Node.js ${nodeVersion} detected`);
+
+  let dockerReachable = await dockerInfoWorks();
+  if (!dockerReachable) {
+    const dockerEnvCandidate = await resolveDockerEnv();
+    if (dockerEnvCandidate.DOCKER_HOST) {
+      dockerReachable = await dockerInfoWorks(dockerEnvCandidate);
+    }
+  }
+  if (!dockerReachable) {
+    throw new Error('Docker is not running. Start Docker Desktop or Colima, then re-run ./setup.sh');
+  }
+  p.log.success('Docker daemon is reachable');
+
+  try {
+    await execa('ddev', ['version'], { stdin: 'ignore' });
+  } catch {
+    throw new Error('DDEV is not installed. Install: https://ddev.com/get-started/');
+  }
+  p.log.success('DDEV detected');
+
+  try {
+    await execa('docker', ['buildx', 'version'], { stdin: 'ignore' });
+  } catch {
+    throw new Error('Docker Buildx is required by DDEV but was not found. Install: https://github.com/docker/buildx#installing');
+  }
+  p.log.success('Docker Buildx detected');
+
+  try {
+    await execa('composer', ['--version'], { stdin: 'ignore' });
+  } catch {
+    throw new Error('Composer is not installed. Install: https://getcomposer.org/download/');
+  }
+  p.log.success('Composer detected');
+}
+
+async function runSetup({
+  projectRoot,
+  projectName,
+  adminUsername,
+  adminPassword,
+  astroTemplate,
+  enableStructuredContent,
+  recipePromptAnswers,
+  astroMode,
+  drupalMode,
+  hasExistingDdevProject,
+}) {
+  const runStep = createStepRunner(STEP_TEXTS.length);
+  let drupalScaffolded = false;
+
+  const envPath = path.join(projectRoot, '.env');
+  const exampleEnvPath = path.join(projectRoot, '.env.example');
+  const drupalBackendPath = path.join(projectRoot, 'drupal-backend');
+  const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
+  const dockerEnvCandidate = await resolveDockerEnv();
+
+  await runStep('env', STEP_TEXTS[0].text, async () => {
+    const envExists = await fs.access(envPath).then(() => true).catch(() => false);
+    if (!envExists) {
+      await fs.copyFile(exampleEnvPath, envPath);
+    }
+
+    const upsertEnvVar = (content, key, value) => {
+      const line = `${key}=${value}`;
+      const re = new RegExp(`^\\s*${key}\\s*=.*$`, 'm');
+      if (re.test(content)) {
+        return content.replace(re, line);
+      }
+      const needsNewline = content.length > 0 && !content.endsWith('\n');
+      return `${content}${needsNewline ? '\n' : ''}${line}\n`;
+    };
+
+    let envContent = await fs.readFile(envPath, 'utf8');
+    envContent = envContent.replace(/your-project-name/g, projectName);
+
+    const drupalBaseUrl = `http://${projectName}.ddev.site`;
+    const drupalJsonApiUrl = `${drupalBaseUrl}/jsonapi`;
+
+    envContent = upsertEnvVar(envContent, 'PROJECT_NAME', projectName);
+    envContent = upsertEnvVar(envContent, 'DRUPAL_BASE_URL', drupalBaseUrl);
+    envContent = upsertEnvVar(envContent, 'DRUPAL_JSONAPI_URL', drupalJsonApiUrl);
+    envContent = upsertEnvVar(envContent, 'DRUPAL_API_URL', drupalJsonApiUrl);
+    envContent = upsertEnvVar(envContent, 'API_BASE_URL', drupalBaseUrl);
+    envContent = upsertEnvVar(envContent, 'HOMEPAGE_ALIAS', '/home');
+    envContent = upsertEnvVar(envContent, 'DRUPAL_ADMIN_USER', adminUsername || 'admin');
+    envContent = upsertEnvVar(envContent, 'DRUPAL_ADMIN_PASS', adminPassword || 'admin');
+
+    await fs.writeFile(envPath, envContent);
+  });
+
+  let dockerEnv = {};
+  await runStep('docker-socket', STEP_TEXTS[1].text, async () => {
+    const canUseDockerCLI = await dockerInfoWorks();
+    if (canUseDockerCLI) {
+      dockerEnv = {};
+      return;
+    }
+
+    if (dockerEnvCandidate.DOCKER_HOST) {
+      const canUseWithHost = await dockerInfoWorks(dockerEnvCandidate);
+      if (canUseWithHost) {
+        dockerEnv = { DOCKER_HOST: dockerEnvCandidate.DOCKER_HOST };
+        return;
+      }
+    }
+
+    throw new Error('Docker daemon is not reachable. Start Docker Desktop or Colima.');
+  });
+
+  await runStep('ddev-config', STEP_TEXTS[2].text, async () => {
+    if (drupalMode === 'reset') {
+      await resetDrupalState({
+        projectRoot,
+        drupalBackendPath,
+        projectName,
+        dockerEnv,
+        hasDdevProject: hasExistingDdevProject,
+      });
+    }
+
+    await fs.mkdir(drupalBackendPath, { recursive: true });
+
+    try {
+      await runDdev(['stop', '--unlist', projectName], {
+        cwd: drupalBackendPath,
+        env: { ...process.env, ...dockerEnv },
+      });
+    } catch {
+    }
+
+    await runDdev(
+      ['config', '--project-type=drupal11', '--php-version=8.3', '--docroot=web', `--project-name=${projectName}`, '--auto'],
+      {
+        cwd: drupalBackendPath,
+        env: { ...process.env, ...dockerEnv },
+      },
+    );
+  });
+
+  await runStep('ddev-start', STEP_TEXTS[3].text, async () => {
+    await runDdev(['start', '-y'], {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+      timeout: 300000,
+    });
+  });
+
+  await runStep('ddev-composer-create', STEP_TEXTS[4].text, async () => {
+    const webCorePath = path.join(drupalBackendPath, 'web', 'core');
+    const composerJsonPath = path.join(drupalBackendPath, 'composer.json');
+    const hasDrupal = (await pathExists(webCorePath)) || (await pathExists(composerJsonPath));
+
+    if (!hasDrupal) {
+      const bootstrapTmpDir = '.drupal-bootstrap-tmp';
+      const bootstrapTmpPath = path.join(drupalBackendPath, bootstrapTmpDir);
+      await fs.rm(bootstrapTmpPath, { recursive: true, force: true });
+
+      try {
+        await execa('composer', ['create-project', 'drupal/recommended-project:^11', bootstrapTmpDir, '--no-interaction'], {
+          cwd: drupalBackendPath,
+          stdin: 'ignore',
+        });
+        await execa('composer', ['require', 'drush/drush', '--working-dir', bootstrapTmpDir, '--no-interaction'], {
+          cwd: drupalBackendPath,
+          stdin: 'ignore',
+        });
+        await moveDirContents(bootstrapTmpPath, drupalBackendPath);
+        drupalScaffolded = true;
+      } finally {
+        await fs.rm(bootstrapTmpPath, { recursive: true, force: true });
+      }
+    }
+  });
+
+  await runStep('ddev-drush', STEP_TEXTS[5].text, async () => {
+    const drushBinaryPath = path.join(drupalBackendPath, 'vendor', 'bin', 'drush');
+    if (await pathExists(drushBinaryPath)) {
+      return;
+    }
+
+    await execa('composer', ['require', 'drush/drush', '--working-dir', drupalBackendPath, '--no-interaction'], {
+      cwd: drupalBackendPath,
+      stdin: 'ignore',
+    });
+  });
+
+  await runStep('ddev-site-install', STEP_TEXTS[6].text, async () => {
+    if (drupalScaffolded) {
+      await runDdev(['start', '-y'], {
+        cwd: drupalBackendPath,
+        env: { ...process.env, ...dockerEnv },
+        timeout: 300000,
+      });
+    }
+
+    await normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv });
+
+    await runDdev([
+      'exec',
+      'bash',
+      '-lc',
+      'set -euo pipefail; mkdir -p web/sites/default/files; if [ ! -w web/sites/default/files ]; then sudo chown -R "$(id -u):$(id -g)" web/sites/default/files || true; fi; mkdir -p web/sites/default/files/sync web/sites/default/files/media-icons/generic; chmod -R u+rwX web/sites/default/files || true',
+    ], {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+    });
+
+    let isInstalled = false;
+    try {
+      await runDdev(['exec', 'drush', 'sql:query', 'SELECT count(*) FROM users LIMIT 1'], {
+        cwd: drupalBackendPath,
+        env: { ...process.env, ...dockerEnv },
+      });
+      isInstalled = true;
+    } catch {
+      isInstalled = false;
+    }
+
+    if (!isInstalled) {
+      await runDdev(['exec', 'drush', 'site:install', `--account-name=${adminUsername}`, `--account-pass=${adminPassword}`, '-y'], {
+        cwd: drupalBackendPath,
+        env: { ...process.env, ...dockerEnv },
+      });
+    }
+  });
+
+  await runStep('configure-drupal', STEP_TEXTS[7].text, async () => {
+    const recipesSrcRoot = path.join(projectRoot, 'setup', 'drupal-recipes');
+    const recipesDir = path.join(drupalBackendPath, 'recipes');
+    await fs.mkdir(recipesDir, { recursive: true });
+
+    // Load recipe manifest
+    const manifestPath = path.join(projectRoot, 'setup', 'recipe-manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+
+    // Collect applicable recipe entries from manifest
+    const recipeEntries = getSelectedRecipeEntries(manifest, recipePromptAnswers);
+
+    // Make the generated Drupal project recipe-ready:
+    // Add installer-path for type:drupal-recipe → ./recipes/{$name}
+    // Add core-recipe-unpack plugin allowance
+    const composerJsonPath = path.join(drupalBackendPath, 'composer.json');
+    const composerJson = JSON.parse(await fs.readFile(composerJsonPath, 'utf8'));
+
+    // Allow recipes to pull in dev/alpha/beta dependencies
+    composerJson['minimum-stability'] = 'dev';
+    composerJson['prefer-stable'] = true;
+
+    const extra = composerJson.extra || {};
+    const installerPaths = extra['installer-paths'] || {};
+    installerPaths['./recipes/{$name}'] = ['type:drupal-recipe'];
+    extra['installer-paths'] = installerPaths;
+    composerJson.extra = extra;
+
+    const configSection = composerJson.config || {};
+    const allowPlugins = configSection['allow-plugins'] || {};
+    allowPlugins['drupal/core-recipe-unpack'] = true;
+    configSection['allow-plugins'] = allowPlugins;
+    composerJson.config = configSection;
+
+    // Register local recipe paths as Composer path repositories (with symlink: false
+    // so files are copied into the project — symlinks break inside the DDEV container
+    // because they point to host-only paths)
+    // Composer's default repositories can be an array — normalize to object keyed format
+    let repositories = composerJson.repositories || {};
+    if (Array.isArray(repositories)) {
+      const repoObj = {};
+      for (let i = 0; i < repositories.length; i++) {
+        repoObj[String(i)] = repositories[i];
+      }
+      repositories = repoObj;
+    }
+    for (const entry of recipeEntries) {
+      const localRecipePath = path.join(recipesSrcRoot, entry.name);
+      if (await pathExists(path.join(localRecipePath, 'composer.json'))) {
+        repositories[entry.name] = {
+          type: 'path',
+          url: localRecipePath,
+          options: { symlink: false },
+        };
+      }
+    }
+    composerJson.repositories = repositories;
+
+    await fs.writeFile(composerJsonPath, JSON.stringify(composerJson, null, 4) + '\n');
+
+    // Require core-recipe-unpack, then require all recipe packages
+    // Composer handles all transitive dependencies (contrib modules, etc.)
+    await execa('composer', [
+      'require', 'drupal/core-recipe-unpack', '--working-dir', drupalBackendPath, '--no-interaction',
+    ], { cwd: drupalBackendPath, stdin: 'ignore' });
+
+    const recipePackages = recipeEntries.map((e) => `${e.package}:*`);
+    if (recipePackages.length > 0) {
+      await execa('composer', [
+        'require', '--working-dir', drupalBackendPath, '--no-interaction', ...recipePackages,
+      ], { cwd: drupalBackendPath, stdin: 'ignore' });
+    }
+
+    // Some custom recipe exports omit field_type on field.field.* configs.
+    // Normalize these from matching field.storage.* config so recipe apply is deterministic.
+    await normalizeRecipeFieldConfigs({ drupalBackendPath });
+
+    await normalizeDrupalHttpReadPermissions({ drupalBackendPath, dockerEnv });
+  });
+
+  await runStep('apply-recipes', STEP_TEXTS[8].text, async () => {
+    const applyRecipe = async ({ recipeDirName, recipePath }) => {
+
+      const attempts = [
+        {
+          label: 'drush recipe:apply',
+          ddevArgs: ['exec', 'drush', 'recipe:apply', recipePath, '-y'],
+        },
+        {
+          label: 'drush recipe',
+          ddevArgs: ['exec', 'drush', 'recipe', recipePath, '-y'],
+        },
+        {
+          label: 'core script',
+          ddevArgs: ['exec', 'php', 'web/core/scripts/drupal', 'recipe', recipePath],
+        },
+      ];
+
+      const errors = [];
+      for (const attempt of attempts) {
+        try {
+          await runDdev(attempt.ddevArgs, { cwd: drupalBackendPath, env: { ...process.env, ...dockerEnv } });
+          return;
+        } catch (error) {
+          const detail = fullErrorText(error)
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .join(' | ');
+          errors.push(`- ${attempt.label}: ${detail}`);
+        }
+      }
+
+      throw new Error(`Failed to apply recipe "${recipeDirName}". Attempts:\n${errors.join('\n')}`);
+    };
+
+    const getRecipeDependencies = async (recipeDirName) => {
+      const recipeYmlPath = path.join(drupalBackendPath, 'recipes', recipeDirName, 'recipe.yml');
+      const recipeYaml = await fs.readFile(recipeYmlPath, 'utf8');
+      return parseRecipeDependenciesFromYaml(recipeYaml);
+    };
+
+    const buildRuntimeRecipePath = async ({ recipeDirName, dependenciesToSkip }) => {
+      const sourceDir = path.join(drupalBackendPath, 'recipes', recipeDirName);
+      const runtimeRoot = path.join(drupalBackendPath, '.dak-runtime-recipes');
+      const runtimeDir = path.join(runtimeRoot, recipeDirName);
+      const sourceRecipeYml = path.join(sourceDir, 'recipe.yml');
+      const runtimeRecipeYml = path.join(runtimeDir, 'recipe.yml');
+
+      await fs.mkdir(runtimeRoot, { recursive: true });
+      await fs.rm(runtimeDir, { recursive: true, force: true });
+      await fs.cp(sourceDir, runtimeDir, { recursive: true });
+
+      const recipeYaml = await fs.readFile(sourceRecipeYml, 'utf8');
+      const rewritten = rewriteRecipeYamlWithoutDependencies(recipeYaml, dependenciesToSkip);
+      await fs.writeFile(runtimeRecipeYml, rewritten.endsWith('\n') ? rewritten : `${rewritten}\n`);
+
+      return `../.dak-runtime-recipes/${recipeDirName}`;
+    };
+
+    const probeLinksetEndpoint = async (menuName) => {
+      const endpoint = `http://${projectName}.ddev.site/system/menu/${menuName}/linkset`;
+      try {
+        const response = await fetch(endpoint);
+        return {
+          endpoint,
+          ok: response.ok,
+          status: response.status,
+          statusText: response.statusText,
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          endpoint,
+          ok: false,
+          status: null,
+          statusText: message,
+        };
+      }
+    };
+
+    // Load recipe manifest to determine apply order
+    const manifestPath = path.join(projectRoot, 'setup', 'recipe-manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+
+    const recipeEntries = getSelectedRecipeEntries(manifest, recipePromptAnswers);
+
+    // Apply recipes while preventing sub-recipes from being re-applied across the stack.
+    // If a recipe depends on something already applied, create a runtime copy with that
+    // dependency removed from its `recipes:` list for this run.
+    const appliedRecipeNames = new Set();
+
+    for (const entry of recipeEntries) {
+      // Composer installs into ./recipes/{short-package-name} (e.g., dak-decoupled-base)
+      const dirName = entry.package.split('/').pop();
+      const declaredDependencies = await getRecipeDependencies(dirName);
+      const dependenciesToSkip = new Set(
+        declaredDependencies.filter((dependencyName) => appliedRecipeNames.has(dependencyName)),
+      );
+
+      let recipePath = `../recipes/${dirName}`;
+      if (dependenciesToSkip.size > 0) {
+        recipePath = await buildRuntimeRecipePath({
+          recipeDirName: dirName,
+          dependenciesToSkip,
+        });
+      }
+
+      await applyRecipe({ recipeDirName: dirName, recipePath });
+
+      appliedRecipeNames.add(dirName);
+      for (const dependencyName of declaredDependencies) {
+        if (!dependenciesToSkip.has(dependencyName)) {
+          appliedRecipeNames.add(dependencyName);
+        }
+      }
+
+      // Post-apply hook: seed starter content
+      if (entry.name === 'dak_starter_content') {
+        await execa('bash', [path.join(projectRoot, 'scripts', 'seed-content.sh'), projectName], {
+          cwd: projectRoot,
+          stdin: 'ignore',
+        });
+      }
+    }
+
+    if (recipePromptAnswers.enableMediaImages) {
+      await configureOptionalMediaAuthoring({ drupalBackendPath, dockerEnv, runDdev });
+    }
+
+    await runDdev(['exec', 'drush', 'cr'], {
+      cwd: drupalBackendPath,
+      env: { ...process.env, ...dockerEnv },
+      timeout: 300000,
+    });
+
+    const mainLinkset = await probeLinksetEndpoint('main');
+    if (!mainLinkset.ok) {
+      const statusDetails = mainLinkset.status === null
+        ? mainLinkset.statusText
+        : `${mainLinkset.status} ${mainLinkset.statusText}`;
+      throw new Error(
+        `Required Linkset endpoint check failed: ${mainLinkset.endpoint} (${statusDetails}). ` +
+        'Linkset may be disabled or Drupal caches may still need to be rebuilt (try: cd drupal-backend && ddev exec drush cr).',
+      );
+    }
+
+    const footerLinkset = await probeLinksetEndpoint('footer');
+    if (!footerLinkset.ok) {
+      const statusDetails = footerLinkset.status === null
+        ? footerLinkset.statusText
+        : `${footerLinkset.status} ${footerLinkset.statusText}`;
+      console.warn(
+        `[setup] Optional Linkset endpoint not available: ${footerLinkset.endpoint} (${statusDetails}). ` +
+        'Footer navigation will be empty until that menu exists.',
+      );
+    }
+  });
+
+  await runStep('astro', STEP_TEXTS[9].text, async () => {
+    if (astroMode === 'skip') {
+      return;
+    }
+
+    if (astroMode === 'overwrite') {
+      await fs.rm(astroFrontendPath, { recursive: true, force: true });
+    }
+
+    const astroFrontendExists = await pathExists(astroFrontendPath);
+    if (!astroFrontendExists) {
+      await execa('npm', ['create', `astro@${ASTRO_CREATE_VERSION}`, 'astro-frontend', '--', '--template', astroTemplate, '--yes', '--no-git', '--no-install'], {
+        cwd: projectRoot,
+        stdin: 'ignore',
+      });
+    }
+
+    const packageJsonPath = path.join(astroFrontendPath, 'package.json');
+    const packageContent = await fs.readFile(packageJsonPath, 'utf8');
+    const packageJson = JSON.parse(packageContent);
+    packageJson.name = `${projectName}-frontend`;
+
+    const astroRunnerPath = path.join(astroFrontendPath, 'scripts', 'run-astro.mjs');
+    const astroRunnerContent = `import { spawn } from 'node:child_process';
+
+const ENV_KEYS_TO_UNSET = ${JSON.stringify(ASTRO_ENV_KEYS_TO_UNSET)};
+const args = process.argv.slice(2);
+const env = { ...process.env };
+const clearedKeys = [];
+
+for (const key of ENV_KEYS_TO_UNSET) {
+  if (Object.prototype.hasOwnProperty.call(env, key)) {
+    delete env[key];
+    clearedKeys.push(key);
+  }
+}
+
+if (clearedKeys.length > 0) {
+  console.warn('[dak] Ignoring exported env vars for Astro: ' + clearedKeys.join(', '));
+}
+
+const child = spawn(process.execPath, ['./node_modules/astro/astro.js', ...args], {
+  cwd: process.cwd(),
+  env,
+  stdio: 'inherit',
+});
+
+child.on('error', (error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});
+
+child.on('exit', (code, signal) => {
+  if (signal) {
+    process.kill(process.pid, signal);
+    return;
+  }
+
+  process.exit(code ?? 0);
+});
+`;
+    await fs.mkdir(path.dirname(astroRunnerPath), { recursive: true });
+    await fs.writeFile(astroRunnerPath, astroRunnerContent);
+
+    const engines = { ...(packageJson.engines ?? {}) };
+    engines.node = ASTRO_NODE_RANGE;
+    packageJson.engines = engines;
+
+    const deps = { ...(packageJson.dependencies ?? {}) };
+    deps.astro = ASTRO_PACKAGE_VERSION;
+    if (deps.tslib && deps.tslib !== '2.6.2') {
+      deps.tslib = '2.6.2';
+    } else if (!deps.tslib) {
+      deps.tslib = '2.6.2';
+    }
+    packageJson.dependencies = deps;
+
+    const scripts = { ...(packageJson.scripts ?? {}) };
+    scripts.dev = 'node ./scripts/run-astro.mjs dev';
+    scripts.start = scripts.dev;
+    scripts.build = 'node ./scripts/run-astro.mjs build';
+    scripts.preview = 'node ./scripts/run-astro.mjs preview';
+    scripts.astro = 'node ./scripts/run-astro.mjs';
+    packageJson.scripts = scripts;
+
+    await fs.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+    await fs.writeFile(path.join(astroFrontendPath, '.nvmrc'), '20\n');
+
+    await execa('npm', ['install'], { cwd: astroFrontendPath, stdin: 'ignore' });
+    await execa('npm', ['install', '--save-dev', 'wrangler'], { cwd: astroFrontendPath, stdin: 'ignore' });
+    await execa('npm', ['install', '--save', 'jsona', 'drupal-jsonapi-params', 'tslib@2.6.2'], {
+      cwd: astroFrontendPath,
+      stdin: 'ignore',
+    });
+
+    const astroConfigContent = `import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  output: 'static',
+  site: 'https://${projectName}.pages.dev',
+  vite: {
+    build: {
+      sourcemap: true
+    }
+  }
+});
+`;
+    await fs.writeFile(path.join(astroFrontendPath, 'astro.config.mjs'), astroConfigContent);
+    await fs.copyFile(envPath, path.join(astroFrontendPath, '.env'));
+
+    const wranglerJsoncContent = `{
+  "name": "${projectName}",
+  "compatibility_date": "${new Date().toISOString().split('T')[0]}",
+  "pages_build_output_dir": "./dist"
+}
+`;
+    await fs.writeFile(path.join(astroFrontendPath, 'wrangler.jsonc'), wranglerJsoncContent);
+
+    const templateSrcPath = path.join(projectRoot, 'templates', 'astro-src');
+    const targetSrcPath = path.join(astroFrontendPath, 'src');
+
+    try {
+      await fs.access(templateSrcPath);
+      const pagesDir = path.join(targetSrcPath, 'pages');
+      try {
+        const templatePages = await fs.readdir(pagesDir);
+        for (const file of templatePages) {
+          await fs.unlink(path.join(pagesDir, file)).catch(() => {});
+        }
+      } catch {
+      }
+
+      await copyDir(templateSrcPath, targetSrcPath);
+    } catch {
+    }
+  });
+
+  await runStep('complete', STEP_TEXTS[10].text, async () => {});
+}
+
+export default async function run() {
+  p.intro(pc.bgCyan(pc.black(' Drupal + Astro + Cloudflare Starter Kit ')));
+
+  await checkPrerequisites();
+
+  const projectRoot = path.resolve(process.cwd(), '..');
+  const defaultProjectName = path.basename(path.resolve(process.cwd(), '..'));
+  const drupalBackendPath = path.join(projectRoot, 'drupal-backend');
+  const astroFrontendPath = path.join(projectRoot, 'astro-frontend');
+  const astroExists = await pathExists(astroFrontendPath);
+
+  const projectName = unwrapPrompt(
+    await p.text({
+      message: 'Project name (lowercase, hyphens only):',
+      initialValue: defaultProjectName,
+      validate: (value) => validateProjectName(String(value ?? '')),
+    }),
+  );
+
+  const drupalRerunRisk = await detectDrupalRerunRisk({
+    drupalBackendPath,
+    projectName: String(projectName),
+  });
+
+  let drupalMode = 'create';
+  if (drupalRerunRisk.hasRisk) {
+    p.note(
+      [
+        drupalRerunRisk.hasDrupalDirState ? '- `drupal-backend/` already contains Drupal files or site state.' : null,
+        drupalRerunRisk.hasDdevProject ? `- DDEV already has a project named "${projectName}".` : null,
+        '',
+        'Reusing Drupal keeps the current database, content, aliases, and routes.',
+        'That old state can change Astro pages on reruns if stale content survives.',
+      ].filter(Boolean).join('\n'),
+      'Existing Drupal State Detected',
+    );
+
+    const drupalOptions = [
+      {
+        value: 'reset',
+        label: 'Clean reset Drupal (recommended) - delete DDEV data and rebuild drupal-backend',
+      },
+    ];
+
+    if (drupalRerunRisk.hasDrupalDirState) {
+      drupalOptions.push({
+        value: 'reuse',
+        label: 'Reuse existing Drupal - keep current database/content/routes',
+      });
+    }
+
+    drupalOptions.push({ value: 'cancel', label: 'Cancel setup' });
+
+    drupalMode = unwrapPrompt(
+      await p.select({
+        message: 'How should setup handle the existing Drupal state?',
+        initialValue: 'reset',
+        options: drupalOptions,
+      }),
+    );
+
+    if (drupalMode === 'cancel') {
+      cancelAndExit('Setup cancelled. Existing Drupal state was left unchanged.');
+    }
+  }
+
+  const adminUsernameInput = unwrapPrompt(
+    await p.text({
+      message: 'Drupal admin username:',
+      placeholder: 'admin',
+      initialValue: 'admin',
+    }),
+  );
+  const adminUsername = String(adminUsernameInput || 'admin');
+
+  const adminPasswordInput = unwrapPrompt(
+    await p.password({
+      message: 'Drupal admin password:',
+      placeholder: 'admin',
+      mask: '•',
+    }),
+  );
+  const adminPassword = String(adminPasswordInput || 'admin');
+
+  let astroMode = 'create';
+  let astroTemplate = 'basics';
+
+  if (astroExists) {
+    astroMode = unwrapPrompt(
+      await p.select({
+        message: 'astro-frontend already exists. How should setup proceed?',
+        options: [
+          { value: 'overwrite', label: 'Overwrite existing astro-frontend' },
+          { value: 'skip', label: 'Skip Astro setup' },
+          { value: 'cancel', label: 'Cancel setup' },
+        ],
+      }),
+    );
+
+    if (astroMode === 'cancel') {
+      cancelAndExit('Setup cancelled. No files were changed.');
+    }
+  }
+
+  if (!astroExists || astroMode === 'overwrite') {
+    astroTemplate = unwrapPrompt(
+      await p.select({
+        message: 'Choose Astro template:',
+        options: [
+          { value: 'basics', label: 'Basics (minimal starter)' },
+          { value: 'blog', label: 'Blog (with content collections)' },
+          { value: 'portfolio', label: 'Portfolio (showcase your work)' },
+          { value: 'minimal', label: 'Minimal (bare bones)' },
+        ],
+      }),
+    );
+  }
+
+  const structuredContent = unwrapPrompt(
+    await p.select({
+      message: 'Enable structured content model (Paragraphs)?',
+      options: [
+        { value: 'yes', label: 'Yes (Recommended for DAK templates - allows block-based content building)' },
+        { value: 'no', label: 'No (Only choose if you are building a strict, flat data API)' },
+      ],
+      initialValue: 'yes',
+    }),
+  );
+  const enableStructuredContent = structuredContent === 'yes';
+
+  // Dynamically prompt for any additional optional recipes from the manifest
+  const manifestPath = path.join(projectRoot, 'setup', 'recipe-manifest.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  const recipePromptAnswers = { enableStructuredContent };
+  for (const entry of (manifest.optional || [])) {
+    if (!entry.prompt || entry.prompt === 'enableStructuredContent') continue;
+    const answer = unwrapPrompt(
+      await p.select({
+        message: `Enable ${entry.label}?`,
+        options: [
+          { value: 'yes', label: `Yes${entry.description ? ` (${entry.description})` : ''}` },
+          { value: 'no', label: 'No' },
+        ],
+        initialValue: 'yes',
+      }),
+    );
+    recipePromptAnswers[entry.prompt] = answer === 'yes';
+  }
+
+  p.note(
+    [
+      `Project name: ${projectName}`,
+      `Drupal mode: ${describeDrupalMode(drupalMode)}`,
+      `Admin username: ${adminUsername}`,
+      `Admin password: ${'•'.repeat(adminPassword.length)}`,
+      `Astro mode: ${astroMode}`,
+      `Astro template: ${astroMode === 'skip' ? 'n/a (skipped)' : astroTemplate}`,
+      `Structured content: ${enableStructuredContent ? 'yes' : 'no'}`,
+      ...Object.entries(recipePromptAnswers)
+        .filter(([key]) => key !== 'enableStructuredContent')
+        .map(([key, val]) => {
+          const entry = (manifest.optional || []).find((e) => e.prompt === key);
+          return `${entry ? entry.label : key}: ${val ? 'yes' : 'no'}`;
+        }),
+    ].join('\n'),
+    'Configuration Summary',
+  );
+
+  const proceed = unwrapPrompt(
+    await p.confirm({
+      message: 'Proceed with setup?',
+      initialValue: true,
+    }),
+  );
+
+  if (!proceed) {
+    cancelAndExit('Setup cancelled by user.');
+  }
+
+  try {
+    await runSetup({
+      projectRoot,
+      projectName: String(projectName),
+      adminUsername,
+      adminPassword,
+      astroTemplate: String(astroTemplate),
+      enableStructuredContent,
+      recipePromptAnswers,
+      astroMode,
+      drupalMode,
+      hasExistingDdevProject: drupalRerunRisk.hasDdevProject,
+    });
+  } catch (error) {
+    p.log.error(error.message || String(error));
+    throw error;
+  }
+
+  const finalNoteLines = buildFinalNoteLines({
+    projectName,
+    adminUsername,
+    adminPassword,
+    astroMode,
+  });
+
+  if (astroMode !== 'skip') {
+    p.note(
+      [
+        `Drupal is already available at http://${projectName}.ddev.site (admin: ${adminUsername}/${adminPassword})`,
+        'Astro is installed and ready to start.',
+      ].join('\n'),
+      'Setup Complete',
+    );
+
+    const startAstroNow = unwrapPrompt(
+      await p.confirm({
+        message: 'Start Astro dev now in this terminal?',
+        initialValue: false,
+      }),
+    );
+
+    if (startAstroNow) {
+      p.log.step('Handing this terminal to Astro dev. Press Ctrl+C to stop.');
+      const astroDevResult = await handoffToAstroDev(astroFrontendPath);
+
+      if (!astroDevResult.ok) {
+        p.note(
+          [
+            `Astro dev did not stay running: ${astroDevResult.detail}`,
+            ...finalNoteLines,
+          ].join('\n'),
+          'Start Astro Manually',
+        );
+        p.outro(pc.green(`${projectName} is ready!`));
+      }
+
+      return;
+    }
+  }
+
+  p.note(finalNoteLines.join('\n'), 'Next Steps');
+
+  p.outro(pc.green(`${projectName} is ready!`));
+}

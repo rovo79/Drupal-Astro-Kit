@@ -1,0 +1,41 @@
+name: 'DAK Discovery Catalog'
+description: 'Sets up structured content types (Product, Collection, Guide) with associated taxonomies.'
+type: 'Site'
+
+recipes:
+  - dak-decoupled-base
+  - dak-structured-content
+  - dak-media-images
+
+install:
+  - feeds
+  - feeds_tamper
+  - field_group
+  - node
+  - text
+  - link
+  - image
+  - media
+  - media_library
+  - paragraphs
+  - options
+  - views
+  - path
+  - pathauto
+  - menu_ui
+  - datetime
+  - taxonomy
+  - jsonapi
+  - entity_reference_revisions
+
+config:
+  import:
+    views:
+      - views.view.product_image_attention
+      - views.view.product_affiliate_attention
+      - views.view.product_ready_to_publish
+      - views.view.editorial_dashboard
+  actions:
+    system.site:
+      simpleConfigUpdate:
+        page.front: /admin/dashboard

@@ -1,0 +1,13 @@
+{
+    "name": "dak/dak-decoupled-base",
+    "description": "Baseline modules for a decoupled Drupal instance serving JSON:API for Astro SSG.",
+    "type": "drupal-recipe",
+    "license": ["GPL-2.0-or-later"],
+    "version": "1.0.0",
+    "require": {
+        "drupal/core": "^11",
+        "drupal/pathauto": "^1.13",
+        "drupal/jsonapi_extras": "^3.28",
+        "drupal/jsonapi_include": "^2.0"
+    }
+}

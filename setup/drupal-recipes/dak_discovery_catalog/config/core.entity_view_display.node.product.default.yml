@@ -1,0 +1,260 @@
+uuid: 0c668e7d-55af-4736-905c-4ba87e428825
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.product.field_affiliate_url
+    - field.field.node.product.field_buy_links
+    - field.field.node.product.field_category
+    - field.field.node.product.field_brand
+    - field.field.node.product.field_editor_pick
+    - field.field.node.product.field_editorial_flags
+    - field.field.node.product.field_external_key
+    - field.field.node.product.field_fandom_tags
+    - field.field.node.product.field_featured
+    - field.field.node.product.field_gallery
+    - field.field.node.product.field_image_asset_path
+    - field.field.node.product.field_image_last_checked
+    - field.field.node.product.field_image_notes
+    - field.field.node.product.field_image_provenance
+    - field.field.node.product.field_image_source_url
+    - field.field.node.product.field_image_status
+    - field.field.node.product.field_retailer_name
+    - field.field.node.product.field_source_url
+    - field.field.node.product.field_official_status
+    - field.field.node.product.field_price
+    - field.field.node.product.field_product_image
+    - field.field.node.product.field_related_collections
+    - field.field.node.product.field_sort_weight
+    - field.field.node.product.field_summary
+    - field.field.node.product.field_taste
+    - node.type.product
+  module:
+    - datetime
+    - entity_reference_revisions
+    - link
+    - options
+    - text
+    - user
+_core:
+  default_config_hash: YQEzZm-DR_i-BTZzFUJxBaXMY06JECvB1wLstaMxcpM
+id: node.product.default
+targetEntityType: node
+bundle: product
+mode: default
+content:
+  field_external_key:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 0
+    region: content
+  field_summary:
+    type: text_default
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    weight: 1
+    region: content
+  field_price:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 2
+    region: content
+  field_brand:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 3
+    region: content
+  field_category:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 10
+    region: content
+  field_fandom_tags:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 11
+    region: content
+  field_taste:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 12
+    region: content
+  field_editorial_flags:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 13
+    region: content
+  field_official_status:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 14
+    region: content
+  field_featured:
+    type: boolean
+    label: above
+    settings:
+      format: default
+      format_custom_false: ''
+      format_custom_true: ''
+    third_party_settings: {  }
+    weight: 20
+    region: content
+  field_editor_pick:
+    type: boolean
+    label: above
+    settings:
+      format: default
+      format_custom_false: ''
+      format_custom_true: ''
+    third_party_settings: {  }
+    weight: 21
+    region: content
+  field_sort_weight:
+    type: number_integer
+    label: above
+    settings:
+      thousand_separator: ''
+      prefix_suffix: true
+    third_party_settings: {  }
+    weight: 22
+    region: content
+  field_related_collections:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 23
+    region: content
+  field_affiliate_url:
+    type: link
+    label: above
+    settings:
+      trim_length: 80
+      url_only: false
+      url_plain: false
+    third_party_settings: {  }
+    weight: 30
+    region: content
+  field_buy_links:
+    type: entity_reference_revisions_entity_view
+    label: above
+    settings:
+      view_mode: default
+      link: ''
+    third_party_settings: {  }
+    weight: 31
+    region: content
+  field_source_url:
+    type: link
+    label: above
+    settings:
+      trim_length: 80
+      url_only: false
+      url_plain: false
+    third_party_settings: {  }
+    weight: 32
+    region: content
+  field_product_image:
+    type: media_thumbnail
+    label: above
+    settings:
+      image_link: content
+      image_loading:
+        attribute: lazy
+      image_style: medium
+    third_party_settings: {  }
+    weight: 40
+    region: content
+  field_gallery:
+    type: entity_reference_label
+    label: above
+    settings:
+      link: true
+    third_party_settings: {  }
+    weight: 41
+    region: content
+  field_image_source_url:
+    type: link
+    label: above
+    settings:
+      trim_length: 80
+      url_only: false
+      url_plain: false
+    third_party_settings: {  }
+    weight: 50
+    region: content
+  field_image_asset_path:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 51
+    region: content
+  field_image_status:
+    type: list_default
+    label: above
+    settings: {}
+    third_party_settings: {  }
+    weight: 52
+    region: content
+  field_image_last_checked:
+    type: datetime_default
+    label: above
+    settings: {}
+    third_party_settings: {  }
+    weight: 53
+    region: content
+  field_image_provenance:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 54
+    region: content
+  field_retailer_name:
+    type: string
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    weight: 55
+    region: content
+  field_image_notes:
+    type: text_default
+    label: above
+    settings: {}
+    third_party_settings: {  }
+    weight: 56
+    region: content
+  links:
+    weight: 100
+    region: content
+hidden: {  }

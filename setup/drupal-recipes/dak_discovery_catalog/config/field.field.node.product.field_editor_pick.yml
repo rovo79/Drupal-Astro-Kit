@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_editor_pick
+    - node.type.product
+
+
+id: node.product.field_editor_pick
+field_name: field_editor_pick
+entity_type: node
+bundle: product
+label: "Editor's Pick"
+description: Marks the Product as editorially recommended. Astro treats this as a promotion signal alongside Featured.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings: {}
+field_type: boolean

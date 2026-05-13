@@ -1,0 +1,25 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_fandom_tags
+    - node.type.guide
+
+
+id: node.guide.field_fandom_tags
+field_name: field_fandom_tags
+entity_type: node
+bundle: guide
+label: Fandom Tags
+description: Character, crew, or world tags that classify the guide for themed discovery.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings:
+  handler: default:taxonomy_term
+  handler_settings:
+    target_bundles:
+      fandom_tag: fandom_tag
+field_type: entity_reference

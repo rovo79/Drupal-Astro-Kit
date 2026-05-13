@@ -1,0 +1,18 @@
+{
+    "name": "dak/dak-discovery-catalog",
+    "description": "Sets up structured content types (Product, Collection, Guide) with associated taxonomies.",
+    "type": "drupal-recipe",
+    "license": ["GPL-2.0-or-later"],
+    "version": "1.0.0",
+    "require": {
+        "drupal/core": "^11",
+        "drupal/feeds": "^3.2",
+        "drupal/feeds_tamper": "^2.0@rc",
+        "drupal/field_group": "^4.0",
+        "drupal/pathauto": "^1.13",
+        "drupal/paragraphs": "^1",
+        "drupal/entity_reference_revisions": "^1",
+        "dak/dak-structured-content": "*",
+        "dak/dak-decoupled-base": "*"
+    }
+}

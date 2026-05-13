@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_image_last_checked
+    - node.type.product
+
+id: node.product.field_image_last_checked
+field_name: field_image_last_checked
+entity_type: node
+bundle: product
+label: Image Last Checked
+description: Time of the last discovery or review pass.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings: {}
+field_type: datetime

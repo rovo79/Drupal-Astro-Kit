@@ -1,0 +1,46 @@
+---
+import type { DrupalMenuItem } from '../lib/drupal';
+import NavigationItem from './NavigationItem.astro';
+
+interface Props {
+  items: DrupalMenuItem[];
+  label: string;
+  currentPath?: string;
+  className?: string;
+}
+
+const {
+  items,
+  label,
+  currentPath = '/',
+  className = '',
+} = Astro.props;
+
+const seenItems = new Set<string>();
+const uniqueItems = items.filter((item) => {
+  const key = `${item.title}::${item.href}`;
+  if (seenItems.has(key)) {
+    return false;
+  }
+
+  seenItems.add(key);
+  return true;
+});
+---
+
+<nav class:list={['navigation', className]} aria-label={label}>
+  <ul class="navigation-list">
+    {uniqueItems.map((item) => (
+      <NavigationItem item={item} currentPath={currentPath} />
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .navigation-list,
+  .navigation-sublist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+</style>

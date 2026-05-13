@@ -1,0 +1,272 @@
+---
+/**
+ * Dynamic catch-all route for Drupal pages (Static Site Generation)
+ * 
+ * At BUILD TIME:
+ * 1. Fetches all published pages from Drupal JSON:API
+ * 2. Generates static routes based on path aliases
+ * 3. Renders HTML for each page
+ * 
+ * After build, the site has no runtime dependency on Drupal.
+ * 
+ * Route mapping:
+ * - Drupal alias "/about" → Astro slug "about" → dist/about/index.html
+ * - Drupal alias "/nested/path" → Astro slug "nested/path" → dist/nested/path/index.html
+ */
+
+import Base from '../layouts/Base.astro';
+import PageHeroImage from '../components/PageHeroImage.astro';
+import { getAllPages, aliasToSlug, checkApiConnection, type DrupalPage, normalizeAlias } from '../lib/drupal';
+import { findReservedAstroRoute } from '../lib/routes';
+
+// Required for static generation
+export async function getStaticPaths() {
+  // Verify Drupal is accessible before fetching pages
+  try {
+    await checkApiConnection();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`\n❌ Build Error: Cannot connect to Drupal JSON:API\n   ${message}\n`);
+    console.error('   Make sure DDEV is running: cd drupal-backend && ddev start\n');
+    throw new Error(`Drupal JSON:API unreachable: ${message}`);
+  }
+
+  // Fetch all published pages
+  let pages: DrupalPage[];
+  try {
+    pages = await getAllPages();
+    console.log(`\n✓ Fetched ${pages.length} pages from Drupal JSON:API\n`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`\n❌ Build Error: Failed to fetch pages\n   ${message}\n`);
+    throw error;
+  }
+
+  // Handle empty site
+  if (pages.length === 0) {
+    console.warn('\n⚠ Warning: No published pages found in Drupal.\n');
+    console.warn('  The site will build with no content pages.\n');
+    console.warn('  Create pages in Drupal: http://<project>.ddev.site/admin/content\n');
+    return [];
+  }
+
+  // Check for duplicate aliases (build fails if duplicates found)
+  const aliasMap = new Map<string, DrupalPage[]>();
+  for (const page of pages) {
+    const rawAlias = page.path?.alias;
+    if (!rawAlias || rawAlias.trim() === '') {
+      continue;
+    }
+
+    const alias = normalizeAlias(rawAlias);
+    if (!aliasMap.has(alias)) {
+      aliasMap.set(alias, []);
+    }
+    aliasMap.get(alias)!.push(page);
+  }
+
+  const duplicates = Array.from(aliasMap.entries()).filter(([, pages]) => pages.length > 1);
+  if (duplicates.length > 0) {
+    console.error('\n❌ Build Error: Duplicate path aliases detected!\n');
+    for (const [alias, pages] of duplicates) {
+      console.error(`   Alias "${alias}" is used by:`);
+      for (const page of pages) {
+        console.error(`     - "${page.title}" (ID: ${page.id})`);
+      }
+    }
+    console.error('\n   Fix these duplicates in Drupal before building.\n');
+    throw new Error('Duplicate path aliases detected. Cannot generate static routes.');
+  }
+
+  // Generate static paths for non-reserved Drupal aliases.
+  const paths: Array<{
+    params: { slug: string };
+    props: { page: DrupalPage };
+  }> = [];
+  let skippedCount = 0;
+
+  for (const page of pages) {
+    const alias = page.path?.alias;
+    
+    // Skip pages without aliases (they can't be routed)
+    if (alias === undefined || alias === null || alias.trim() === '') {
+      console.warn(`  ⚠ Skipping page "${page.title}" (ID: ${page.id}) - no path alias`);
+      skippedCount++;
+      continue;
+    }
+
+    const normalizedAlias = normalizeAlias(alias);
+    const reservedRoute = findReservedAstroRoute(normalizedAlias);
+    if (reservedRoute) {
+      throw new Error(
+        `Drupal alias "${normalizedAlias}" collides with reserved Astro route ${reservedRoute.source}. Remove or rename the Drupal page "${page.title}" (ID: ${page.id}).`,
+      );
+    }
+
+    const slug = aliasToSlug(alias);
+    if (!slug || slug.length === 0) {
+      console.warn(`  ⚠ Skipping page "${page.title}" (ID: ${page.id}) - invalid slug derived from alias "${alias}"`);
+      skippedCount++;
+      continue;
+    }
+
+    paths.push({
+      params: { slug },
+      props: { page },
+    });
+  }
+
+  if (skippedCount > 0) {
+    console.warn(`\n⚠ ${skippedCount} page(s) skipped (missing path aliases)\n`);
+  }
+
+  console.log(`  Routes generated: ${paths.length}`);
+  for (const p of paths) {
+    const displaySlug = `/${p.params.slug}`;
+    console.log(`    ${displaySlug} → ${p.props.page.title}`);
+  }
+  console.log('');
+
+  return paths;
+}
+
+// Get page data from props (passed from getStaticPaths)
+interface Props {
+  page: DrupalPage;
+}
+
+const { page } = Astro.props;
+
+// Build canonical URL
+const slug = Astro.params.slug;
+const canonicalPath = `/${slug}`;
+const canonicalUrl = new URL(canonicalPath, Astro.site).toString();
+
+// Extract description from body (first 160 chars of text content)
+const bodyText = page.body?.processed?.replace(/<[^>]*>/g, '') || '';
+const description = bodyText.slice(0, 160).trim() + (bodyText.length > 160 ? '...' : '');
+---
+
+<Base title={page.title} description={description} canonicalUrl={canonicalUrl}>
+  <article class="page">
+    <header class="page-header">
+      <h1>{page.title}</h1>
+      {page.changed && (
+        <time class="page-date" datetime={page.changed}>
+          Last updated: {new Date(page.changed).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}
+        </time>
+      )}
+    </header>
+
+    <PageHeroImage image={page.heroImage} title={page.title} />
+    
+    <div class="page-content">
+      {page.body?.processed ? (
+        <Fragment set:html={page.body.processed} />
+      ) : (
+        <p class="no-content"><em>This page has no content yet.</em></p>
+      )}
+    </div>
+  </article>
+</Base>
+
+<style>
+  .page {
+    max-width: 65ch;
+    margin: 0 auto;
+  }
+  
+  .page-header {
+    margin-bottom: 2rem;
+  }
+  
+  .page-header h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+  }
+  
+  .page-date {
+    display: block;
+    color: #666;
+    font-size: 0.875rem;
+  }
+  
+  .page-content {
+    font-size: 1.125rem;
+  }
+  
+  .page-content :global(p) {
+    margin-bottom: 1.5rem;
+  }
+  
+  .page-content :global(h2) {
+    font-size: 1.75rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+  
+  .page-content :global(h3) {
+    font-size: 1.375rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .page-content :global(ul),
+  .page-content :global(ol) {
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+  }
+  
+  .page-content :global(li) {
+    margin-bottom: 0.5rem;
+  }
+  
+  .page-content :global(a) {
+    color: #0969da;
+  }
+  
+  .page-content :global(a:hover) {
+    text-decoration: underline;
+  }
+  
+  .page-content :global(code) {
+    background: #f4f4f5;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    font-size: 0.875em;
+  }
+  
+  .page-content :global(pre) {
+    background: #1e1e1e;
+    color: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+  }
+  
+  .page-content :global(pre code) {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+  }
+  
+  .page-content :global(blockquote) {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    color: #666;
+    font-style: italic;
+  }
+  
+  .no-content {
+    color: #666;
+    text-align: center;
+    padding: 3rem 0;
+  }
+</style>

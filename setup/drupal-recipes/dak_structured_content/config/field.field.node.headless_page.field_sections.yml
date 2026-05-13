@@ -1,0 +1,37 @@
+uuid: 9c10a143-0f07-4bb2-8c85-2b4d7f2b2e6a
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_sections
+    - node.type.headless_page
+    - paragraphs.paragraphs_type.section_callout
+    - paragraphs.paragraphs_type.section_rich_text
+  module:
+    - entity_reference_revisions
+id: node.headless_page.field_sections
+field_name: field_sections
+entity_type: node
+bundle: headless_page
+label: Sections
+description: ''
+required: false
+translatable: true
+default_value: { }
+default_value_callback: ''
+settings:
+  handler: 'default:paragraph'
+  handler_settings:
+    negate: 0
+    target_bundles:
+      section_rich_text: section_rich_text
+      section_callout: section_callout
+    target_bundles_drag_drop:
+      section_rich_text:
+        weight: 0
+        enabled: true
+      section_callout:
+        weight: 1
+        enabled: true
+field_type: entity_reference_revisions
+

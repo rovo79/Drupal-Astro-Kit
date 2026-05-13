@@ -1,0 +1,36 @@
+.DS_Store
+Thumbs.db
+node_modules/
+dist/
+build/
+*.log
+.env.*
+.env
+.notes
+
+# Generated directories (created by setup.sh)
+drupal-backend/
+astro-frontend/
+
+setup/node_modules/*
+
+# Local agent/tooling artifacts (do not commit)
+.agent/
+skills/
+.sisyphus/
+.planning/
+audit/
+_verify/
+repomix.config.json
+.repomixignore
+*-output.xml
+
+# Personal developer files (not useful to other contributors)
+memory.json
+scripts/setup-mcp.sh
+.specify/
+specs/
+.vscode/
+Drupal_Astro_Kit.code-workspace
+GitHub_Publish_Readiness_Review.md
+GitHub_Publish_Readiness_Review.md

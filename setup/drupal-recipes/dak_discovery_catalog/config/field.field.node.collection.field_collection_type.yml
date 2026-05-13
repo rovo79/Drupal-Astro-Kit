@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_collection_type
+    - node.type.collection
+
+
+id: node.collection.field_collection_type
+field_name: field_collection_type
+entity_type: node
+bundle: collection
+label: Collection Type
+description: Stored collection behavior key. Astro reads this to distinguish curated versus automated collection handling, so keep the stored values consistent.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+field_type: list_string
+settings: {}

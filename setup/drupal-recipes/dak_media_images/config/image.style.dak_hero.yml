@@ -1,0 +1,14 @@
+langcode: en
+status: true
+dependencies: { }
+name: dak_hero
+label: 'DAK hero'
+effects:
+  0e480f9d-a721-4cb4-834b-6a90cb1c1408:
+    uuid: 0e480f9d-a721-4cb4-834b-6a90cb1c1408
+    id: image_scale
+    weight: 1
+    data:
+      width: 1600
+      height: null
+      upscale: false

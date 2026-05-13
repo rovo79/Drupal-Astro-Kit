@@ -1,0 +1,8 @@
+langcode: en
+status: true
+dependencies: { }
+name: 'Editorial Flag'
+vid: editorial_flag
+description: 'Editorial flags.'
+weight: 0
+new_revision: false

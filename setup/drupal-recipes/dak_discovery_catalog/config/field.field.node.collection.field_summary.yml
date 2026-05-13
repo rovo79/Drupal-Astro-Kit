@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_summary
+    - node.type.collection
+
+
+id: node.collection.field_summary
+field_name: field_summary
+entity_type: node
+bundle: collection
+label: Summary
+description: Short editorial summary used by Astro on Collection cards, Collection detail pages, and supporting editorial surfaces.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+field_type: text_long
+settings: {}

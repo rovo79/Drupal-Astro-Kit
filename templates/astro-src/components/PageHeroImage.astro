@@ -1,0 +1,32 @@
+---
+import type { DrupalPageImage } from '../lib/drupal';
+
+interface Props {
+  image?: DrupalPageImage;
+  title: string;
+}
+
+const { image, title } = Astro.props;
+const src = image?.styles.dak_hero || image?.styles.dak_card || image?.originalSrc;
+const alt = image?.alt?.trim() || title;
+---
+
+{src && image ? (
+  <figure class="page-hero">
+    <img src={src} alt={alt} loading="eager" decoding="async" />
+  </figure>
+) : null}
+
+<style>
+  .page-hero {
+    margin: 0 0 2rem;
+  }
+
+  .page-hero img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 1rem;
+    object-fit: cover;
+  }
+</style>

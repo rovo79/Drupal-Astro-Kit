@@ -1,0 +1,19 @@
+uuid: be22aa00-5d26-4c39-9a47-83bbbb61b1a3
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.paragraph.field_retailer
+    - paragraphs.paragraphs_type.buy_link
+id: paragraph.buy_link.field_retailer
+field_name: field_retailer
+entity_type: paragraph
+bundle: buy_link
+label: Retailer
+description: ''
+required: true
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string

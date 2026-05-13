@@ -1,0 +1,36 @@
+uuid: 9f07897b-f355-45e1-82e6-6f109de9994f
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_sections
+    - node.type.guide
+    - paragraphs.paragraphs_type.section_callout
+    - paragraphs.paragraphs_type.section_rich_text
+  module:
+    - entity_reference_revisions
+id: node.guide.field_sections
+field_name: field_sections
+entity_type: node
+bundle: guide
+label: Guide Sections
+description: 'Ordered paragraph blocks that make up the guide body. Add sections in reading order.'
+required: false
+translatable: true
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:paragraph'
+  handler_settings:
+    target_bundles:
+      section_rich_text: section_rich_text
+      section_callout: section_callout
+    negate: 0
+    target_bundles_drag_drop:
+      section_callout:
+        weight: 1
+        enabled: true
+      section_rich_text:
+        weight: 0
+        enabled: true
+field_type: entity_reference_revisions

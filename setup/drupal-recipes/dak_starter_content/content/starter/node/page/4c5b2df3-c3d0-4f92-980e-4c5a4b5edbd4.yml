@@ -1,0 +1,28 @@
+_meta:
+  version: '1.0'
+  entity_type: node
+  uuid: 4c5b2df3-c3d0-4f92-980e-4c5a4b5edbd4
+  bundle: page
+  default_langcode: en
+default:
+  uid:
+    - target_id: 1
+  status:
+    - value: true
+  title:
+    - value: Contact
+  promote:
+    - value: false
+  sticky:
+    - value: false
+  created:
+    - value: 1700000002
+  path:
+    - alias: /contact
+      langcode: en
+      pathauto: 0
+  body:
+    - value: "<p>Get in touch with us!</p><p>You can add contact information, a form, or directions here.</p>"
+      format: basic_html
+      summary: ''
+

@@ -1,0 +1,25 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_related_collections
+    - node.type.product
+
+
+id: node.product.field_related_collections
+field_name: field_related_collections
+entity_type: node
+bundle: product
+label: Collections Featuring This Product
+description: Connect this Product to curated Collection pages so Astro can surface it inside those editorial groupings.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings:
+  handler: default:node
+  handler_settings:
+    target_bundles:
+      collection: collection
+field_type: entity_reference

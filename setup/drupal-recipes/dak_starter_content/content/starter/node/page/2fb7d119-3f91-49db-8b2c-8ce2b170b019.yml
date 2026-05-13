@@ -1,0 +1,28 @@
+_meta:
+  version: '1.0'
+  entity_type: node
+  uuid: 2fb7d119-3f91-49db-8b2c-8ce2b170b019
+  bundle: page
+  default_langcode: en
+default:
+  uid:
+    - target_id: 1
+  status:
+    - value: true
+  title:
+    - value: About Us
+  promote:
+    - value: false
+  sticky:
+    - value: false
+  created:
+    - value: 1700000001
+  path:
+    - alias: /about
+      langcode: en
+      pathauto: 0
+  body:
+    - value: "<p>This is the About page. Tell visitors about your organization, mission, and values.</p><p>Edit this content in Drupal to customize it for your needs.</p>"
+      format: basic_html
+      summary: ''
+

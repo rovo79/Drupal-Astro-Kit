@@ -1,0 +1,25 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_category
+    - node.type.product
+
+
+id: node.product.field_category
+field_name: field_category
+entity_type: node
+bundle: product
+label: Category
+description: Primary merch bucket used by Astro category pages and browse groupings. Choose the single category this Product should live under.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+settings:
+  handler: default:taxonomy_term
+  handler_settings:
+    target_bundles:
+      product_category: product_category
+field_type: entity_reference

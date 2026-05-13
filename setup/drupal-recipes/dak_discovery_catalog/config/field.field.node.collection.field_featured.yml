@@ -1,0 +1,21 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_featured
+    - node.type.collection
+
+
+id: node.collection.field_featured
+field_name: field_featured
+entity_type: node
+bundle: collection
+label: Featured
+description: Promotion toggle for highlighted Collection surfaces. Use when this Collection should rank higher in editorial placement.
+required: false
+translatable: false
+default_value: []
+
+default_value_callback: 
+field_type: boolean
+settings: {}

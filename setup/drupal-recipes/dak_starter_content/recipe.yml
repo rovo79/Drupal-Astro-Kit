@@ -1,0 +1,12 @@
+name: 'DAK: Starter content'
+description: 'Starter Basic Pages and navigation links with stable aliases for Astro SSG.'
+type: 'Site'
+
+recipes:
+  - dak-decoupled-base
+
+install:
+  - default_content
+
+content:
+  - starter

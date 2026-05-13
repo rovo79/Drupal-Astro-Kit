@@ -1,0 +1,8 @@
+langcode: en
+status: true
+dependencies: { }
+name: 'Product Category'
+vid: product_category
+description: 'Categories for products.'
+weight: 0
+new_revision: false

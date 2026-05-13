@@ -1,0 +1,13 @@
+{
+    "name": "dak/dak-structured-content",
+    "description": "Optional structured content model: headless_page with Paragraphs sections.",
+    "type": "drupal-recipe",
+    "license": ["GPL-2.0-or-later"],
+    "version": "1.0.0",
+    "require": {
+        "drupal/core": "^11",
+        "drupal/paragraphs": "^1",
+        "drupal/entity_reference_revisions": "^1",
+        "dak/dak-decoupled-base": "*"
+    }
+}

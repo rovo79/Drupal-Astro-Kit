@@ -1,0 +1,25 @@
+name: 'DAK: Media images'
+description: 'Optional Media-based image handling with JSON:API image style URLs for decoupled frontends.'
+type: 'Site'
+
+recipes:
+  - dak-decoupled-base
+
+install:
+  - file
+  - image
+  - media
+  - jsonapi_image_styles
+
+config:
+  import:
+    media:
+      - media.type.image
+    field:
+      - field.storage.media.field_media_image
+      - field.field.media.image.field_media_image
+      - field.storage.node.field_hero_image
+      - field.field.node.page.field_hero_image
+    image:
+      - image.style.dak_card
+      - image.style.dak_hero
