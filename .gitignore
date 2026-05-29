@@ -5,6 +5,7 @@ dist/
 build/
 *.log
 .env.*
+!.env.*.example
 .env
 .notes
 
@@ -24,6 +25,12 @@ _verify/
 repomix.config.json
 .repomixignore
 *-output.xml
+
+# Local walkthrough/video tooling output (do not commit)
+.walkthrough/
+/playwright-report/
+/playwright/.cache/
+/playwright/.auth/
 
 # Personal developer files (not useful to other contributors)
 memory.json

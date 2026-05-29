@@ -11,11 +11,18 @@ import { DrupalJsonApiParams } from 'drupal-jsonapi-params';
 const dataFormatter: Jsona = new Jsona();
 const DEFAULT_HOMEPAGE_ALIAS = '/home';
 const PAGE_QUERY_FIELDS = ['title', 'body', 'path', 'status', 'created', 'changed'];
+const HEADLESS_PAGE_QUERY_FIELDS = ['title', 'path', 'status', 'created', 'changed', 'field_summary', 'field_sections'];
 const PAGE_MEDIA_FIELDS = ['name', 'field_media_image'];
 const PAGE_FILE_FIELDS = ['uri', 'image_style_uri'];
 const PAGE_INCLUDE_FIELDS = ['field_hero_image', 'field_hero_image.field_media_image'];
+const HEADLESS_PAGE_INCLUDE_FIELDS = [
+  'field_sections',
+  'field_hero_image',
+  'field_hero_image.field_media_image',
+];
 const menuCache = new Map<string, Promise<DrupalMenuItem[]>>();
 let pageQueryMode: 'basic' | 'with-images' | undefined;
+let headlessPageQueryMode: 'basic' | 'with-images' | undefined;
 
 export interface JsonApiResourceIdentifier {
   id: string;
@@ -69,6 +76,17 @@ export interface DrupalPage {
   status: boolean;
   created: string;
   changed: string;
+  heroImage?: DrupalPageImage;
+}
+
+export interface DrupalRenderablePage {
+  id: string;
+  sourceType: string;
+  title: string;
+  alias?: string;
+  bodyHtml?: string;
+  summary?: string;
+  changed?: string;
   heroImage?: DrupalPageImage;
 }
 
@@ -131,10 +149,41 @@ function buildPageQueryParams(limit: number, mode: 'basic' | 'with-images' = 'wi
   return params;
 }
 
+function buildHeadlessPageQueryParams(limit: number, mode: 'basic' | 'with-images' = 'with-images'): DrupalJsonApiParams {
+  const params = new DrupalJsonApiParams();
+  const pageFields = mode === 'with-images'
+    ? [...HEADLESS_PAGE_QUERY_FIELDS, 'field_hero_image']
+    : HEADLESS_PAGE_QUERY_FIELDS;
+
+  const includeFields = mode === 'with-images' ? HEADLESS_PAGE_INCLUDE_FIELDS : ['field_sections'];
+
+  params
+    .addFilter('status', '1')
+    .addFields('node--headless_page', pageFields)
+    .addFields('paragraph--section_rich_text', ['field_text'])
+    .addFields('paragraph--section_callout', ['field_heading', 'field_text'])
+    .addInclude(includeFields)
+    .addPageLimit(limit);
+
+  if (mode === 'with-images') {
+    params
+      .addFields('media--image', PAGE_MEDIA_FIELDS)
+      .addFields('file--file', PAGE_FILE_FIELDS);
+  }
+
+  return params;
+}
+
 function getPageCollectionUrl(limit: number, mode: 'basic' | 'with-images' = 'with-images'): string {
   const jsonApiBase = getDrupalJsonApiBaseUrl();
   const params = buildPageQueryParams(limit, mode);
   return `${jsonApiBase}/node/page?${params.getQueryString()}`;
+}
+
+function getHeadlessPageCollectionUrl(limit: number, mode: 'basic' | 'with-images' = 'with-images'): string {
+  const jsonApiBase = getDrupalJsonApiBaseUrl();
+  const params = buildHeadlessPageQueryParams(limit, mode);
+  return `${jsonApiBase}/node/headless_page?${params.getQueryString()}`;
 }
 
 export async function checkApiConnection(): Promise<void> {
@@ -191,12 +240,84 @@ export async function getAllPages(): Promise<DrupalPage[]> {
   return allPages;
 }
 
+export function toRenderablePage(page: DrupalPage): DrupalRenderablePage {
+  return {
+    id: page.id,
+    sourceType: page.type,
+    title: page.title,
+    alias: page.path?.alias ? normalizeAlias(page.path.alias) : undefined,
+    bodyHtml: page.body?.processed,
+    summary: page.body?.summary,
+    changed: page.changed,
+    heroImage: page.heroImage,
+  };
+}
+
+export async function getRenderablePages(): Promise<DrupalRenderablePage[]> {
+  const pages = await getAllPages();
+  const headlessPages = await getHeadlessRenderablePages();
+  return [
+    ...pages.map(toRenderablePage),
+    ...headlessPages,
+  ];
+}
+
+async function getHeadlessRenderablePages(): Promise<DrupalRenderablePage[]> {
+  const allPages: DrupalRenderablePage[] = [];
+  let activeMode: 'basic' | 'with-images' = headlessPageQueryMode ?? 'with-images';
+  let nextUrl: string | null = getHeadlessPageCollectionUrl(50, activeMode);
+
+  while (nextUrl) {
+    const response = await fetch(nextUrl);
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      if (
+        activeMode === 'with-images'
+        && allPages.length === 0
+        && shouldRetryWithoutImages(response.status, detail)
+      ) {
+        activeMode = 'basic';
+        headlessPageQueryMode = 'basic';
+        nextUrl = getHeadlessPageCollectionUrl(50, activeMode);
+        continue;
+      }
+
+      if (shouldTreatHeadlessPagesAsUnavailable(response.status)) {
+        return [];
+      }
+
+      throw new Error(
+        `Failed to fetch headless pages: ${response.status} ${response.statusText}${detail ? ` - ${detail}` : ''}`,
+      );
+    }
+
+    headlessPageQueryMode = activeMode;
+
+    const json = await response.json() as JsonApiDocument;
+    const rawPages = normalizeJsonApiData(json.data);
+    const includedMap = createIncludedResourceMap(json.included);
+
+    for (const page of rawPages) {
+      allPages.push(toRenderableHeadlessPage(page, includedMap));
+    }
+
+    nextUrl = json.links?.next?.href || null;
+  }
+
+  return allPages;
+}
+
 function shouldRetryWithoutImages(status: number, detail: string): boolean {
   if (status !== 400) {
     return false;
   }
 
   return /field_hero_image|media--image|file--file|include/i.test(detail);
+}
+
+function shouldTreatHeadlessPagesAsUnavailable(status: number): boolean {
+  return status === 403 || status === 404;
 }
 
 function getResourceKey(type: string, id: string): string {
@@ -278,6 +399,32 @@ function extractStringRecord(value: unknown): Record<string, string> {
   );
 }
 
+function extractTextFieldHtml(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const processed = (value as { processed?: unknown }).processed;
+  if (typeof processed === 'string' && processed.trim() !== '') {
+    return processed;
+  }
+
+  const valueText = (value as { value?: unknown }).value;
+  if (typeof valueText === 'string' && valueText.trim() !== '') {
+    return valueText;
+  }
+
+  return undefined;
+}
+
+function extractPlainText(value: unknown): string | undefined {
+  const html = extractTextFieldHtml(value);
+  if (!html) {
+    return undefined;
+  }
+  return html.replace(/<[^>]*>/g, '').trim() || undefined;
+}
+
 function extractOriginalSrc(fileResource?: JsonApiResource): string | undefined {
   const uri = fileResource ? resourceValue(fileResource, 'uri') : undefined;
   if (!uri || typeof uri !== 'object' || Array.isArray(uri)) {
@@ -316,6 +463,78 @@ function extractHeroImage(
     originalSrc,
     styles,
   };
+}
+
+function renderHeadlessSections(
+  pageResource: JsonApiResource,
+  includedMap: Map<string, JsonApiResource>,
+): string {
+  const sectionIdentifiers = normalizeRelationshipEntries(
+    pageResource.relationships?.field_sections?.data,
+  );
+
+  return sectionIdentifiers
+    .map((identifier) => includedMap.get(getResourceKey(identifier.type, identifier.id)))
+    .filter((section): section is JsonApiResource => Boolean(section))
+    .map((section) => {
+      const heading = resourceValue(section, 'field_heading');
+      const headingText = typeof heading === 'string' ? heading.trim() : '';
+      const textHtml = extractTextFieldHtml(resourceValue(section, 'field_text'));
+
+      if (section.type === 'paragraph--section_callout') {
+        return [
+          '<aside class="section-callout">',
+          headingText ? `<h2>${escapeHtml(headingText)}</h2>` : '',
+          textHtml ?? '',
+          '</aside>',
+        ].join('');
+      }
+
+      return [
+        '<section class="section-rich-text">',
+        headingText ? `<h2>${escapeHtml(headingText)}</h2>` : '',
+        textHtml ?? '',
+        '</section>',
+      ].join('');
+    })
+    .filter((sectionHtml) => sectionHtml.replace(/<[^>]*>/g, '').trim() !== '')
+    .join('\n');
+}
+
+function toRenderableHeadlessPage(
+  pageResource: JsonApiResource,
+  includedMap: Map<string, JsonApiResource>,
+): DrupalRenderablePage {
+  const title = resourceValue(pageResource, 'title');
+  const changed = resourceValue(pageResource, 'changed');
+  const path = resourceValue(pageResource, 'path');
+  const alias = path && typeof path === 'object' && !Array.isArray(path)
+    ? (path as { alias?: unknown }).alias
+    : undefined;
+  const summaryHtml = extractTextFieldHtml(resourceValue(pageResource, 'field_summary'));
+  const sectionsHtml = renderHeadlessSections(pageResource, includedMap);
+  const bodyHtml = [summaryHtml, sectionsHtml].filter(Boolean).join('\n');
+  const heroImage = extractHeroImage(pageResource, includedMap);
+
+  return {
+    id: pageResource.id,
+    sourceType: pageResource.type,
+    title: typeof title === 'string' ? title : 'Untitled page',
+    alias: typeof alias === 'string' ? normalizeAlias(alias) : undefined,
+    bodyHtml: bodyHtml || undefined,
+    summary: extractPlainText(resourceValue(pageResource, 'field_summary')),
+    changed: typeof changed === 'string' ? changed : undefined,
+    heroImage,
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function normalizeAliasOrEmpty(alias?: string | null): string {

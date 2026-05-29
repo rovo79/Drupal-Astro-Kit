@@ -1,0 +1,154 @@
+---
+import PageHeroImage from './PageHeroImage.astro';
+import type { DrupalRenderablePage } from '../lib/drupal';
+
+interface Props {
+  page?: DrupalRenderablePage;
+  fallbackTitle: string;
+  emptyContentMessage?: string;
+}
+
+const {
+  page,
+  fallbackTitle,
+  emptyContentMessage = 'This page has no content yet.',
+} = Astro.props;
+
+const title = page?.title ?? fallbackTitle;
+---
+
+<article class="page">
+  <header class="page-header">
+    <h1>{title}</h1>
+    {page?.changed && (
+      <time class="page-date" datetime={page.changed}>
+        Last updated: {new Date(page.changed).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })}
+      </time>
+    )}
+  </header>
+
+  {page && <PageHeroImage image={page.heroImage} title={page.title} />}
+
+  <div class="page-content">
+    {page?.bodyHtml ? (
+      <Fragment set:html={page.bodyHtml} />
+    ) : emptyContentMessage ? (
+      <p class="no-content">
+        <em>{emptyContentMessage}</em>
+      </p>
+    ) : null}
+    <slot />
+  </div>
+</article>
+
+<style>
+  .page {
+    max-width: 65ch;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+  }
+
+  .page-date {
+    display: block;
+    color: #666;
+    font-size: 0.875rem;
+  }
+
+  .page-content {
+    font-size: 1.125rem;
+  }
+
+  .page-content :global(p) {
+    margin-bottom: 1.5rem;
+  }
+
+  .page-content :global(h2) {
+    font-size: 1.75rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .page-content :global(h3) {
+    font-size: 1.375rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .page-content :global(ul),
+  .page-content :global(ol) {
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+  }
+
+  .page-content :global(li) {
+    margin-bottom: 0.5rem;
+  }
+
+  .page-content :global(a) {
+    color: #0969da;
+  }
+
+  .page-content :global(a:hover) {
+    text-decoration: underline;
+  }
+
+  .page-content :global(code) {
+    background: #f4f4f5;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    font-size: 0.875em;
+  }
+
+  .page-content :global(pre) {
+    background: #1e1e1e;
+    color: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+  }
+
+  .page-content :global(pre code) {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+  }
+
+  .page-content :global(blockquote) {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    color: #666;
+    font-style: italic;
+  }
+
+  .page-content :global(.section-rich-text),
+  .page-content :global(.section-callout) {
+    margin-bottom: 2rem;
+  }
+
+  .page-content :global(.section-callout) {
+    border-left: 4px solid #0969da;
+    background: #f6f8fa;
+    padding: 1rem 1.25rem;
+  }
+
+  .no-content {
+    color: #666;
+    text-align: center;
+    padding: 3rem 0;
+  }
+</style>

@@ -5,6 +5,10 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import {
+  parseRecipeDependenciesFromYaml,
+  rewriteRecipeYamlWithoutDependencies,
+} from './recipe-yaml.js';
 
 const STEP_TEXTS = [
   { id: 'env', text: 'Syncing .env file' },
@@ -66,94 +70,6 @@ function firstErrorLine(error) {
 
 function fullErrorText(error) {
   return error?.message ? String(error.message) : String(error ?? 'Unknown error');
-}
-
-function parseRecipeDependenciesFromYaml(recipeYaml) {
-  const lines = String(recipeYaml ?? '').split(/\r?\n/);
-  const deps = [];
-  let inRecipesSection = false;
-
-  for (const line of lines) {
-    if (!inRecipesSection) {
-      if (/^\s*recipes\s*:\s*$/.test(line)) {
-        inRecipesSection = true;
-      }
-      continue;
-    }
-
-    if (/^\S/.test(line)) {
-      break;
-    }
-
-    const match = line.match(/^\s*-\s*["']?([A-Za-z0-9._-]+)["']?\s*(?:#.*)?$/);
-    if (match?.[1]) {
-      deps.push(match[1]);
-    }
-  }
-
-  return deps;
-}
-
-function rewriteRecipeYamlWithoutDependencies(recipeYaml, dependenciesToSkip) {
-  if (!dependenciesToSkip || dependenciesToSkip.size === 0) {
-    return recipeYaml;
-  }
-
-  const lines = String(recipeYaml ?? '').split(/\r?\n/);
-  const output = [];
-  let inRecipesSection = false;
-  let recipesHeaderIndex = -1;
-  let keptRecipeLines = [];
-
-  const flushRecipesSection = () => {
-    if (recipesHeaderIndex === -1) return;
-    if (keptRecipeLines.length > 0) {
-      output.push(...keptRecipeLines);
-    } else {
-      output.splice(recipesHeaderIndex, 1);
-    }
-    recipesHeaderIndex = -1;
-    keptRecipeLines = [];
-  };
-
-  for (const line of lines) {
-    if (!inRecipesSection) {
-      if (/^\s*recipes\s*:\s*$/.test(line)) {
-        inRecipesSection = true;
-        recipesHeaderIndex = output.length;
-        output.push(line);
-        continue;
-      }
-
-      output.push(line);
-      continue;
-    }
-
-    if (/^\S/.test(line)) {
-      flushRecipesSection();
-      inRecipesSection = false;
-      output.push(line);
-      continue;
-    }
-
-    const match = line.match(/^\s*-\s*["']?([A-Za-z0-9._-]+)["']?\s*(?:#.*)?$/);
-    if (match?.[1]) {
-      if (!dependenciesToSkip.has(match[1])) {
-        keptRecipeLines.push(line);
-      }
-      continue;
-    }
-
-    if (line.trim() !== '') {
-      keptRecipeLines.push(line);
-    }
-  }
-
-  if (inRecipesSection) {
-    flushRecipesSection();
-  }
-
-  return output.join('\n');
 }
 
 function getSelectedRecipeEntries(manifest, recipePromptAnswers) {

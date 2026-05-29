@@ -19,10 +19,9 @@
 - `scripts/`: helper scripts meant to run *after* setup created `drupal-backend/` + `astro-frontend/`.
   - `scripts/deploy-frontend.sh`: builds + deploys static site to Cloudflare Pages.
   - `scripts/seed-content.sh`: seeds sample Drupal content via `ddev exec drush php:eval`.
-- `audit/`: Node-based audit toolkit (structured JSON report) intended to validate setup/integration/CI/docs.
-  - Entrypoint: `audit/index.js` (via `npm run audit:*` scripts in `audit/package.json`).
+- `audit/`: ignored local audit toolkit if present. It is not currently a tracked fresh-clone asset.
 - `docs/`: user-facing docs. V1 docs at root (`architecture.md`, `deployment.md`, `troubleshooting.md`); legacy SSR-era docs walled off in `docs/future/`.
-- `specs/`: “spec kit” style feature specs + contracts (e.g., audit report schema, JSON:API contracts, OpenAPI).
+- `specs/`: ignored local spec-kit artifacts if present. They are not currently tracked V1 source-of-truth files.
 - `.github/workflows/main.yml`: CI/CD workflow (expects generated artifacts in repo root; see risks in `docs/ai/SECURITY_AND_RISKS.md`).
 
 ## Main Runtime Entrypoints (after `./setup.sh`)
@@ -45,22 +44,22 @@
   - Alias normalization/homepage behavior: `templates/astro-src/lib/drupal.ts`
 - **Data models / API**
   - JSON:API deserialization + pagination + query params: `templates/astro-src/lib/drupal.ts`
-  - API contracts/specs: `specs/003-static-ssg-refactor/contracts/`, `specs/002-drupal-api-config/contracts/openapi.yaml`
+  - API contracts/specs: no tracked V1 contract directory; ignored `specs/` may exist locally.
 - **UI**
   - Base layout + global styling: `templates/astro-src/layouts/Base.astro`
   - Page rendering: `templates/astro-src/pages/index.astro`, `templates/astro-src/pages/[...slug].astro`
 - **Infra / CI / automation**
   - GitHub Actions: `.github/workflows/main.yml`
   - Cloudflare deploy script: `scripts/deploy-frontend.sh`
-  - Audit tooling (DX/reliability gates): `audit/`
+  - Audit tooling: no tracked V1 audit toolkit; ignored `audit/` may exist locally.
 - **Tests**
-  - No unit-test suite in this repo; validation is mostly via CI + manual workflows + `audit/` scripts.
+  - No unit-test suite in this repo; validation is mostly via CI and manual workflows.
   - CI config references: `.github/workflows/main.yml`
 - **Docs**
   - V1 user docs: `docs/architecture.md`, `docs/deployment.md`, `docs/troubleshooting.md`
   - Legacy/future reference: `docs/future/` (SSR-era docs, walled off)
   - AI-maintained docs: `docs/ai/`
-  - Specs/decision records: `specs/`
+  - Specs/decision records: no tracked V1 specs directory; ignored `specs/` may exist locally.
 
 ## Assumptions
 
