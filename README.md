@@ -1,6 +1,6 @@
 # Drupal + Astro Starter Kit
 
-[![Watch the Drupal Astro Kit walkthrough](docs/assets/drupal-astro-kit-walkthrough-thumbnail.png)](https://github.com/user-attachments/assets/4c216dec-b949-4614-b04e-5607763b7766)
+[![Watch the Drupal Astro Kit walkthrough](docs/assets/thumbnail.png)](https://github.com/user-attachments/assets/4c216dec-b949-4614-b04e-5607763b7766)
 
 **▶ Watch the walkthrough:** Manage content in Drupal, render with Astro, and deploy the public site as static files.
 
