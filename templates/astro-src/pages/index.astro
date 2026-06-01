@@ -25,8 +25,8 @@ await checkApiConnection();
 const pages = await getRenderablePages();
 const homepageAlias = getHomepageAlias();
 
-const rootAliasPage = pages.find((p) => normalizeAlias(p.alias) === '/');
-const configuredHomepagePage = pages.find((p) => normalizeAlias(p.alias) === homepageAlias);
+const rootAliasPage = pages.find((p) => p.alias && normalizeAlias(p.alias) === '/');
+const configuredHomepagePage = pages.find((p) => p.alias && normalizeAlias(p.alias) === homepageAlias);
 const homepagePage: DrupalRenderablePage | undefined = rootAliasPage ?? configuredHomepagePage;
 
 if (!homepagePage) {
