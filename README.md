@@ -10,7 +10,7 @@
   </a>
 </p>
 
-**▶ Watch the walkthrough:** Manage content in Drupal, render with Astro, and deploy the public site as static files.
+**▶ [Watch the walkthrough video](https://github.com/user-attachments/assets/4c216dec-b949-4614-b04e-5607763b7766):** Manage content in Drupal, render with Astro, and deploy the public site as static files.
 
 > **Status: Alpha / Developer Preview**  
 > Works end-to-end locally. Not yet tested across all OS/DDEV configurations.
