@@ -4,7 +4,7 @@
 
 - **Generated dirs are ignored in git**: `drupal-backend/`, `astro-frontend/` are created by setup and are listed in `.gitignore`.
 - **Template source lives in `templates/`** and is copied into the generated Astro project by `setup/ui.js`.
-- **Specs are treated as first-class**: feature specs and contracts live under `specs/` and are referenced by the audit toolkit (`audit/scripts/util/constants.js`).
+- **Specs are not currently tracked V1 source**: `specs/` is ignored in `.gitignore`. Treat local `specs/` content as private/local unless the repo deliberately starts tracking it.
 
 ## Naming & Validation
 
@@ -37,8 +37,8 @@
 ## Documentation & Spec Conventions
 
 - User-facing docs are in `docs/`.
-- Feature requirements/contracts live in `specs/**/contracts/`.
-- Audit output is written under `audit/report/` by `audit/index.js`.
+- Feature requirements/contracts do not have a tracked V1 directory today.
+- Audit output, if a local ignored audit toolkit is present, should stay local and ignored.
 
 ## Assumptions
 

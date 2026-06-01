@@ -3,7 +3,7 @@
 ## Languages & Runtimes
 
 - **Node.js**
-  - Setup CLI (CommonJS): `setup/package.json` (`"type": "commonjs"`)
+  - Setup CLI (ESM): `setup/package.json` (`"type": "module"`)
   - Audit toolkit (ESM): `audit/package.json` (`"type": "module"`)
 - **Shell (bash):** `setup.sh`, `scripts/deploy-frontend.sh`, `scripts/seed-content.sh`
 - **Astro + TypeScript (template source):** `templates/astro-src/**/*.astro`, `templates/astro-src/**/*.ts`
@@ -20,21 +20,19 @@
 ## Key Node Dependencies (in this repo)
 
 - **Setup CLI dependencies** (`setup/package.json`)
-  - UI: `ink`, `react`, `ink-select-input`, `ink-spinner`, `ink-text-input`
+  - UI: `@clack/prompts`
   - Process execution: `execa`
-  - Terminal UX: `chalk`
-- **Audit toolkit dependencies** (`audit/package.json`)
-  - CLI parsing: `yargs`
-  - Validation: `ajv`, `ajv-formats`
+  - Terminal UX: `picocolors`
   - YAML parsing: `js-yaml`
-  - JSON:API helpers: `jsona`, `drupal-jsonapi-params`
+  - Image processing: `sharp`
+- **Audit toolkit dependencies**
+  - No audit package is tracked in the V1 repo. Local ignored `audit/` worktrees may have their own dependencies.
 
 ## API / Data Formats
 
 - **Drupal JSON:API** (content fetch at build time)
   - Client implementation: `templates/astro-src/lib/drupal.ts`
-  - OpenAPI reference: `specs/002-drupal-api-config/contracts/openapi.yaml`
-- **Audit report schema**: `specs/001-project-audit-optimization/contracts/audit-report.schema.json`
+  - No tracked OpenAPI contract is currently present in V1.
 
 ## Configuration & “Glue”
 
@@ -48,4 +46,3 @@
 
 - Exact versions of Drupal/PHP are enforced by DDEV + the Drupal recommended project created during setup; confirm by inspecting generated `drupal-backend/composer.json` and `drupal-backend/.ddev/config.yaml` after running `./setup.sh`.
 - Astro/Pages config is created during setup; confirm by inspecting generated `astro-frontend/astro.config.mjs` and `astro-frontend/wrangler.jsonc` after setup.
-

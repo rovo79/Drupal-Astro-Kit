@@ -4,8 +4,7 @@
 
 - **No dedicated unit/integration test suite in this repo** (no Jest/Vitest/PhpUnit config checked in at repo root).
 - **CI pipeline** (`.github/workflows/main.yml`) is a 37-line single-job static deploy: `npm ci`, `npm run build`, then `cloudflare/pages-action@v1`. It does not run a test command.
-- **Audit toolkit** provides structured validation checks:
-  - Entrypoint: `audit/index.js` (run via `audit/package.json` scripts like `npm run audit:all`).
+- **Audit toolkit is not currently repo-provided**: `audit/` is ignored in `.gitignore`. Some local worktrees may have it, but contributors should not assume it is available from a fresh clone.
 
 ## Practical Manual Test Checklist (recommended)
 
@@ -23,13 +22,13 @@
 - **Deploy (optional)**
   - `./scripts/deploy-frontend.sh` (requires Cloudflare credentials in `.env`)
 
-## Audit Tool (repo-provided checks)
+## Audit Tool (local-only, if present)
 
-- Install/run:
+- `audit/` and `specs/` are local ignored artifacts in the current V1 repo shape.
+- If your local worktree has them, install/run:
   - `cd audit && npm install`
   - `npm run audit:all` (or target-specific scripts in `audit/package.json`)
-- Contract/schema:
-  - Output should conform to `specs/001-project-audit-optimization/contracts/audit-report.schema.json`
+- Do not treat audit output or spec contracts as fresh-clone validation gates unless those directories are deliberately made tracked repo assets.
 
 ## Assumptions
 

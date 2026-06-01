@@ -34,7 +34,8 @@
 - **Deployment (static)**
   - Build + deploy script: `scripts/deploy-frontend.sh` (`npm run build` then `npx wrangler pages deploy ./dist`)
 - **Validation / auditing**
-  - Audits (setup, API, CI, docs drift, etc): `audit/index.js` + `audit/scripts/*.js`
+  - Fresh-clone validation is manual setup/build plus any focused repo scripts.
+  - `audit/` is currently ignored local tooling if present, not a tracked V1 validation dependency.
 
 ## Phase 2 (Future): Workers SSR
 

@@ -6,36 +6,37 @@
  * the homepage via a dedicated `index.astro` route.
  *
  * Resolution rules:
- * - Use `HOMEPAGE_ALIAS` (default: `/home`).
- * - `/` is reserved for this Astro route.
+ * - Prefer a Drupal page aliased to `/`.
+ * - Fall back to `HOMEPAGE_ALIAS` (default: `/home`).
  */
 
 import Base from '../layouts/Base.astro';
-import PageHeroImage from '../components/PageHeroImage.astro';
+import DrupalPage from '../components/DrupalPage.astro';
 import {
   checkApiConnection,
-  getAllPages,
   getHomepageAlias,
+  getRenderablePages,
   normalizeAlias,
-  type DrupalPage,
+  type DrupalRenderablePage,
 } from '../lib/drupal';
 
 await checkApiConnection();
 
-const pages = await getAllPages();
+const pages = await getRenderablePages();
 const homepageAlias = getHomepageAlias();
 
-const homepagePage: DrupalPage | undefined =
-  pages.find((p) => normalizeAlias(p.path?.alias) === homepageAlias);
+const rootAliasPage = pages.find((p) => p.alias && normalizeAlias(p.alias) === '/');
+const configuredHomepagePage = pages.find((p) => p.alias && normalizeAlias(p.alias) === homepageAlias);
+const homepagePage: DrupalRenderablePage | undefined = rootAliasPage ?? configuredHomepagePage;
 
 if (!homepagePage) {
-  console.warn(`\n⚠ Homepage not found. No page with HOMEPAGE_ALIAS (${homepageAlias}).\n`);
+  console.warn(`\n⚠ Homepage not found. No page with alias "/" or HOMEPAGE_ALIAS (${homepageAlias}).\n`);
 }
 
 const page = homepagePage;
 const canonicalUrl = new URL('/', Astro.site).toString();
 
-const bodyText = page?.body?.processed?.replace(/<[^>]*>/g, '') || '';
+const bodyText = page?.bodyHtml?.replace(/<[^>]*>/g, '') || '';
 const description = bodyText.slice(0, 160).trim() + (bodyText.length > 160 ? '...' : '');
 ---
 
@@ -45,143 +46,19 @@ const description = bodyText.slice(0, 160).trim() + (bodyText.length > 160 ? '..
   canonicalUrl={canonicalUrl}
 >
   {page ? (
-    <article class="page">
-      <header class="page-header">
-        <h1>{page.title}</h1>
-        {page.changed && (
-          <time class="page-date" datetime={page.changed}>
-            Last updated: {new Date(page.changed).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </time>
-        )}
-      </header>
-
-      <PageHeroImage image={page.heroImage} title={page.title} />
-
-      <div class="page-content">
-        {page.body?.processed ? (
-          <Fragment set:html={page.body.processed} />
-        ) : (
-          <p class="no-content">
-            <em>This page has no content yet.</em>
-          </p>
-        )}
-      </div>
-    </article>
+    <DrupalPage page={page} fallbackTitle="Homepage" />
   ) : (
-    <article class="page">
-      <header class="page-header">
-        <h1>Homepage</h1>
-      </header>
-      <div class="page-content">
+    <DrupalPage fallbackTitle="Homepage" emptyContentMessage="">
+      <Fragment>
         <p>
-          No Drupal page was found for <code>{homepageAlias}</code>.
+          No Drupal page was found for <code>/</code> or <code>{homepageAlias}</code>.
         </p>
         <p>
-          Create a published “Basic page” in Drupal and set its URL alias to <code>{homepageAlias}</code>. Refresh the browser while
-          Astro dev is running or rerun <code>npm run build</code> so the new alias is picked up, then revisit <code>/</code>.
+          Create a published “Basic page” in Drupal and set its URL alias to <code>/</code> or <code>{homepageAlias}</code>.
+          Refresh the browser while Astro dev is running or rerun <code>npm run build</code> so the new alias is picked up,
+          then revisit <code>/</code>.
         </p>
-      </div>
-    </article>
+      </Fragment>
+    </DrupalPage>
   )}
 </Base>
-
-<style>
-  .page {
-    max-width: 65ch;
-    margin: 0 auto;
-  }
-
-  .page-header {
-    margin-bottom: 2rem;
-  }
-
-  .page-header h1 {
-    font-size: 2.5rem;
-    line-height: 1.2;
-    margin-bottom: 0.5rem;
-  }
-
-  .page-date {
-    display: block;
-    color: #666;
-    font-size: 0.875rem;
-  }
-
-  .page-content {
-    font-size: 1.125rem;
-  }
-
-  .page-content :global(p) {
-    margin-bottom: 1.5rem;
-  }
-
-  .page-content :global(h2) {
-    font-size: 1.75rem;
-    margin-top: 2rem;
-    margin-bottom: 1rem;
-  }
-
-  .page-content :global(h3) {
-    font-size: 1.375rem;
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .page-content :global(ul),
-  .page-content :global(ol) {
-    margin-bottom: 1.5rem;
-    padding-left: 1.5rem;
-  }
-
-  .page-content :global(li) {
-    margin-bottom: 0.5rem;
-  }
-
-  .page-content :global(a) {
-    color: #0969da;
-  }
-
-  .page-content :global(a:hover) {
-    text-decoration: underline;
-  }
-
-  .page-content :global(code) {
-    background: #f4f4f5;
-    padding: 0.125rem 0.375rem;
-    border-radius: 4px;
-    font-size: 0.875em;
-  }
-
-  .page-content :global(pre) {
-    background: #1e1e1e;
-    color: #fff;
-    padding: 1rem;
-    border-radius: 8px;
-    overflow-x: auto;
-    margin-bottom: 1.5rem;
-  }
-
-  .page-content :global(pre code) {
-    background: transparent;
-    padding: 0;
-    color: inherit;
-  }
-
-  .page-content :global(blockquote) {
-    border-left: 4px solid #e5e7eb;
-    padding-left: 1rem;
-    margin: 1.5rem 0;
-    color: #666;
-    font-style: italic;
-  }
-
-  .no-content {
-    color: #666;
-    text-align: center;
-    padding: 3rem 0;
-  }
-</style>
