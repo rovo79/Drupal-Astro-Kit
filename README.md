@@ -1,12 +1,17 @@
 # Drupal + Astro Starter Kit
 
-> **Status: Alpha / Developer Preview** — Works end-to-end locally. Not yet tested across all OS/DDEV configurations.
+[![Watch the Drupal Astro Kit walkthrough](docs/assets/drupal-astro-kit-walkthrough-thumbnail.png)](https://github.com/user-attachments/assets/4c216dec-b949-4614-b04e-5607763b7766)
 
-A static-first starter kit for developers. Local Drupal CMS, Astro static site generator, Cloudflare Pages hosting.
+**▶ Watch the walkthrough:** Manage content in Drupal, render with Astro, and deploy the public site as static files.
 
-This is a static-first starter kit that turns Drupal 11 into a local-only content source and uses Astro to generate a fully static site. The production site is pre-rendered HTML served from Cloudflare Pages — no server-side rendering, no runtime CMS dependency, no edge workers.
+> **Status: Alpha / Developer Preview**  
+> Works end-to-end locally. Not yet tested across all OS/DDEV configurations.
 
-Built for developers who want Drupal's content modeling with a modern static frontend.
+Drupal Astro Kit is a static-first starter kit for developers who want Drupal's content modeling with a modern Astro frontend.
+
+It turns Drupal 11 into a local content source and uses Astro to generate a fully static site. The production site is pre-rendered HTML that can be served from static hosting or a CDN, with no runtime CMS dependency for public page delivery.
+
+Built for developers who want to keep Drupal where it shines: content management, structured data, and editorial workflow.
 
 ---
 
