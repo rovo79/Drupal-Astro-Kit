@@ -143,7 +143,7 @@ Important: In static mode, Drupal does not need to be hosted anywhere. It only n
 1. Clone this kit and initialize your project
 
 ```bash
-git clone https://github.com/rovo79/Drupal_Astro_Kit.git my-project
+git clone https://github.com/rovo79/Drupal-Astro-Kit.git my-project
 cd my-project
 git remote remove origin
 ```
