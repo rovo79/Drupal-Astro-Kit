@@ -6,7 +6,7 @@ Use Drupal locally to model, manage, and edit structured content. Build the publ
 
 **No production database. No PHP runtime. No publicly accessible CMS.**
 
-Drupal handles content management. Astro handles presentation. Cloudflare Pages serves the finished site.
+Drupal handles content management. Astro handles presentation. A static host such as Cloudflare Pages serves the finished site.
 
 [![Watch the Drupal Astro Kit walkthrough](docs/assets/thumbnail.png)](https://github.com/user-attachments/assets/4c216dec-b949-4614-b04e-5607763b7766)
 
@@ -28,7 +28,7 @@ Drupal Astro Kit keeps the useful part of a mature CMS without carrying its runt
 * Deploy pre-rendered HTML to static hosting or a CDN
 * Turn Drupal off when you are not editing or building
 
-## Architecture
+## How it works
 
 ```text
 Drupal running locally
