@@ -1,39 +1,74 @@
-# Drupal + Astro Starter Kit
+# Drupal Astro Kit
 
-<p>
-  <a href="https://github.com/user-attachments/assets/4c216dec-b949-4614-b04e-5607763b7766">
-    <img
-      src="docs/assets/thumbnail.png"
-      alt="Watch the Drupal Astro Kit walkthrough"
-      width="900"
-    >
-  </a>
-</p>
+## Full CMS editing. Static Astro delivery.
 
-**▶ [Watch the walkthrough video](https://github.com/user-attachments/assets/4c216dec-b949-4614-b04e-5607763b7766):** Manage content in Drupal, render with Astro, and deploy the public site as static files.
+Use Drupal locally to model, manage, and edit structured content. Build the public website with Astro and deploy only static files.
 
-> **Status: Alpha / Developer Preview**  
-> Works end-to-end locally. Not yet tested across all OS/DDEV configurations.
+**No production database. No PHP runtime. No publicly accessible CMS.**
 
-Drupal Astro Kit is a static-first starter kit for developers who want Drupal's content modeling with a modern Astro frontend.
+Drupal handles content management. Astro handles presentation. Cloudflare Pages serves the finished site.
 
-It turns Drupal 11 into a local content source and uses Astro to generate a fully static site. The production site is pre-rendered HTML that can be served from static hosting or a CDN, with no runtime CMS dependency for public page delivery.
+[![Watch the Drupal Astro Kit walkthrough](docs/assets/thumbnail.png)](https://github.com/user-attachments/assets/4c216dec-b949-4614-b04e-5607763b7766)
 
-Built for developers who want to keep Drupal where it shines: content management, structured data, and editorial workflow.
+**[▶ Watch the walkthrough: edit in Drupal, build with Astro, and deploy a static website.](https://github.com/user-attachments/assets/4c216dec-b949-4614-b04e-5607763b7766)**
 
----
+> **Project status: Alpha / Developer Preview**
+> The complete workflow runs locally on macOS with DDEV. Linux should work, while Windows and broader environment coverage have not yet been validated.
 
-## What You Get
+## Why this exists
 
-Core (Static-first)
+Static Astro sites are fast, inexpensive to host, and operationally simple. But content often becomes harder to model and manage as a site grows beyond Markdown files and basic editing interfaces.
 
-- Astro Static Frontend — Pre-rendered pages, built locally, deployed to Cloudflare Pages
-- Local Drupal 11 CMS — Fully managed inside DDEV
-- Instant Bootstrap — One interactive CLI creates both Drupal and Astro projects
-- Type-Safe API Access — jsona + drupal-jsonapi-params
-- Simple Build Pipeline — Build locally, deploy static output
-- Clean Routing — Drupal aliases mapped to Astro routes
-- Zero Runtime Dependencies — Production site does not require Drupal at all
+Drupal Astro Kit keeps the useful part of a mature CMS without carrying its runtime into production:
+
+* Build structured content types, fields, media, menus, and editorial workflows in Drupal
+* Fetch published content through JSON:API during development and builds
+* Generate routes from Drupal URL aliases
+* Render the public website with Astro
+* Deploy pre-rendered HTML to static hosting or a CDN
+* Turn Drupal off when you are not editing or building
+
+## Architecture
+
+```text
+Drupal running locally
+        │
+        │ JSON:API + Linkset
+        ▼
+    Astro build
+        │
+        ▼
+  Static HTML, CSS, and JavaScript
+        │
+        ▼
+ Cloudflare Pages or another static host
+```
+
+The deployed website does not connect to Drupal and does not require Drupal to remain online.
+
+## What you get
+
+* **One-command bootstrap** that creates and connects the Drupal and Astro projects
+* **Local Drupal 11 CMS** managed through DDEV
+* **Static Astro frontend** with no production CMS dependency
+* **Structured content and menus** exposed through JSON:API and Linkset
+* **Drupal alias-based routing** mapped to Astro pages
+* **Optional Media image support** with build-time image URLs
+* **Local build and deployment workflow** for Cloudflare Pages
+* **Framework flexibility** through Astro islands when client-side interactivity is needed
+
+## Who this is for
+
+Drupal Astro Kit is intended for developers who want:
+
+* More structured content management than Markdown provides
+* Drupal’s content modeling without hosting Drupal publicly
+* An Astro frontend that owns the design and rendering
+* Static hosting with minimal production infrastructure
+* A local-first publishing workflow where rebuilding is an intentional release step
+
+It is probably not the right fit when editors need an always-available hosted CMS, content must publish automatically without a developer-controlled build, or server-side rendering is required.
+
 
 ---
 
