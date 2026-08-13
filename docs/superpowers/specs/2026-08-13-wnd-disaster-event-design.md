@@ -56,7 +56,7 @@ Examples:
 - Hurricane Katrina
 - 2011 Tōhoku Earthquake and Tsunami, if modeled as one editorial event
 
-The Event is the only v0.1 domain object that is expected to have a public standalone Astro route.
+The Event is the only v0.1 domain object expected to have a public standalone Astro route.
 
 ### 2.2 Occurrence
 
@@ -80,7 +80,7 @@ A sourced assertion about an Event or Occurrence at a specific point in time.
 Examples:
 
 - 104 confirmed fatalities
-- magnitude revised to Mw 7.4
+- magnitude reported as Mw 7.4
 - airport operations suspended
 - 15 km depth reported by a seismic agency
 - evacuation ordered for a named zone
@@ -89,9 +89,18 @@ Observations are intentionally broader than numeric measurements. They are the u
 
 ### 2.4 Source
 
-A reusable provenance record representing an authority, scientific agency, NGO, newsroom, dataset, report, or other information origin.
+A reusable **citable evidence item** supporting one or more Observations.
 
-Sources are reusable across many observations and events.
+Examples include:
+
+- an official situation report
+- a scientific event record or feed item
+- an NGO assessment
+- a government statement
+- a dataset record
+- a news report
+
+A Source is not merely an organization. The publishing organization is recorded as Source metadata. This keeps Observation provenance tied to the actual evidence item that made the assertion.
 
 ## 3. Drupal representations
 
@@ -104,7 +113,7 @@ Create four node types:
 - `wnd_observation`
 - `wnd_source`
 
-All four must be revisionable through Drupal's normal node revision system.
+All four use Drupal's normal node revision system.
 
 Only `wnd_event` is treated as publicly routable by the initial Astro implementation. The other bundles exist for editorial management, API traversal, provenance, filtering, and future uses.
 
@@ -120,7 +129,7 @@ Create three core vocabularies:
 
 Hierarchical hazard classification.
 
-Initial design supports parent/child classification such as:
+The design supports parent/child classification such as:
 
 ```text
 Geophysical
@@ -134,25 +143,38 @@ Meteorological
   -> Tropical cyclone
 ```
 
-The recipe may seed a minimal useful vocabulary, but it must not attempt to encode a comprehensive global hazard ontology in v0.1.
+The production recipe creates the vocabulary and field configuration but does not attempt to ship a comprehensive global hazard-term corpus in v0.1.
 
 #### `wnd_metric`
 
-Canonical measurable concepts referenced by observations.
+Hierarchical canonical measurable concepts referenced by Observations.
 
-Examples:
+Example hierarchy:
 
-- fatalities
-- injured
-- missing
-- displaced
-- affected population
-- magnitude
-- depth
-- buildings damaged
-- buildings destroyed
+```text
+Human impact
+  -> Fatalities
+  -> Injured
+  -> Missing
+  -> Displaced
 
-Metric terms may carry machine-readable metadata such as a stable code, category, and default unit.
+Seismic
+  -> Magnitude
+  -> Depth
+
+Built environment
+  -> Buildings damaged
+  -> Buildings destroyed
+```
+
+Metric terms carry:
+
+| Field | Type | Cardinality | Notes |
+|---|---|---:|---|
+| `field_wnd_metric_code` | String | 1 | Required stable editorial/API key, e.g. `fatalities` |
+| `field_wnd_default_unit` | String | 1 | Optional display/default unit |
+
+The taxonomy hierarchy provides metric grouping, so v0.1 does not create a separate metric-category field.
 
 A metric is not represented as a dedicated Event field. This avoids hard-coding every possible disaster measurement into the Event bundle.
 
@@ -169,26 +191,32 @@ Examples:
 - an evacuation zone
 - a named coastal region
 
+Place terms carry:
+
+| Field | Type | Cardinality | Notes |
+|---|---|---:|---|
+| `field_wnd_place_type` | List text | 1 | `city`, `region`, `feature`, `zone`, `other` |
+| `field_wnd_location` | Geofield | 1 | Optional representative point/geometry |
+| `field_wnd_country` | Address country-capable field | 1 | Optional normalized country |
+
 Countries are not modeled as `wnd_place` taxonomy terms solely to recreate a country list.
 
 ## 4. Event schema
 
 The `wnd_event` bundle contains durable event identity, lifecycle, classification, geography, relationships, and selected media.
 
-Required design fields:
-
 | Field | Type / representation | Cardinality | Notes |
 |---|---|---:|---|
 | `title` | Core node title | 1 | Canonical event title |
 | `field_wnd_short_title` | String | 1 | Optional compact display title |
 | `field_wnd_summary` | Long text | 1 | Authoritative orientation summary |
-| `field_wnd_status` | List text | 1 | Editorial lifecycle state |
-| `field_wnd_hazard_type` | Taxonomy reference -> `wnd_hazard_type` | 1 | Primary hazard |
+| `field_wnd_status` | List text | 1 | Required editorial lifecycle state |
+| `field_wnd_hazard_type` | Taxonomy reference -> `wnd_hazard_type` | 1 | Required primary hazard |
 | `field_wnd_secondary_hazards` | Taxonomy reference -> `wnd_hazard_type` | unlimited | Cascading / secondary hazards |
 | `field_wnd_start_at` | Datetime | 1 | Required event start |
 | `field_wnd_end_at` | Datetime | 1 | Optional event end |
 | `field_wnd_detected_at` | Datetime | 1 | Optional detection timestamp |
-| `field_wnd_origin` | Geofield | 1 | Optional point or appropriate origin geometry |
+| `field_wnd_origin` | Geofield | 1 | Optional origin geometry |
 | `field_wnd_footprint` | Geofield | 1 | Optional affected geometry |
 | `field_wnd_affected_countries` | Address country-capable field | unlimited | Normalized country values |
 | `field_wnd_affected_places` | Taxonomy reference -> `wnd_place` | unlimited | Named places |
@@ -218,7 +246,7 @@ The Event bundle must not contain mutable impact measurements as simple scalar f
 - `field_magnitude`
 - `field_depth`
 
-Those values belong to Observations so their time, provenance, revision, uncertainty, and supersession remain explicit.
+Those values belong to Observations so their time, provenance, uncertainty, and supersession remain explicit.
 
 ## 5. Occurrence schema
 
@@ -228,7 +256,7 @@ The `wnd_occurrence` bundle represents a physical episode within an Event.
 |---|---|---:|---|
 | `title` | Core node title | 1 | Editorial label |
 | `field_wnd_event` | Node reference -> `wnd_event` | 1 | Required parent Event |
-| `field_wnd_occurrence_type` | List text | 1 | Common hazard-neutral occurrence class |
+| `field_wnd_occurrence_type` | List text | 1 | Required common hazard-neutral occurrence class |
 | `field_wnd_occurred_at` | Datetime | 1 | Required |
 | `field_wnd_location` | Geofield | 1 | Optional geometry |
 | `field_wnd_summary` | Long text | 1 | Optional context |
@@ -252,7 +280,7 @@ The `wnd_observation` bundle is the core evidence model.
 
 Every Observation answers:
 
-> At a particular time, which source asserted what about this Event or Occurrence?
+> At a particular time, which Source asserted what about this Event or Occurrence?
 
 | Field | Type / representation | Cardinality | Notes |
 |---|---|---:|---|
@@ -262,15 +290,15 @@ Every Observation answers:
 | `field_wnd_observation_type` | List text | 1 | Required category |
 | `field_wnd_metric` | Taxonomy reference -> `wnd_metric` | 1 | Optional structured metric |
 | `field_wnd_numeric_value` | Decimal | 1 | Optional numeric assertion |
-| `field_wnd_text_value` | String / text | 1 | Optional text assertion |
-| `field_wnd_unit` | String | 1 | Optional explicit unit when needed |
+| `field_wnd_text_value` | String / text | 1 | Optional textual assertion |
+| `field_wnd_unit` | String | 1 | Optional explicit unit |
 | `field_wnd_summary` | Long text | 1 | Narrative context |
-| `field_wnd_assertion_status` | List text | 1 | Required provenance status |
+| `field_wnd_assertion_status` | List text | 1 | Required assertion status |
 | `field_wnd_observed_at` | Datetime | 1 | Required time the assertion applies |
 | `field_wnd_location` | Geofield | 1 | Optional specific geometry |
 | `field_wnd_places` | Taxonomy reference -> `wnd_place` | unlimited | Optional named places |
 | `field_wnd_sources` | Node reference -> `wnd_source` | unlimited | Required, minimum one |
-| `field_wnd_supersedes` | Node reference -> `wnd_observation` | unlimited | Prior observations replaced or revised |
+| `field_wnd_supersedes` | Node reference -> `wnd_observation` | unlimited | Prior assertions explicitly replaced/revised |
 | `field_wnd_media` | Media reference | unlimited | Supporting evidence |
 
 ### 6.1 Observation types
@@ -298,30 +326,56 @@ Initial controlled values:
 
 The status expresses the nature of the assertion, not a generic editorial workflow state.
 
-### 6.3 Timeline derivation
+### 6.3 New assertion versus Drupal revision
+
+A materially new external assertion creates a **new Observation node**.
+
+Examples:
+
+```text
+09:00 Source A reports 23 fatalities -> Observation A
+11:40 Source A reports 41 fatalities -> Observation B, supersedes A when appropriate
+16:10 Source B confirms 67 fatalities -> Observation C
+```
+
+Drupal revisions of an existing Observation are reserved for editorial changes to that record, such as correcting a typo, improving its summary, or fixing metadata without claiming that a new external assertion occurred.
+
+This preserves both source chronology and editorial history.
+
+### 6.4 Timeline derivation
 
 The public event timeline is not stored as a second independent timeline structure.
 
-It is derived from the Event's Observations ordered by `field_wnd_observed_at`, optionally filtered by observation type.
+It is derived from the Event's Observations ordered by `field_wnd_observed_at`, optionally filtered by Observation type.
 
 This prevents duplication between timeline entries, impact values, hazard measurements, and situation updates.
 
 ## 7. Source schema
 
-The `wnd_source` bundle represents reusable provenance.
-
-Required design fields:
+The `wnd_source` bundle represents a reusable citable evidence item.
 
 | Field | Type / representation | Cardinality | Notes |
 |---|---|---:|---|
-| `title` | Core node title | 1 | Source name |
-| `field_wnd_source_type` | List text | 1 | Authority / scientific / NGO / news / dataset / other |
-| `field_wnd_source_url` | Link | 1 | Canonical source URL |
-| `field_wnd_publisher` | String | 1 | Optional publisher / agency |
-| `field_wnd_external_id` | String | 1 | Optional source-system ID |
+| `title` | Core node title | 1 | Evidence-item title |
+| `field_wnd_source_type` | List text | 1 | Required source class |
+| `field_wnd_source_url` | Link | 1 | Canonical evidence URL when available |
+| `field_wnd_publisher` | String | 1 | Publishing agency / organization / newsroom |
+| `field_wnd_published_at` | Datetime | 1 | Optional source publication timestamp |
+| `field_wnd_accessed_at` | Datetime | 1 | Optional retrieval timestamp |
+| `field_wnd_external_id` | String | 1 | Optional source-system identifier |
 | `field_wnd_summary` | Long text | 1 | Optional editorial context |
 
-The source bundle must be reusable by many observations and must not be embedded as repeated free-text citations.
+Initial source types:
+
+- `official_report`
+- `official_statement`
+- `scientific_record`
+- `dataset`
+- `ngo_report`
+- `news_report`
+- `other`
+
+The bundle is reusable by many Observations and must not be replaced by repeated free-text citations.
 
 ## 8. Embedded Paragraph value objects
 
@@ -333,9 +387,11 @@ Create two Paragraph types.
 
 Fields:
 
-- `field_wnd_namespace`
-- `field_wnd_identifier`
-- `field_wnd_url`
+| Field | Type | Cardinality |
+|---|---|---:|
+| `field_wnd_namespace` | String | 1 |
+| `field_wnd_identifier` | String | 1 |
+| `field_wnd_url` | Link | 1 |
 
 Examples:
 
@@ -349,8 +405,10 @@ EM-DAT -> ...
 
 Fields:
 
-- `field_wnd_relationship_type`
-- `field_wnd_target_event`
+| Field | Type | Cardinality |
+|---|---|---:|
+| `field_wnd_relationship_type` | List text | 1 |
+| `field_wnd_target_event` | Node reference -> `wnd_event` | 1 |
 
 Initial relationship values:
 
@@ -366,7 +424,7 @@ The recipe does not implement automatic inverse relationship maintenance in v0.1
 
 Geography is first-class structured data.
 
-Use Geofield for geometry storage and Leaflet for Drupal map widgets where practical.
+Use Geofield for geometry storage and Leaflet for Drupal map widgets.
 
 The schema must support:
 
@@ -375,6 +433,7 @@ The schema must support:
 - polygons / multipolygons for affected footprints
 - occurrence-specific locations
 - observation-specific locations
+- representative geometry for `wnd_place` terms
 
 The public map remains an Astro concern. Drupal's map integration exists for authoring and structured storage, not as the production rendering layer.
 
@@ -386,7 +445,7 @@ The recipe must produce a Drupal admin experience that is usable for disaster ed
 
 Use `field_group` to organize the Event edit form into meaningful sections.
 
-Recommended Event groups:
+Event groups:
 
 1. **Event**
    - title
@@ -419,20 +478,20 @@ Create dedicated administrative Views for:
 - Observations
 - Sources
 
-The Observations administration view should expose filtering by at least:
+The Observations administration view must expose filters for:
 
 - Event
-- observation type
+- Observation type
 - metric
 - assertion status
 - observed date
-- source
+- Source
 
-These Views are for Drupal editorial management. Astro should continue to consume direct JSON:API entity resources for ordinary page composition, consistent with Drupal_Astro_Kit's existing architecture.
+These Views are for Drupal editorial management. Astro continues to consume direct JSON:API entity resources for ordinary page composition, consistent with Drupal_Astro_Kit's existing architecture.
 
 ## 11. Recipe composition
 
-The new recipe should live at:
+The new recipe lives at:
 
 ```text
 setup/drupal-recipes/wnd_disaster_event/
@@ -449,18 +508,14 @@ wnd_disaster_event/
 
 The package is exposed through `setup/recipe-manifest.json` as an optional Drupal_Astro_Kit capability.
 
-The recipe composes existing DAK capabilities rather than duplicating them.
+The Recipe composes:
 
-Expected composition:
+- `dak-decoupled-base`
+- `dak-media-images`
 
-- `dak_decoupled_base`
-- `dak_media_images`
+It does **not** compose `dak-structured-content`, because that recipe intentionally creates the unrelated `headless_page` model.
 
-Paragraphs and Entity Reference Revisions may be installed directly by this recipe unless composition with `dak_structured_content` is proven cleaner during implementation. The disaster recipe must not create or depend on the unrelated `headless_page` content model merely to gain Paragraphs support.
-
-## 12. Contrib dependency policy
-
-The v0.1 design permits the following contrib modules because each has a clear domain or admin-UX role:
+`wnd_disaster_event` directly requires and installs its own structural/admin dependencies:
 
 - Geofield
 - Leaflet
@@ -469,7 +524,20 @@ The v0.1 design permits the following contrib modules because each has a clear d
 - Paragraphs
 - Entity Reference Revisions
 
-Existing DAK JSON:API / Pathauto / Media dependencies are reused through recipe composition.
+This keeps WND independent from the generic `headless_page` content model while still following DAK's established Recipe packaging conventions.
+
+## 12. Contrib dependency policy
+
+The v0.1 design permits exactly the following new contrib capabilities because each has a clear domain or admin-UX role:
+
+- Geofield
+- Leaflet
+- Address
+- Field Group
+- Paragraphs
+- Entity Reference Revisions
+
+Existing DAK JSON:API / Pathauto / Media capabilities are reused through recipe composition.
 
 Do not add the following in v0.1:
 
@@ -501,9 +569,9 @@ This is required to reduce recipe collisions and make configuration provenance o
 
 Drupal is the source of truth. Astro must not recreate a second independent domain schema in Markdown or TypeScript content collections.
 
-The recipe must expose the entities through Drupal JSON:API using DAK's existing decoupled base.
+The Recipe exposes the entities through Drupal JSON:API using DAK's existing decoupled base.
 
-The initial public Event page should be composable from:
+The initial public Event page must be composable from:
 
 - one `wnd_event` resource
 - related `wnd_occurrence` resources
@@ -511,7 +579,7 @@ The initial public Event page should be composable from:
 - referenced `wnd_source` resources
 - referenced taxonomy terms and Media resources
 
-No custom JSON:API normalization is part of v0.1 unless implementation proves that standard JSON:API plus existing DAK tooling cannot represent the model cleanly.
+No custom JSON:API normalization is part of v0.1. If standard JSON:API plus existing DAK tooling proves insufficient during implementation, that discovery is a BLOCKER requiring an explicit design amendment rather than silent scope expansion.
 
 ## 15. Revision and provenance rules
 
@@ -519,19 +587,21 @@ Revision history is fundamental to this domain.
 
 Requirements:
 
-- Event, Occurrence, Observation, and Source are revisionable nodes.
-- A changed casualty count is represented by a new or revised Observation, not an overwrite of an Event scalar field.
+- Event, Occurrence, Observation, and Source use Drupal node revisions.
+- A materially new externally asserted value always creates a new Observation.
+- A changed casualty count is never implemented by overwriting an Event scalar field.
 - When a new Observation explicitly replaces an earlier assertion, `field_wnd_supersedes` records that relationship.
-- Historical source assertions should remain reconstructable.
-- The current public value for a metric may later be derived by selecting the newest applicable non-superseded Observation according to application rules, but that computation is not implemented in the Recipe itself.
+- Drupal revisions of an Observation preserve editorial changes to that Observation; they do not substitute for new source assertions.
+- Historical source assertions remain reconstructable as distinct Observation nodes.
+- The current public value for a metric may later be derived by selecting applicable non-superseded Observations according to application rules, but that computation is not implemented in the Recipe itself.
 
 ## 16. Fixture strategy
 
-The production recipe defines schema and authoring configuration only.
+The production Recipe defines schema and authoring configuration only.
 
-It does not embed the Colombia disaster as canonical starter content.
+It does not embed the Colombia disaster as canonical starter content and does not seed a large hazard or metric corpus.
 
-Validation must use a separate fixture or later demo recipe representing one real earthquake event end-to-end.
+Validation uses a separate fixture representing one real earthquake Event end-to-end. During v0.1 implementation this fixture may be created by a validation script or test procedure, but it is not shipped as production Recipe content.
 
 The fixture must demonstrate that the schema can represent:
 
@@ -539,16 +609,16 @@ The fixture must demonstrate that the schema can represent:
 - event lifecycle
 - main shock
 - aftershocks
-- magnitude and depth observations
-- evolving casualty observations
+- magnitude and depth Observations
+- evolving casualty Observations
 - affected geography
 - affected named places
-- infrastructure / response observations
-- multiple sources
-- superseded observations
+- infrastructure / response Observations
+- multiple Sources
+- superseded Observations
 - external IDs
 
-A separate `wnd_disaster_event_demo` recipe is explicitly parked until the core recipe installs and validates cleanly.
+A separate `wnd_disaster_event_demo` Recipe is explicitly PARKED until the core Recipe installs and validates cleanly.
 
 ## 17. Public IA consequences
 
@@ -564,7 +634,7 @@ This Recipe does not build the full WorldNaturalDisasters frontend, but the sche
 /about/data-sources
 ```
 
-Derived indexes should be queries over structured Event data, not independent hand-authored content silos.
+Derived indexes are queries over structured Event data, not independent hand-authored content silos.
 
 ## 18. Explicit non-goals for v0.1
 
@@ -586,7 +656,8 @@ The following are outside this milestone:
 - a production public map
 - an Astro implementation of every IA route
 - a comprehensive global hazard taxonomy
-- the demo-content recipe
+- production demo content
+- the `wnd_disaster_event_demo` Recipe
 
 Discovery of any of these during implementation must be classified as BLOCKER, PARK, or KILL rather than silently expanding scope.
 
@@ -596,26 +667,28 @@ The design is successfully implemented when all of the following are true:
 
 1. Drupal_Astro_Kit can optionally install `wnd_disaster_event` through its existing Recipe setup flow.
 2. The Recipe installs cleanly on a fresh generated Drupal 11 backend.
-3. Drupal contains the four required revisionable node bundles.
+3. Drupal contains the four required node bundles using normal Drupal revisions.
 4. Drupal contains the three required vocabularies and two Paragraph types.
 5. The Event form is organized into coherent editorial sections.
-6. Editors can create and edit geospatial fields through a usable map widget.
-7. An Observation must reference an Event and at least one Source.
+6. Editors can create and edit geospatial fields through a usable Leaflet-backed map widget.
+7. An Observation requires an Event and at least one Source.
 8. Observations can represent both numeric metrics and narrative situation updates.
-9. An Observation can supersede an earlier Observation without deleting historical evidence.
+9. A new external assertion can supersede an earlier Observation without deleting or rewriting that historical assertion.
 10. Occurrences can be associated with an Event and separately observed / measured.
 11. The resulting entities are available through JSON:API.
 12. Existing DAK static-first behavior remains intact.
-13. Existing optional DAK recipes continue to function.
+13. Existing optional DAK Recipes continue to function.
 14. No sample disaster facts are embedded into the production Recipe.
 15. The schema can represent the Colombia-earthquake validation fixture without stuffing essential facts into generic unstructured text.
 
 ## 20. Architectural invariants
 
-These rules should survive future extensions unless intentionally superseded by a new design decision:
+These rules survive future extensions unless intentionally superseded by a new design decision:
 
 - **The Disaster Event is the atomic public unit.**
 - **The Observation is the atomic evidence unit.**
+- **A Source is a citable evidence item, not merely a publisher name.**
+- **New external assertions create new Observations.**
 - **Mutable facts carry provenance rather than living as timeless Event fields.**
 - **Occurrences model physical episodes, not editorial updates.**
 - **Sources are reusable first-class records.**
